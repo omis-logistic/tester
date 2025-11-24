@@ -149,5 +149,19 @@
   </div>
 
   <script src="scripts/app.js"></script>
+  <script>
+// Prevent Safari form resubmission on back/forward
+if (window.performance && performance.navigation.type === performance.navigation.TYPE_BACK_FORWARD) {
+  document.getElementById('declarationForm').reset();
+}
+
+// Safari autocomplete fix
+document.addEventListener('DOMContentLoaded', function() {
+  const inputs = document.querySelectorAll('input');
+  inputs.forEach(input => {
+    input.setAttribute('autocomplete', 'on');
+  });
+});
+</script>
 </body>
 </html>
