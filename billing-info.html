@@ -1,0 +1,790 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <base target="_top">
+  <title>Billing Info - Cahaya Az Zahra Enterprise</title>
+  <link rel="stylesheet" href="styles/main.css">
+  <style>
+  .billing-page { 
+    max-width: 1200px; 
+    margin: 20px auto;
+    animation: fadeIn 0.3s ease-in;
+  }
+  
+  .search-container {
+    margin: 20px 0;
+  }
+  
+  .search-box {
+    width: 100%;
+    padding: 12px;
+    background: #2a2a2a;
+    border: 1px solid var(--gold);
+    color: var(--text-light);
+    border-radius: 5px;
+    font-size: 16px;
+  }
+  
+  .billing-sections {
+    display: grid;
+    gap: 30px;
+    margin-top: 20px;
+  }
+  
+  .billing-section {
+    background: rgba(255,255,255,0.05);
+    border-radius: 8px;
+    padding: 20px;
+    border: 1px solid var(--gold);
+    overflow: hidden;
+  }
+  
+  .section-title {
+    color: var(--gold);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid rgba(197, 160, 71, 0.3);
+  }
+  
+  .billing-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+    table-layout: fixed;
+  }
+  
+  .billing-table th {
+    background: rgba(197, 160, 71, 0.2);
+    color: var(--gold);
+    padding: 12px 8px;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid var(--gold);
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+  
+  .billing-table td {
+    padding: 12px 8px;
+    border-bottom: 1px solid rgba(255,255,255,0.1);
+    vertical-align: top;
+    overflow: hidden;
+    word-wrap: break-word;
+  }
+  
+  .billing-table tr:hover {
+    background: rgba(255,255,255,0.03);
+  }
+  
+  .pay-now-btn {
+    background: var(--gold);
+    color: var(--dark-bg);
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: bold;
+    display: inline-block;
+    transition: opacity 0.3s;
+    white-space: nowrap;
+  }
+  
+  .pay-now-btn:hover {
+    opacity: 0.9;
+    color: var(--dark-bg);
+  }
+  
+  .tracking-details {
+    white-space: pre-line;
+    font-family: monospace;
+    font-size: 0.9em;
+    line-height: 1.4;
+    max-width: 100%;
+    overflow-wrap: break-word;
+  }
+  
+  .empty-state {
+    text-align: center;
+    padding: 40px 20px;
+    color: #888;
+  }
+  
+  .amount {
+    font-weight: 500;
+  }
+  
+  .status-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.8em;
+    font-weight: 500;
+    white-space: nowrap;
+  }
+  
+  .status-pending {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+  }
+  
+  .status-completed {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+  }
+  
+  .uncollected-indicator {
+    background: #ff4444;
+    color: white;
+    border-radius: 50%;
+    width: 20px;
+    height: 20px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.8em;
+    margin-left: 8px;
+    animation: pulse 2s infinite;
+  }
+  
+  /* UPDATED: Desktop column widths - Receipt No. slightly wider */
+  .col-receipt { 
+    width: 11%; /* Increased from 10% */
+    min-width: 95px; /* Increased from 80px */
+    max-width: 130px; /* Increased from 100px */
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  .col-date { 
+    width: 12%;
+    min-width: 85px;
+    max-width: 100px;
+    font-size: 0.85em;
+    word-break: break-word;
+  }
+  .col-code { 
+    width: 7%;
+    min-width: 50px;
+    max-width: 60px;
+    font-size: 0.85em;
+    word-break: break-all;
+  }
+  .col-details { 
+    width: 31%; /* Slightly reduced to accommodate wider receipt column */
+    min-width: 200px;
+    max-width: none;
+    overflow-wrap: break-word;
+  }
+  .col-location { 
+    width: 12%;
+    min-width: 90px;
+    max-width: 120px;
+    font-size: 0.85em;
+    word-break: break-word;
+  }
+  .col-total { 
+    width: 10%;
+    min-width: 80px;
+    max-width: 90px;
+  }
+  .col-action { 
+    width: 9%;
+    min-width: 90px;
+    max-width: 100px;
+  }
+  .col-status { 
+    width: 9%;
+    min-width: 90px;
+    max-width: 100px;
+  }
+  .col-collection-date { 
+    width: 9%;
+    min-width: 110px;
+    max-width: 130px;
+    font-size: 0.85em;
+    word-break: break-word;
+  }
+  
+  @keyframes pulse {
+    0% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+    100% { transform: scale(1); }
+  }
+  
+  @keyframes fadeIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to { opacity: 1; transform: translateY(0); }
+  }
+  
+  /* Desktop Optimizations */
+  @media (min-width: 1024px) {
+    .billing-table {
+      table-layout: fixed;
+    }
+    
+    /* NEW: Specific desktop column adjustments */
+    .col-receipt { 
+      width: 11%;
+      min-width: 100px; /* Wider on desktop */
+    }
+    .col-date { 
+      width: 10%;
+      min-width: 90px;
+    }
+    .col-code { 
+      width: 7%;
+      min-width: 55px;
+    }
+    .col-details { 
+      width: 32%; 
+      min-width: 250px;
+    }
+    .col-location { 
+      width: 11%;
+      min-width: 100px;
+    }
+    .col-total { 
+      width: 9%;
+      min-width: 85px;
+    }
+    .col-action { 
+      width: 10%;
+      min-width: 95px;
+    }
+    .col-status { 
+      width: 10%;
+      min-width: 95px;
+    }
+    .col-collection-date { 
+      width: 10%;
+      min-width: 120px;
+    }
+  }
+  
+  /* Tablet Optimizations */
+  @media (max-width: 1023px) and (min-width: 769px) {
+    .billing-table {
+      table-layout: fixed;
+    }
+    
+    /* Adjusted percentage widths for tablet */
+    .col-receipt { width: 12%; min-width: 80px; }
+    .col-date { width: 12%; min-width: 80px; }
+    .col-code { width: 8%; min-width: 50px; }
+    .col-details { width: 30%; min-width: 180px; }
+    .col-location { width: 12%; min-width: 85px; }
+    .col-total { width: 9%; min-width: 75px; }
+    .col-action { width: 9%; min-width: 85px; }
+    .col-status { width: 9%; min-width: 85px; }
+    .col-collection-date { width: 9%; min-width: 110px; }
+    
+    .tracking-details {
+      font-size: 0.85em;
+    }
+  }
+  
+  /* Mobile Optimizations - FIXED HEADER WRAPPING */
+  @media (max-width: 768px) {
+    .billing-page {
+      padding: 10px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .billing-section {
+      padding: 15px;
+      margin: 0;
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: auto;
+    }
+    
+    .billing-table {
+      table-layout: auto;
+      min-width: 720px; /* Slightly increased to accommodate better spacing */
+      width: auto;
+    }
+    
+    .billing-table th,
+    .billing-table td {
+      padding: 8px 6px;
+      font-size: 0.9em;
+    }
+    
+    /* NEW: Better header text wrapping for mobile */
+    .billing-table th {
+      white-space: normal; /* Allow headers to wrap */
+      line-height: 1.3; /* Better line spacing for wrapped text */
+      padding: 10px 6px; /* Slightly more vertical padding for wrapped headers */
+      word-break: keep-all; /* Keep words together when possible */
+    }
+    
+    /* NEW: Specific header adjustments to prevent bad breaks */
+    .billing-table th.col-receipt {
+      word-break: keep-all;
+      white-space: nowrap; /* Keep "Receipt No." on one line */
+    }
+    
+    .pay-now-btn {
+      padding: 6px 12px;
+      font-size: 0.85em;
+      white-space: nowrap;
+    }
+    
+    .tracking-details {
+      max-width: 200px;
+      font-size: 0.8em;
+      line-height: 1.3;
+    }
+    
+    .status-badge {
+      font-size: 0.75em;
+      padding: 3px 6px;
+      white-space: nowrap;
+    }
+    
+    /* Mobile column widths - UPDATED with better receipt column and smaller date font */
+    .col-receipt { 
+      width: 85px !important; /* Slightly wider for better header display */
+      min-width: 85px;
+      max-width: 85px;
+      font-size: 0.8em;
+      word-break: break-all;
+    }
+    .col-date { 
+      width: 80px !important; /* Slightly narrower to accommodate receipt */
+      min-width: 80px;
+      max-width: 80px;
+      font-size: 0.75em !important; /* NEW: Smaller date font on mobile */
+    }
+    .col-code { 
+      width: 55px !important; /* Slightly smaller to balance */
+      min-width: 55px;
+      max-width: 55px;
+      font-size: 0.8em;
+      word-break: break-all;
+    }
+    .col-details { 
+      width: 220px !important;
+      min-width: 220px;
+      max-width: 220px;
+      overflow-wrap: break-word;
+    }
+    .col-location { 
+      width: 95px !important;
+      min-width: 95px;
+      max-width: 95px;
+      font-size: 0.8em;
+    }
+    .col-total { 
+      width: 75px !important;
+      min-width: 75px;
+      max-width: 75px;
+    }
+    .col-action { 
+      width: 85px !important;
+      min-width: 85px;
+      max-width: 85px;
+    }
+    .col-status { 
+      width: 85px !important;
+      min-width: 85px;
+      max-width: 85px;
+    }
+    .col-collection-date { 
+      width: 105px !important;
+      min-width: 105px;
+      max-width: 105px;
+      font-size: 0.75em !important; /* NEW: Smaller collection date font on mobile */
+    }
+    
+    .section-title {
+      font-size: 1.2em;
+      margin-bottom: 15px;
+    }
+    
+    .search-box {
+      padding: 10px;
+      font-size: 14px;
+      width: 100%;
+      box-sizing: border-box;
+    }
+  
+    .container {
+      padding: 10px;
+      margin: 0 auto;
+      width: 100%;
+      box-sizing: border-box;
+      overflow-x: auto;
+    }
+  }
+  
+  /* Small Mobile Optimizations */
+  @media (max-width: 480px) {
+    .billing-section {
+      padding: 12px;
+      margin: 5px 0;
+    }
+    
+    .billing-table {
+      min-width: 680px;
+    }
+    
+    .billing-table th,
+    .billing-table td {
+      padding: 6px 4px;
+      font-size: 0.85em;
+    }
+    
+    /* NEW: Even smaller date font on very small screens */
+    .col-date { 
+      font-size: 0.7em !important;
+    }
+    .col-collection-date { 
+      font-size: 0.7em !important;
+    }
+    
+    .tracking-details {
+      max-width: 180px;
+      font-size: 0.75em;
+    }
+    
+    .pay-now-btn {
+      padding: 5px 10px;
+      font-size: 0.8em;
+    }
+    
+    /* Smaller fixed widths for very small screens */
+    .col-receipt { 
+      width: 80px !important;
+      min-width: 80px;
+      max-width: 80px;
+      font-size: 0.75em;
+    }
+    .col-date { 
+      width: 75px !important;
+      min-width: 75px;
+      max-width: 75px;
+    }
+    .col-code { 
+      width: 50px !important;
+      min-width: 50px;
+      max-width: 50px;
+      font-size: 0.75em;
+    }
+    .col-details { 
+      width: 190px !important;
+      min-width: 190px;
+      max-width: 190px;
+    }
+    .col-location { 
+      width: 85px !important;
+      min-width: 85px;
+      max-width: 85px;
+      font-size: 0.75em;
+    }
+    .col-total { 
+      width: 70px !important;
+      min-width: 70px;
+      max-width: 70px;
+    }
+    .col-action { 
+      width: 75px !important;
+      min-width: 75px;
+      max-width: 75px;
+    }
+    .col-status { 
+      width: 75px !important;
+      min-width: 75px;
+      max-width: 75px;
+    }
+    .col-collection-date { 
+      width: 95px !important;
+      min-width: 95px;
+      max-width: 95px;
+    }
+  
+    .billing-sections {
+      gap: 20px;
+    }
+  }
+  
+  /* Print Styles */
+  @media print {
+    .billing-page {
+      max-width: none;
+      margin: 0;
+    }
+    
+    .search-container,
+    .back-btn {
+      display: none;
+    }
+    
+    .billing-section {
+      border: 1px solid #000;
+      break-inside: avoid;
+    }
+    
+    .billing-table {
+      border: 1px solid #000;
+      table-layout: auto;
+    }
+    
+    .billing-table th {
+      background: #f0f0f0 !important;
+      color: #000 !important;
+      border-bottom: 2px solid #000;
+    }
+    
+    .pay-now-btn {
+      background: #fff !important;
+      color: #000 !important;
+      border: 1px solid #000;
+    }
+  }
+  </style>
+</head>
+<body>
+  <div class="container billing-page">
+    <h1>Billing Information</h1>
+    
+    <div id="connectionError" class="error-message" style="display: none;"></div>
+    
+    <div class="search-container">
+      <input type="text" 
+             id="searchInput" 
+             placeholder="Search by Tracking Number or Code..."
+             class="search-box">
+    </div>
+    
+    <div class="billing-sections">
+      <!-- Uncollected Section -->
+      <div class="billing-section">
+        <h2 class="section-title">
+          📦 Uncollected Parcels 
+          <span id="uncollectedCount" class="uncollected-indicator">0</span>
+        </h2>
+        <div id="uncollectedSection">
+          <div class="empty-state">Loading uncollected parcels...</div>
+        </div>
+      </div>
+      
+      <!-- Collected Section -->
+      <div class="billing-section">
+        <h2 class="section-title">✅ Collected & Completed</h2>
+        <div id="collectedSection">
+          <div class="empty-state">Loading completed parcels...</div>
+        </div>
+      </div>
+    </div>
+    
+    <button class="back-btn" onclick="safeRedirect('dashboard.html')" style="margin-top: 30px;">
+      Back to Dashboard
+    </button>
+    
+    <div id="loadingOverlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Loading Billing Information...</div>
+    </div>
+  </div>
+
+  <script src="scripts/app.js"></script>
+  <script>
+    let allBillingData = [];
+    let uncollectedCount = 0;
+
+    // BND Currency formatter for billing page only
+    function formatCurrencyBND(amount) {
+      if (!amount && amount !== 0) return 'N/A';
+      const num = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
+      return 'B$' + (num || 0).toFixed(2);
+    }
+
+    // Better date formatting for billing page
+    function formatBillingDate(dateString) {
+      if (!dateString) return 'N/A';
+      try {
+        // Handle Google Sheets date format and various date string formats
+        if (typeof dateString === 'string') {
+          // Try to parse different date formats
+          const date = new Date(dateString);
+          if (!isNaN(date.getTime())) {
+            return date.toLocaleDateString('en-MY', {
+              year: 'numeric',
+              month: 'short',
+              day: 'numeric'
+            });
+          }
+          // If it's already in a good format, return as is
+          return dateString;
+        }
+        
+        // Handle Date objects
+        if (dateString instanceof Date) {
+          return dateString.toLocaleDateString('en-MY', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+        }
+        
+        return 'N/A';
+      } catch {
+        return dateString || 'N/A';
+      }
+    }
+
+    async function loadBillingData() {
+      try {
+        showLoading(true);
+        const userData = checkSession();
+        if (!userData?.phone) return safeRedirect('login.html');
+
+        const callbackName = `billingCallback_${Date.now()}`;
+        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(userData.phone)}`;
+
+        const response = await new Promise((resolve, reject) => {
+          window[callbackName] = (data) => {
+            delete window[callbackName];
+            document.getElementById(callbackName)?.remove();
+            resolve(data);
+          };
+
+          const script = document.createElement('script');
+          script.id = callbackName;
+          script.src = url;
+          script.onerror = () => {
+            delete window[callbackName];
+            reject(new Error('Failed to load billing data'));
+          };
+          document.head.appendChild(script);
+        });
+
+        if (!response.success) {
+          showError(response.message || 'Failed to load billing information', 'connectionError');
+          return;
+        }
+
+        allBillingData = response.data || [];
+        console.log('Loaded billing data:', allBillingData);
+        
+        renderBillingSections(allBillingData);
+
+      } catch (error) {
+        console.error('Billing load error:', error);
+        showError('Connection failed. Please try again.', 'connectionError');
+      } finally {
+        showLoading(false);
+      }
+    }
+
+    function renderBillingSections(data) {
+      // Split data into uncollected and collected
+      const uncollected = data.filter(item => !item.status || item.status.toString().trim() === '');
+      const collected = data.filter(item => item.status && item.status.toString().trim() !== '');
+      
+      uncollectedCount = uncollected.length;
+      const countElement = document.getElementById('uncollectedCount');
+      if (countElement) {
+        countElement.textContent = uncollectedCount;
+        countElement.style.display = uncollectedCount > 0 ? 'inline-flex' : 'none';
+      }
+      
+      renderSection('uncollectedSection', uncollected, true);
+      renderSection('collectedSection', collected, false);
+    }
+
+    function renderSection(sectionId, data, isUncollected) {
+      const section = document.getElementById(sectionId);
+      if (!section) return;
+      
+      if (!data.length) {
+        section.innerHTML = `
+          <div class="empty-state">
+            <i class="fas fa-box-open"></i>
+            No ${isUncollected ? 'uncollected' : 'completed'} parcels found
+          </div>
+        `;
+        return;
+      }
+
+      section.innerHTML = `
+        <table class="billing-table">
+          <thead>
+            <tr>
+              <th class="col-receipt">Receipt No.</th>
+              <th class="col-date">Date</th>
+              <th class="col-code">Code</th>
+              <th class="col-details">Details</th>
+              ${isUncollected ? '<th class="col-location">Location</th>' : ''}
+              <th class="col-total">Total</th>
+              ${isUncollected ? 
+                '<th class="col-action">Action</th>' : 
+                '<th class="col-status">Status</th><th class="col-collection-date">Collection Date</th>'
+              }
+            </tr>
+          </thead>
+          <tbody>
+            ${data.map(item => {
+              const receiptNumber = item.receipt || 'N/A';
+              const code = item.code || 'N/A';
+              const trackingDetails = item.trackingDetails || 'No tracking details available';
+              const location = item.location || 'N/A';
+              const total = item.total || 0;
+              const status = item.status || '';
+              const collectionDate = item.collectionDate || '';
+              
+              return `
+              <tr>
+                <td class="col-receipt">${receiptNumber}</td>
+                <td class="col-date">${formatBillingDate(item.date)}</td>
+                <td class="col-code">${code}</td>
+                <td class="col-details tracking-details">${trackingDetails}</td>
+                ${isUncollected ? `<td class="col-location">${location}</td>` : ''}
+                <td class="col-total amount">${formatCurrencyBND(total)}</td>
+                <td class="${isUncollected ? 'col-action' : 'col-status'}">
+                  ${isUncollected && receiptNumber !== 'N/A' ? 
+                    `<a href="https://omis-logistic.github.io/caz-paymentgateway/index.html?orderNumber=${receiptNumber}" 
+                       class="pay-now-btn" target="_blank">Pay Now</a>` :
+                    `<span class="status-badge status-completed">${status}</span>`
+                  }
+                </td>
+                ${!isUncollected ? 
+                  `<td class="col-collection-date">${formatBillingDate(collectionDate)}</td>` : 
+                  ''
+                }
+              </tr>
+            `}).join('')}
+          </tbody>
+        </table>
+      `;
+    }
+
+    function filterBillingData(searchTerm) {
+      const filtered = allBillingData.filter(item => {
+        if (!searchTerm) return true;
+        const searchLower = searchTerm.toLowerCase();
+        return (item.trackingDetails && item.trackingDetails.toLowerCase().includes(searchLower)) ||
+               (item.code && item.code.toLowerCase().includes(searchLower)) ||
+               (item.receipt && item.receipt.toLowerCase().includes(searchLower));
+      });
+      renderBillingSections(filtered);
+    }
+
+    // Initialize page
+    document.addEventListener('DOMContentLoaded', () => {
+      detectViewMode();
+      
+      // Setup search functionality
+      const searchInput = document.getElementById('searchInput');
+      if (searchInput) {
+        searchInput.addEventListener('input', (e) => {
+          filterBillingData(e.target.value.trim());
+        });
+      }
+
+      // Load billing data
+      loadBillingData();
+    });
+  </script>
+</body>
+</html>
