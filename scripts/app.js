@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby15SY3j0lOIsnQzl_sKlFN_F-k5whQPSwDIxwkGjdQUXp1McmxgYU7oC8hhHWDYouL/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwTdfwAxFRmrtb85trNq59oi8dMw5L3LwPCy6WQ4cws7uqe-c4ssfuf-r5sRXiK08I/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx8gXnezaCk4TbGqFTUugWQL-GP2EjR4QOMQ0nL-SOZwRu7lfzcgUp-llIltsbixiVf/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbww9rN-_ot2zqOGIYF0XjE43TMUgIJCGetXiWROaBgiIcRjoH2FoFta-5gW2pqqZl0J/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -219,68 +219,80 @@ async function handleParcelSubmission(e) {
   const form = e.target;
   showLoading(true);
 
+  // Safari network check
+  if (!navigator.onLine) {
+    showError('No internet connection. Please check your network and try again.');
+    showLoading(false);
+    return;
+  }
+
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
-    }
+    // Process files
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name.replace(/[^a-z0-9._-]/gi, '_'), // Sanitize filename
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
+      quantity: parseInt(formData.get('quantity')),
+      price: parseFloat(formData.get('price')),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: filesPayload
+      files: processedFiles
     };
 
-    await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-    });
+    const result = await submitDeclaration(payload);
+    
+    if (result.success) {
+      showSuccessMessage();
+      resetForm();
+      
+      // Optional: Add verification for critical submissions
+      setTimeout(() => {
+        verifySubmission(payload.trackingNumber);
+      }, 2000);
+    } else {
+      throw new Error(result.message || 'Submission failed');
+    }
 
   } catch (error) {
-    // Still ignore errors but files are handled
+    console.error('Submission error:', error);
+    
+    // User-friendly error messages for Safari
+    let userMessage = error.message;
+    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
+      userMessage = 'Network connection failed. Please check your internet and try again.';
+    } else if (error.message.includes('timeout')) {
+      userMessage = 'Request timed out. Please try again.';
+    }
+    
+    showError(userMessage);
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
   }
 }
 
 function readFileAsBase64(file) {
-  return new Promise((resolve) => {
+  return new Promise((resolve, reject) => {
     const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
+    reader.onload = () => {
+      // Safari-specific: Ensure proper base64 extraction
+      const result = reader.result;
+      const base64 = result.includes(',') ? result.split(',')[1] : result;
+      resolve(base64);
+    };
+    reader.onerror = error => reject(error);
     reader.readAsDataURL(file);
   });
 }
@@ -466,7 +478,11 @@ function handleFileSelection(input) {
 }
 
 // ================= SUBMISSION HANDLER =================
+// Enhanced submission with Safari timeout handling
 async function submitDeclaration(payload) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+
   try {
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
@@ -474,23 +490,23 @@ async function submitDeclaration(payload) {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
-      mode: 'cors',
-      redirect: 'follow',
-      referrerPolicy: 'no-referrer'
+      signal: controller.signal,
+      mode: 'cors'
     });
 
-    // Handle Google's URL redirection pattern
-    const finalResponse = response.url.includes('/exec') 
-      ? response
-      : await fetch(response.url);
+    clearTimeout(timeoutId);
 
-    if (!finalResponse.ok) throw new Error('Network response was not OK');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
     
-    return await finalResponse.json();
-
+    return await response.json();
   } catch (error) {
-    console.error('Submission error:', error);
-    throw new Error(`Submission failed: ${error.message}`);
+    clearTimeout(timeoutId);
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please try again');
+    }
+    throw error;
   }
 }
 
