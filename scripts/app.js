@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbw6XQZCayhhcXMZBQvWV2fc3MMRUQKTqN7UcxxGfAxzql_lPlaFkxdG9011qEyjQW71/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbx737dV4ESjx_m1x_sCsKrdcGEkuws4rwez7lW6zmCRafhO7NvGImXZSP82Am9bFfbg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxdW1EZ6ygE5jSmJMXON_o2WBZpZss049Gmtr7-QvGDo29Tz5YLrNuX4TlStjjDL7CJ/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwTO8PVoQcmR0ATSqEW0t0ss6oG8-BKaER9srwQ0iicRdZz0zoupXRnkd0Ncb0xja4Y/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -30,41 +30,47 @@ function detectViewMode() {
 }
 
 // ================= ERROR HANDLING =================
+// IMPROVE ERROR VISIBILITY
 function showError(message, targetId = 'error-message') {
   const errorElement = document.getElementById(targetId) || createErrorElement();
   
-  // Special handling for success-like messages
-  if (typeof message === 'string' && message.includes('success')) {
-    errorElement.style.background = '#00C851dd';
-    errorElement.textContent = message.replace('success', '').trim();
-  } else {
-    errorElement.style.background = '#ff4444dd';
-    errorElement.textContent = message;
-  }
+  // Ensure error is highly visible
+  errorElement.innerHTML = `
+    <div style="display: flex; align-items: center; gap: 10px;">
+      <span style="font-size: 1.5em;">⚠️</span>
+      <span>${message}</span>
+    </div>
+  `;
   
-  errorElement.style.display = 'block';
+  errorElement.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px 20px;
+    background: #ff4444;
+    color: white;
+    border-radius: 8px;
+    z-index: 10000;
+    display: block;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    max-width: 90%;
+    text-align: center;
+    font-weight: bold;
+  `;
   
+  // Auto-hide after 8 seconds for better UX
   setTimeout(() => {
     errorElement.style.display = 'none';
-  }, 5000);
+  }, 8000);
 }
 
 function createErrorElement() {
   const errorDiv = document.createElement('div');
   errorDiv.id = 'error-message';
   errorDiv.className = 'error-message';
-  errorDiv.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px;
-    background: #ff4444dd;
-    color: white;
-    border-radius: 5px;
-    z-index: 1000;
-    display: none;
-  `;
+  // Minimal styling here since showError will apply the full styles
+  errorDiv.style.cssText = 'display: none;';
   document.body.prepend(errorDiv);
   return errorDiv;
 }
@@ -130,9 +136,29 @@ async function callAPI(action, payload) {
   }
 }
 
-function showLoading(show = true) {
+// ENHANCE LOADING INDICATOR
+function showLoading(show = true, message = 'Processing Submission...') {
   const loader = document.getElementById('loadingOverlay') || createLoaderElement();
+  const textElement = loader.querySelector('.loading-text');
+  
+  if (textElement) {
+    textElement.textContent = message;
+  }
+  
   loader.style.display = show ? 'flex' : 'none';
+  
+  if (show) {
+    // Prevent form interaction while loading
+    document.querySelectorAll('input, button, select, textarea').forEach(el => {
+      el.style.pointerEvents = 'none';
+      el.style.opacity = '0.7';
+    });
+  } else {
+    document.querySelectorAll('input, button, select, textarea').forEach(el => {
+      el.style.pointerEvents = '';
+      el.style.opacity = '';
+    });
+  }
 }
 
 function createLoaderElement() {
@@ -219,80 +245,68 @@ async function handleParcelSubmission(e) {
   const form = e.target;
   showLoading(true);
 
-  // Safari network check
-  if (!navigator.onLine) {
-    showError('No internet connection. Please check your network and try again.');
-    showLoading(false);
-    return;
-  }
-
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Process files
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name.replace(/[^a-z0-9._-]/gi, '_'), // Sanitize filename
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
-    );
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
+      }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
+    }
 
     const payload = {
       trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
       itemDescription: formData.get('itemDescription').trim(),
-      quantity: parseInt(formData.get('quantity')),
-      price: parseFloat(formData.get('price')),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
-      files: processedFiles
+      files: filesPayload
     };
 
-    const result = await submitDeclaration(payload);
-    
-    if (result.success) {
-      showSuccessMessage();
-      resetForm();
-      
-      // Optional: Add verification for critical submissions
-      setTimeout(() => {
-        verifySubmission(payload.trackingNumber);
-      }, 2000);
-    } else {
-      throw new Error(result.message || 'Submission failed');
-    }
+    // Use retry mechanism for submission
+    await submitWithRetry(payload);
 
   } catch (error) {
+    // Show error to user instead of silently ignoring it
+    showError(`Submission failed: ${error.message}`);
     console.error('Submission error:', error);
-    
-    // User-friendly error messages for Safari
-    let userMessage = error.message;
-    if (error.message.includes('Failed to fetch') || error.message.includes('NetworkError')) {
-      userMessage = 'Network connection failed. Please check your internet and try again.';
-    } else if (error.message.includes('timeout')) {
-      userMessage = 'Request timed out. Please try again.';
-    }
-    
-    showError(userMessage);
+    return; // Don't proceed to show success message
   } finally {
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
 function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
+  return new Promise((resolve) => {
     const reader = new FileReader();
-    reader.onload = () => {
-      // Safari-specific: Ensure proper base64 extraction
-      const result = reader.result;
-      const base64 = result.includes(',') ? result.split(',')[1] : result;
-      resolve(base64);
-    };
-    reader.onerror = error => reject(error);
+    reader.onload = () => resolve(reader.result.split(',')[1]);
     reader.readAsDataURL(file);
   });
 }
@@ -478,11 +492,7 @@ function handleFileSelection(input) {
 }
 
 // ================= SUBMISSION HANDLER =================
-// Enhanced submission with Safari timeout handling
 async function submitDeclaration(payload) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
-
   try {
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
@@ -490,23 +500,41 @@ async function submitDeclaration(payload) {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
-      signal: controller.signal,
-      mode: 'cors'
+      mode: 'cors',
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer'
     });
 
-    clearTimeout(timeoutId);
+    // Handle Google's URL redirection pattern
+    const finalResponse = response.url.includes('/exec') 
+      ? response
+      : await fetch(response.url);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
+    if (!finalResponse.ok) throw new Error('Network response was not OK');
     
-    return await response.json();
+    return await finalResponse.json();
+
   } catch (error) {
-    clearTimeout(timeoutId);
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please try again');
+    console.error('Submission error:', error);
+    throw new Error(`Submission failed: ${error.message}`);
+  }
+}
+
+// ADD RETRY MECHANISM
+async function submitWithRetry(payload, maxRetries = 2) {
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      const result = await submitDeclaration(payload);
+      return result;
+    } catch (error) {
+      if (attempt === maxRetries) throw error;
+      
+      // Wait before retry (exponential backoff)
+      await new Promise(resolve => 
+        setTimeout(resolve, 1000 * attempt)
+      );
+      console.log(`Retry attempt ${attempt}...`);
     }
-    throw error;
   }
 }
 
