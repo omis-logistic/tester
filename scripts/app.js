@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxaSuLnl3bsemdz9LXKdfrSQkm2hud32En5GeQK3i0efoat4slell7O2xK_tj7J9xGJ/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzEXK9yC1a8MS_Rkte5tM2PLQis92GOX_VNBUh0MnHIUlcmcCQkgxelsVyV-wZwW-Pg/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyte4FABYloj2JWfUuMpqZGvH0eRq6FxbAm582ncBpY5c4pZOe9v5xxgf0555MKx-KB/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -549,11 +549,13 @@ function handleFileSelection(input) {
 
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
+  console.log('Starting submission to:', CONFIG.PROXY_URL);
+  
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+  const timeoutId = setTimeout(() => controller.abort(), 30000);
 
   try {
-    // Remove files from payload for JSON stringify
+    // Remove files from payload for FormData
     const { files, ...payloadWithoutFiles } = payload;
     
     const formData = new FormData();
@@ -562,34 +564,42 @@ async function submitDeclaration(payload) {
       data: payloadWithoutFiles
     }));
 
-    // Add files to formData if they exist
+    // Add files to formData
     if (files && files.length > 0) {
       files.forEach((file, index) => {
-        const blob = new Blob(
-          [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
-          { type: file.type }
-        );
+        // Convert base64 back to blob for FormData
+        const byteCharacters = atob(file.data);
+        const byteNumbers = new Array(byteCharacters.length);
+        for (let i = 0; i < byteCharacters.length; i++) {
+          byteNumbers[i] = byteCharacters.charCodeAt(i);
+        }
+        const byteArray = new Uint8Array(byteNumbers);
+        const blob = new Blob([byteArray], { type: file.type });
+        
         formData.append(`file${index}`, blob, file.name);
       });
     }
 
-    const response = await fetch(CONFIG.GAS_URL, {
+    console.log('Sending FormData with files:', files ? files.length : 0);
+
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       body: formData,
-      signal: controller.signal
+      signal: controller.signal,
+      // Remove custom headers for FormData - let browser set them
+      headers: {
+        // Let browser set Content-Type with boundary for FormData
+      }
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
 
     const result = await response.json();
-    
-    if (!result) {
-      throw new Error('Empty response from server');
-    }
+    console.log('Server response:', result);
     
     return result;
 
@@ -597,11 +607,16 @@ async function submitDeclaration(payload) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please try again');
+      throw new Error('Request timeout - please check your connection and try again');
     }
     
-    console.error('Network error:', error);
-    throw new Error(`Network error: ${error.message}`);
+    console.error('Network error details:', error);
+    
+    if (error.message.includes('Failed to fetch')) {
+      throw new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+    
+    throw new Error(`Submission error: ${error.message}`);
   }
 }
 
