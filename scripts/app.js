@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbz15grWSZNdIdDwLAjtqBg_ZS-G1mvZKvF60ip8jaQlrzPPZGbfFAs33dFPG9vr9A3Y/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbz15grWSZNdIdDwLAjtqBg_ZS-G1mvZKvF60ip8jaQlrzPPZGbfFAs33dFPG9vr9A3Y/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwQ1NcGYA-1TIfVBCWBAZuvaF4vyMcqih_UqwDvpAqcwmJS22aP4RXk1oBhHORZ1Q8/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
