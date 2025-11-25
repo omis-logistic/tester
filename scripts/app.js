@@ -249,61 +249,34 @@ async function handleParcelSubmission(e) {
   
   showLoading(true, 'Processing your submission...');
 
-  // Disable submit button to prevent multiple clicks
-  const submitBtn = form.querySelector('button[type="submit"]');
-  if (submitBtn) submitBtn.disabled = true;
-
-  let submissionSuccessful = false;
-
   try {
     const formData = new FormData(form);
     
-    // Get form values
+    // Create simple payload without files for testing
     const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phoneNumber: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: parseInt(formData.get('quantity')),
-      price: parseFloat(formData.get('price')),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: formData.get('itemCategory'),
-      transactionId: transactionId
+      action: 'submitParcelDeclaration',
+      data: {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phoneNumber: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: parseInt(formData.get('quantity')),
+        price: parseFloat(formData.get('price')),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory'),
+        transactionId: transactionId
+      }
     };
 
-    console.log('Form payload:', payload);
+    console.log('Testing with simple payload:', payload);
 
-    // Get files
-    const files = Array.from(formData.getAll('files[]'));
-    console.log('Files to upload:', files.length);
-
-    // Validate mandatory file requirement for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(payload.itemCategory) && files.length === 0) {
-      throw new Error('Invoice files are required for this item category');
-    }
-
-    // Prepare FormData for submission
-    const submissionFormData = new FormData();
-    submissionFormData.append('data', JSON.stringify({
-      action: 'submitParcelDeclaration',
-      data: payload
-    }));
-
-    // Add files to FormData
-    files.forEach((file, index) => {
-      submissionFormData.append(`file${index}`, file);
-    });
-
-    // Submit to PROXY URL
+    // Test with simple JSON POST first
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: submissionFormData
+      headers: {
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify(payload)
     });
 
     if (!response.ok) {
@@ -311,32 +284,24 @@ async function handleParcelSubmission(e) {
     }
 
     const result = await response.json();
-    console.log('Submission result:', result);
+    console.log('Test submission result:', result);
 
     if (!result.success) {
       throw new Error(result.message || 'Submission failed');
     }
 
-    submissionSuccessful = true;
+    showSuccessMessage();
+    resetForm();
+    
+    setTimeout(() => {
+      safeRedirect('dashboard.html');
+    }, 2000);
 
   } catch (error) {
     console.error('Submission error:', error);
     showError(`Submission failed: ${error.message}`);
   } finally {
     showLoading(false);
-    
-    // Re-enable submit button
-    if (submitBtn) submitBtn.disabled = false;
-    
-    if (submissionSuccessful) {
-      resetForm();
-      showSuccessMessage();
-      
-      // Redirect after success
-      setTimeout(() => {
-        safeRedirect('dashboard.html');
-      }, 2000);
-    }
   }
 }
 
@@ -549,13 +514,11 @@ function handleFileSelection(input) {
 
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
-  console.log('Starting submission to:', CONFIG.PROXY_URL);
-  
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000);
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
   try {
-    // Remove files from payload for FormData
+    // Remove files from payload for JSON stringify
     const { files, ...payloadWithoutFiles } = payload;
     
     const formData = new FormData();
@@ -564,42 +527,34 @@ async function submitDeclaration(payload) {
       data: payloadWithoutFiles
     }));
 
-    // Add files to formData
+    // Add files to formData if they exist
     if (files && files.length > 0) {
       files.forEach((file, index) => {
-        // Convert base64 back to blob for FormData
-        const byteCharacters = atob(file.data);
-        const byteNumbers = new Array(byteCharacters.length);
-        for (let i = 0; i < byteCharacters.length; i++) {
-          byteNumbers[i] = byteCharacters.charCodeAt(i);
-        }
-        const byteArray = new Uint8Array(byteNumbers);
-        const blob = new Blob([byteArray], { type: file.type });
-        
+        const blob = new Blob(
+          [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
+          { type: file.type }
+        );
         formData.append(`file${index}`, blob, file.name);
       });
     }
 
-    console.log('Sending FormData with files:', files ? files.length : 0);
-
-    const response = await fetch(CONFIG.PROXY_URL, {
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
       body: formData,
-      signal: controller.signal,
-      // Remove custom headers for FormData - let browser set them
-      headers: {
-        // Let browser set Content-Type with boundary for FormData
-      }
+      signal: controller.signal
     });
 
     clearTimeout(timeoutId);
 
     if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
 
     const result = await response.json();
-    console.log('Server response:', result);
+    
+    if (!result) {
+      throw new Error('Empty response from server');
+    }
     
     return result;
 
@@ -607,16 +562,11 @@ async function submitDeclaration(payload) {
     clearTimeout(timeoutId);
     
     if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please check your connection and try again');
+      throw new Error('Request timeout - please try again');
     }
     
-    console.error('Network error details:', error);
-    
-    if (error.message.includes('Failed to fetch')) {
-      throw new Error('Network connection failed. Please check your internet connection and try again.');
-    }
-    
-    throw new Error(`Submission error: ${error.message}`);
+    console.error('Network error:', error);
+    throw new Error(`Network error: ${error.message}`);
   }
 }
 
