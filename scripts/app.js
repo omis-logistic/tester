@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxU5RJKLKMbjKL3m-CMLPiD2NwAZ0TU69aLDHFAvn-k-2smChwgTBz6QXk83aSwifpi/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz-_mtH7JDv0qfsQqFnBuTiixppnvmLhBDKbCxRlcAgObwMIYgZokO4EzW9tjxR9qki/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwTO8PVoQcmR0ATSqEW0t0ss6oG8-BKaER9srwQ0iicRdZz0zoupXRnkd0Ncb0xja4Y/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -243,16 +243,24 @@ function resetForm() {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
+  
+  // Generate unique transaction ID
+  const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+  
   showLoading(true);
 
-  let submissionSuccessful = false; // Track success
+  // Disable submit button to prevent multiple clicks
+  const submitBtn = document.getElementById('submitBtn');
+  if (submitBtn) submitBtn.disabled = true;
+
+  let submissionSuccessful = false;
 
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files'));
+    const files = Array.from(formData.getAll('files[]'));
     
-    // Process files for ALL categories, not just starred ones
+    // Process files for ALL categories
     let filesPayload = [];
     if (files.length > 0) {
       const processedFiles = await Promise.all(
@@ -285,22 +293,28 @@ async function handleParcelSubmission(e) {
       price: formData.get('price'),
       collectionPoint: formData.get('collectionPoint'),
       itemCategory: itemCategory,
+      transactionId: transactionId, // ADD TRANSACTION ID
       files: filesPayload
     };
 
     // Use retry mechanism for submission
-    await submitWithRetry(payload);
-    submissionSuccessful = true; // Mark as successful
+    const result = await submitWithRetry(payload);
+    
+    if (result.duplicate) {
+      console.log('Duplicate submission ignored');
+    }
+    
+    submissionSuccessful = true;
 
   } catch (error) {
-    // Show error to user
     showError(`Submission failed: ${error.message}`);
     console.error('Submission error:', error);
-    return; // Stop execution
   } finally {
     showLoading(false);
     
-    // Only reset form and show success if submission was successful
+    // Re-enable submit button
+    if (submitBtn) submitBtn.disabled = false;
+    
     if (submissionSuccessful) {
       resetForm();
       showSuccessMessage();
@@ -468,60 +482,108 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
+    const category = document.getElementById('itemCategory')?.value || '';
     
-    // Validate against starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
+    // Validate file count and size for ALL categories when files are selected
+    if (files.length > 0) {
+      if (files.length > 3) {
+        throw new Error('Maximum 3 files allowed');
+      }
+
+      // Validate individual files
+      files.forEach(file => {
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          throw new Error(`${file.name} exceeds 5MB limit`);
+        }
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          throw new Error(`${file.name} must be JPEG, PNG, or PDF`);
+        }
+      });
     }
 
-    // Validate individual files
-    files.forEach(file => {
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        throw new Error(`${file.name} exceeds 5MB`);
+    // Update UI to show file selection
+    const fileHelp = document.getElementById('fileHelp');
+    if (fileHelp) {
+      if (files.length > 0) {
+        fileHelp.textContent = `${files.length} file(s) selected`;
+        fileHelp.style.color = '#4CAF50';
+      } else {
+        const starredCategories = [
+          '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+          '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+        ];
+        
+        if (starredCategories.includes(category)) {
+          fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
+          fileHelp.style.color = '#ff4444';
+        } else {
+          fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
+          fileHelp.style.color = '#888';
+        }
       }
-    });
-
-    showError(`${files.length} valid files selected`, 'status-message success');
+    }
     
   } catch (error) {
     showError(error.message);
-    input.value = '';
+    input.value = ''; // Clear invalid files
   }
 }
 
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
   try {
-    const response = await fetch(CONFIG.PROXY_URL, {
+    // Remove files from payload for JSON stringify
+    const { files, ...payloadWithoutFiles } = payload;
+    
+    const formData = new FormData();
+    formData.append('data', JSON.stringify({
+      action: 'submitParcelDeclaration',
+      data: payloadWithoutFiles
+    }));
+
+    // Add files to formData if they exist
+    if (files && files.length > 0) {
+      files.forEach((file, index) => {
+        const blob = new Blob(
+          [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
+          { type: file.type }
+        );
+        formData.append(`file${index}`, blob, file.name);
+      });
+    }
+
+    const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-      },
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
-      mode: 'cors',
-      redirect: 'follow',
-      referrerPolicy: 'no-referrer'
+      body: formData,
+      signal: controller.signal
     });
 
-    // Handle Google's URL redirection pattern
-    const finalResponse = response.url.includes('/exec') 
-      ? response
-      : await fetch(response.url);
+    clearTimeout(timeoutId);
 
-    if (!finalResponse.ok) throw new Error('Network response was not OK');
+    if (!response.ok) {
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+
+    const result = await response.json();
     
-    return await finalResponse.json();
+    if (!result) {
+      throw new Error('Empty response from server');
+    }
+    
+    return result;
 
   } catch (error) {
-    console.error('Submission error:', error);
-    throw new Error(`Submission failed: ${error.message}`);
+    clearTimeout(timeoutId);
+    
+    if (error.name === 'AbortError') {
+      throw new Error('Request timeout - please try again');
+    }
+    
+    console.error('Network error:', error);
+    throw new Error(`Network error: ${error.message}`);
   }
 }
 
