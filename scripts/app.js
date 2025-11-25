@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxdW1EZ6ygE5jSmJMXON_o2WBZpZss049Gmtr7-QvGDo29Tz5YLrNuX4TlStjjDL7CJ/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxU5RJKLKMbjKL3m-CMLPiD2NwAZ0TU69aLDHFAvn-k-2smChwgTBz6QXk83aSwifpi/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwTO8PVoQcmR0ATSqEW0t0ss6oG8-BKaER9srwQ0iicRdZz0zoupXRnkd0Ncb0xja4Y/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -245,24 +245,16 @@ async function handleParcelSubmission(e) {
   const form = e.target;
   showLoading(true);
 
+  let submissionSuccessful = false; // Track success
+
   try {
     const formData = new FormData(form);
     const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
+    // Process files for ALL categories, not just starred ones
+    let filesPayload = [];
+    if (files.length > 0) {
       const processedFiles = await Promise.all(
         files.map(async file => ({
           name: file.name,
@@ -270,10 +262,18 @@ async function handleParcelSubmission(e) {
           data: await readFileAsBase64(file)
         }))
       );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
+      filesPayload = processedFiles;
+    }
+
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(itemCategory) && filesPayload.length === 0) {
+      throw new Error('Files required for this category');
     }
 
     const payload = {
@@ -290,16 +290,21 @@ async function handleParcelSubmission(e) {
 
     // Use retry mechanism for submission
     await submitWithRetry(payload);
+    submissionSuccessful = true; // Mark as successful
 
   } catch (error) {
-    // Show error to user instead of silently ignoring it
+    // Show error to user
     showError(`Submission failed: ${error.message}`);
     console.error('Submission error:', error);
-    return; // Don't proceed to show success message
+    return; // Stop execution
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
+    
+    // Only reset form and show success if submission was successful
+    if (submissionSuccessful) {
+      resetForm();
+      showSuccessMessage();
+    }
   }
 }
 
@@ -525,9 +530,22 @@ async function submitWithRetry(payload, maxRetries = 2) {
   for (let attempt = 1; attempt <= maxRetries; attempt++) {
     try {
       const result = await submitDeclaration(payload);
-      return result;
+      
+      // Check if the response indicates success
+      if (result && result.success) {
+        return result;
+      } else {
+        throw new Error(result.message || 'Submission failed');
+      }
+      
     } catch (error) {
-      if (attempt === maxRetries) throw error;
+      // Don't retry on duplicate errors or validation errors
+      if (error.message.includes('duplicate') || 
+          error.message.includes('recently submitted') ||
+          error.message.includes('validation') ||
+          attempt === maxRetries) {
+        throw error;
+      }
       
       // Wait before retry (exponential backoff)
       await new Promise(resolve => 
