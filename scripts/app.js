@@ -2,7 +2,7 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbz15grWSZNdIdDwLAjtqBg_ZS-G1mvZKvF60ip8jaQlrzPPZGbfFAs33dFPG9vr9A3Y/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwQ1NcGYA-1TIfVBCWBAZuvaF4vyMcqih_UqwDvpAqcwmJS22aP4RXk1oBhHORZ1Q8/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwLuL25j8j7Vk5NDrWPl02YI2wYzCZxPSYGXjONYP5TX_h18tLtJmpBPhNtbQOb-EAY/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -247,68 +247,81 @@ async function handleParcelSubmission(e) {
   // Generate unique transaction ID
   const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   
-  showLoading(true);
+  showLoading(true, 'Processing your submission...');
 
   // Disable submit button to prevent multiple clicks
-  const submitBtn = document.getElementById('submitBtn');
+  const submitBtn = form.querySelector('button[type="submit"]');
   if (submitBtn) submitBtn.disabled = true;
 
   let submissionSuccessful = false;
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
-    const files = Array.from(formData.getAll('files[]'));
     
-    // Process files for ALL categories
-    let filesPayload = [];
-    if (files.length > 0) {
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      filesPayload = processedFiles;
-    }
+    // Get form values
+    const payload = {
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phoneNumber: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: parseInt(formData.get('quantity')),
+      price: parseFloat(formData.get('price')),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: formData.get('itemCategory'),
+      transactionId: transactionId
+    };
 
-    // Mandatory file check for starred categories
+    console.log('Form payload:', payload);
+
+    // Get files
+    const files = Array.from(formData.getAll('files[]'));
+    console.log('Files to upload:', files.length);
+
+    // Validate mandatory file requirement for starred categories
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
       '*Oil Ointment', '*Supplement', '*Others'
     ];
     
-    if (starredCategories.includes(itemCategory) && filesPayload.length === 0) {
-      throw new Error('Files required for this category');
+    if (starredCategories.includes(payload.itemCategory) && files.length === 0) {
+      throw new Error('Invoice files are required for this item category');
     }
 
-    const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      transactionId: transactionId, // ADD TRANSACTION ID
-      files: filesPayload
-    };
+    // Prepare FormData for submission
+    const submissionFormData = new FormData();
+    submissionFormData.append('data', JSON.stringify({
+      action: 'submitParcelDeclaration',
+      data: payload
+    }));
 
-    // Use retry mechanism for submission
-    const result = await submitWithRetry(payload);
-    
-    if (result.duplicate) {
-      console.log('Duplicate submission ignored');
+    // Add files to FormData
+    files.forEach((file, index) => {
+      submissionFormData.append(`file${index}`, file);
+    });
+
+    // Submit to PROXY URL
+    const response = await fetch(CONFIG.PROXY_URL, {
+      method: 'POST',
+      body: submissionFormData
+    });
+
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
     }
-    
+
+    const result = await response.json();
+    console.log('Submission result:', result);
+
+    if (!result.success) {
+      throw new Error(result.message || 'Submission failed');
+    }
+
     submissionSuccessful = true;
 
   } catch (error) {
-    showError(`Submission failed: ${error.message}`);
     console.error('Submission error:', error);
+    showError(`Submission failed: ${error.message}`);
   } finally {
     showLoading(false);
     
@@ -318,6 +331,11 @@ async function handleParcelSubmission(e) {
     if (submissionSuccessful) {
       resetForm();
       showSuccessMessage();
+      
+      // Redirect after success
+      setTimeout(() => {
+        safeRedirect('dashboard.html');
+      }, 2000);
     }
   }
 }
