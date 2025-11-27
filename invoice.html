@@ -252,15 +252,53 @@
   <script src="scripts/app.js"></script>
   <script>
     let invoiceData = null;
-
-    // NEW: Function to go back to billing page properly
+  
+    // Enhanced session check for invoice page
+    function checkInvoiceSession() {
+      try {
+        const sessionData = localStorage.getItem('userData');
+        const lastActivity = localStorage.getItem('lastActivity');
+  
+        if (!sessionData) {
+          console.log('No session data found, redirecting to login');
+          safeRedirect('login.html');
+          return null;
+        }
+  
+        if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
+          console.log('Session expired, redirecting to login');
+          safeRedirect('login.html');
+          return null;
+        }
+  
+        // Update last activity
+        localStorage.setItem('lastActivity', Date.now());
+        return JSON.parse(sessionData);
+        
+      } catch (error) {
+        console.error('Session check error:', error);
+        safeRedirect('login.html');
+        return null;
+      }
+    }
+  
+    // Fixed back button function
     function goBackToBilling() {
+      console.log('Navigating back to billing page');
+      // Use safeRedirect to ensure proper navigation
       safeRedirect('billing-info.html');
     }
-
+  
     async function loadInvoiceData() {
       try {
-        showLoading(true);
+        showLoading(true, "Loading invoice data...");
+        
+        // Check session first
+        const userData = checkInvoiceSession();
+        if (!userData) {
+          console.error('No valid session found');
+          return;
+        }
         
         // Get order number from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
@@ -269,37 +307,22 @@
         if (!orderNumber) {
           throw new Error('No order number provided');
         }
-
-        const callbackName = `invoiceCallback_${Date.now()}`;
-        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getInvoiceData&orderNumber=${encodeURIComponent(orderNumber)}`;
-
-        const response = await new Promise((resolve, reject) => {
-          window[callbackName] = (data) => {
-            delete window[callbackName];
-            document.getElementById(callbackName)?.remove();
-            resolve(data);
-          };
-
-          const script = document.createElement('script');
-          script.id = callbackName;
-          script.src = url;
-          script.onerror = () => {
-            delete window[callbackName];
-            reject(new Error('Failed to load invoice data'));
-          };
-          document.head.appendChild(script);
-        });
-
-        if (!response.success) {
-          throw new Error(response.message || 'Failed to load invoice information');
+  
+        console.log('Loading invoice for order:', orderNumber);
+  
+        // Load invoice data and billing details in parallel
+        const [invoiceResponse, billingDetails] = await Promise.all([
+          loadInvoiceDataFromServer(orderNumber),
+          loadBillingDetails(orderNumber, userData.phone)
+        ]);
+  
+        if (!invoiceResponse.success) {
+          throw new Error(invoiceResponse.message || 'Failed to load invoice information');
         }
-
-        invoiceData = response.data;
-        
-        // Also load billing details for this order
-        const billingDetails = await loadBillingDetails(orderNumber);
+  
+        invoiceData = invoiceResponse.data;
         renderInvoiceContent(invoiceData, billingDetails);
-
+  
       } catch (error) {
         console.error('Invoice load error:', error);
         showError(error.message, 'connectionError');
@@ -307,24 +330,45 @@
         showLoading(false);
       }
     }
-
-    // NEW: Function to load billing details for the tracking information
-    async function loadBillingDetails(orderNumber) {
+  
+    // Separate function for server call
+    async function loadInvoiceDataFromServer(orderNumber) {
+      const callbackName = `invoiceCallback_${Date.now()}`;
+      const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getInvoiceData&orderNumber=${encodeURIComponent(orderNumber)}`;
+  
+      return new Promise((resolve, reject) => {
+        window[callbackName] = (data) => {
+          delete window[callbackName];
+          document.getElementById(callbackName)?.remove();
+          resolve(data);
+        };
+  
+        const script = document.createElement('script');
+        script.id = callbackName;
+        script.src = url;
+        script.onerror = () => {
+          delete window[callbackName];
+          reject(new Error('Failed to load invoice data'));
+        };
+        document.head.appendChild(script);
+      });
+    }
+  
+    // Updated billing details loader with session
+    async function loadBillingDetails(orderNumber, phone) {
       try {
-        const userData = checkSession();
-        if (!userData?.phone) return null;
-
-        // Load all billing data and find the matching order
+        console.log('Loading billing details for order:', orderNumber);
+        
         const callbackName = `billingDetailsCallback_${Date.now()}`;
-        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(userData.phone)}`;
-
+        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(phone)}`;
+  
         const response = await new Promise((resolve, reject) => {
           window[callbackName] = (data) => {
             delete window[callbackName];
             document.getElementById(callbackName)?.remove();
             resolve(data);
           };
-
+  
           const script = document.createElement('script');
           script.id = callbackName;
           script.src = url;
@@ -334,10 +378,11 @@
           };
           document.head.appendChild(script);
         });
-
+  
         if (response.success && response.data) {
           // Find the order in billing data
           const order = response.data.find(item => item.receipt === orderNumber);
+          console.log('Found billing details:', order ? 'Yes' : 'No');
           return order || null;
         }
         
@@ -454,9 +499,15 @@
       }
     }
 
-    // Initialize page
+    // Initialize page with better error handling
     document.addEventListener('DOMContentLoaded', () => {
-      loadInvoiceData();
+      console.log('Invoice page loaded, starting data load...');
+      try {
+        loadInvoiceData();
+      } catch (error) {
+        console.error('Initialization error:', error);
+        showError('Failed to initialize page. Please try again.', 'connectionError');
+      }
     });
   </script>
 </body>
