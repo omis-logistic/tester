@@ -130,9 +130,25 @@ async function callAPI(action, payload) {
   }
 }
 
-function showLoading(show = true) {
-  const loader = document.getElementById('loadingOverlay') || createLoaderElement();
+function showLoading(show = true, message = 'Processing...') {
+  const loader = document.getElementById('loadingOverlay');
+  if (!loader) return;
+
+  const textElement = loader.querySelector('.loading-text');
+  if (textElement) {
+    textElement.textContent = message;
+  }
+
   loader.style.display = show ? 'flex' : 'none';
+  
+  // Add a timeout to show "this may take a while" for long operations
+  if (show) {
+    setTimeout(() => {
+      if (loader.style.display === 'flex' && textElement) {
+        textElement.textContent = message + ' This may take a while...';
+      }
+    }, 3000); // Show after 3 seconds
+  }
 }
 
 function createLoaderElement() {
