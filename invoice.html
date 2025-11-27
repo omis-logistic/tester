@@ -251,6 +251,12 @@
 
   <script src="scripts/app.js"></script>
   <script>
+    
+    console.log('Page loaded - checking session...');
+    const userData = checkSession();
+    console.log('Session data:', userData);
+    console.log('Current page:', window.location.href);
+    
     let invoiceData = null;
   
     // Enhanced session check for invoice page
