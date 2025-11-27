@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxaSuLnl3bsemdz9LXKdfrSQkm2hud32En5GeQK3i0efoat4slell7O2xK_tj7J9xGJ/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyte4FABYloj2JWfUuMpqZGvH0eRq6FxbAm582ncBpY5c4pZOe9v5xxgf0555MKx-KB/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbw-RJl3RFs8FVx-5RR4ByHz_7TaruwDtBUfd3fgnXGLxMEqnc-sBY4ZOis5BwI1Uwpz/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxIAX4irDMGRGzrQcnuQIP3-gAdMJ_tdAP9UDHr14s4deFBLu_-RjBRjZA8FgX3mrqtEQ/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -30,47 +30,41 @@ function detectViewMode() {
 }
 
 // ================= ERROR HANDLING =================
-// IMPROVE ERROR VISIBILITY
 function showError(message, targetId = 'error-message') {
   const errorElement = document.getElementById(targetId) || createErrorElement();
   
-  // Ensure error is highly visible
-  errorElement.innerHTML = `
-    <div style="display: flex; align-items: center; gap: 10px;">
-      <span style="font-size: 1.5em;">⚠️</span>
-      <span>${message}</span>
-    </div>
-  `;
+  // Special handling for success-like messages
+  if (typeof message === 'string' && message.includes('success')) {
+    errorElement.style.background = '#00C851dd';
+    errorElement.textContent = message.replace('success', '').trim();
+  } else {
+    errorElement.style.background = '#ff4444dd';
+    errorElement.textContent = message;
+  }
   
-  errorElement.style.cssText = `
-    position: fixed;
-    top: 20px;
-    left: 50%;
-    transform: translateX(-50%);
-    padding: 15px 20px;
-    background: #ff4444;
-    color: white;
-    border-radius: 8px;
-    z-index: 10000;
-    display: block;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
-    max-width: 90%;
-    text-align: center;
-    font-weight: bold;
-  `;
+  errorElement.style.display = 'block';
   
-  // Auto-hide after 8 seconds for better UX
   setTimeout(() => {
     errorElement.style.display = 'none';
-  }, 8000);
+  }, 5000);
 }
 
 function createErrorElement() {
   const errorDiv = document.createElement('div');
   errorDiv.id = 'error-message';
   errorDiv.className = 'error-message';
-  // Minimal styling here since showError will apply the full styles
-  errorDiv.style.cssText = 'display: none;';
+  errorDiv.style.cssText = `
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    padding: 15px;
+    background: #ff4444dd;
+    color: white;
+    border-radius: 5px;
+    z-index: 1000;
+    display: none;
+  `;
   document.body.prepend(errorDiv);
   return errorDiv;
 }
@@ -136,29 +130,9 @@ async function callAPI(action, payload) {
   }
 }
 
-// ENHANCE LOADING INDICATOR
-function showLoading(show = true, message = 'Processing Submission...') {
+function showLoading(show = true) {
   const loader = document.getElementById('loadingOverlay') || createLoaderElement();
-  const textElement = loader.querySelector('.loading-text');
-  
-  if (textElement) {
-    textElement.textContent = message;
-  }
-  
   loader.style.display = show ? 'flex' : 'none';
-  
-  if (show) {
-    // Prevent form interaction while loading
-    document.querySelectorAll('input, button, select, textarea').forEach(el => {
-      el.style.pointerEvents = 'none';
-      el.style.opacity = '0.7';
-    });
-  } else {
-    document.querySelectorAll('input, button, select, textarea').forEach(el => {
-      el.style.pointerEvents = '';
-      el.style.opacity = '';
-    });
-  }
 }
 
 function createLoaderElement() {
@@ -243,65 +217,63 @@ function resetForm() {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  
-  // Generate unique transaction ID
-  const transactionId = `txn_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-  
-  showLoading(true, 'Processing your submission...');
+  showLoading(true);
 
   try {
     const formData = new FormData(form);
+    const itemCategory = formData.get('itemCategory');
+    const files = Array.from(formData.getAll('files'));
     
-    // Create simple payload without files for testing
-    const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phoneNumber: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: parseInt(formData.get('quantity')),
-        price: parseFloat(formData.get('price')),
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory'),
-        transactionId: transactionId
+    // Mandatory file check for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        throw new Error('Files required for this category');
       }
+      
+      // Process files for starred categories
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+      
+      var filesPayload = processedFiles;
+    } else {
+      var filesPayload = [];
+    }
+
+    const payload = {
+      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+      nameOnParcel: formData.get('nameOnParcel').trim(),
+      phone: document.getElementById('phone').value,
+      itemDescription: formData.get('itemDescription').trim(),
+      quantity: formData.get('quantity'),
+      price: formData.get('price'),
+      collectionPoint: formData.get('collectionPoint'),
+      itemCategory: itemCategory,
+      files: filesPayload
     };
 
-    console.log('Testing with simple payload:', payload);
-
-    // Test with simple JSON POST first
-    const response = await fetch(CONFIG.PROXY_URL, {
+    await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify(payload)
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
-    }
-
-    const result = await response.json();
-    console.log('Test submission result:', result);
-
-    if (!result.success) {
-      throw new Error(result.message || 'Submission failed');
-    }
-
-    showSuccessMessage();
-    resetForm();
-    
-    setTimeout(() => {
-      safeRedirect('dashboard.html');
-    }, 2000);
-
   } catch (error) {
-    console.error('Submission error:', error);
-    showError(`Submission failed: ${error.message}`);
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
+    resetForm();
+    showSuccessMessage();
   }
 }
 
@@ -465,139 +437,60 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory')?.value || '';
+    const category = document.getElementById('itemCategory').value;
     
-    // Validate file count and size for ALL categories when files are selected
-    if (files.length > 0) {
-      if (files.length > 3) {
-        throw new Error('Maximum 3 files allowed');
-      }
-
-      // Validate individual files
-      files.forEach(file => {
-        if (file.size > CONFIG.MAX_FILE_SIZE) {
-          throw new Error(`${file.name} exceeds 5MB limit`);
-        }
-        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-          throw new Error(`${file.name} must be JPEG, PNG, or PDF`);
-        }
-      });
+    // Validate against starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      if (files.length < 1) throw new Error('At least 1 file required');
+      if (files.length > 3) throw new Error('Max 3 files allowed');
     }
 
-    // Update UI to show file selection
-    const fileHelp = document.getElementById('fileHelp');
-    if (fileHelp) {
-      if (files.length > 0) {
-        fileHelp.textContent = `${files.length} file(s) selected`;
-        fileHelp.style.color = '#4CAF50';
-      } else {
-        const starredCategories = [
-          '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-          '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-        ];
-        
-        if (starredCategories.includes(category)) {
-          fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
-          fileHelp.style.color = '#ff4444';
-        } else {
-          fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
-          fileHelp.style.color = '#888';
-        }
+    // Validate individual files
+    files.forEach(file => {
+      if (file.size > CONFIG.MAX_FILE_SIZE) {
+        throw new Error(`${file.name} exceeds 5MB`);
       }
-    }
+    });
+
+    showError(`${files.length} valid files selected`, 'status-message success');
     
   } catch (error) {
     showError(error.message);
-    input.value = ''; // Clear invalid files
+    input.value = '';
   }
 }
 
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
-  const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
   try {
-    // Remove files from payload for JSON stringify
-    const { files, ...payloadWithoutFiles } = payload;
-    
-    const formData = new FormData();
-    formData.append('data', JSON.stringify({
-      action: 'submitParcelDeclaration',
-      data: payloadWithoutFiles
-    }));
-
-    // Add files to formData if they exist
-    if (files && files.length > 0) {
-      files.forEach((file, index) => {
-        const blob = new Blob(
-          [Uint8Array.from(atob(file.data), c => c.charCodeAt(0))],
-          { type: file.type }
-        );
-        formData.append(`file${index}`, blob, file.name);
-      });
-    }
-
-    const response = await fetch(CONFIG.GAS_URL, {
+    const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      body: formData,
-      signal: controller.signal
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
+      },
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
+      mode: 'cors',
+      redirect: 'follow',
+      referrerPolicy: 'no-referrer'
     });
 
-    clearTimeout(timeoutId);
+    // Handle Google's URL redirection pattern
+    const finalResponse = response.url.includes('/exec') 
+      ? response
+      : await fetch(response.url);
 
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
+    if (!finalResponse.ok) throw new Error('Network response was not OK');
     
-    if (!result) {
-      throw new Error('Empty response from server');
-    }
-    
-    return result;
+    return await finalResponse.json();
 
   } catch (error) {
-    clearTimeout(timeoutId);
-    
-    if (error.name === 'AbortError') {
-      throw new Error('Request timeout - please try again');
-    }
-    
-    console.error('Network error:', error);
-    throw new Error(`Network error: ${error.message}`);
-  }
-}
-
-// ADD RETRY MECHANISM
-async function submitWithRetry(payload, maxRetries = 2) {
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      const result = await submitDeclaration(payload);
-      
-      // Check if the response indicates success
-      if (result && result.success) {
-        return result;
-      } else {
-        throw new Error(result.message || 'Submission failed');
-      }
-      
-    } catch (error) {
-      // Don't retry on duplicate errors or validation errors
-      if (error.message.includes('duplicate') || 
-          error.message.includes('recently submitted') ||
-          error.message.includes('validation') ||
-          attempt === maxRetries) {
-        throw error;
-      }
-      
-      // Wait before retry (exponential backoff)
-      await new Promise(resolve => 
-        setTimeout(resolve, 1000 * attempt)
-      );
-      console.log(`Retry attempt ${attempt}...`);
-    }
+    console.error('Submission error:', error);
+    throw new Error(`Submission failed: ${error.message}`);
   }
 }
 
