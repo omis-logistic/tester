@@ -81,35 +81,55 @@
       border: 2px solid transparent;
     }
 
-    /* Enhanced Billing Indicator */
-    .billing-indicator {
+    /* Pop-out Message Styles */
+    .popout-message {
       position: absolute;
-      top: -10px;
-      right: -10px;
-      background: #ff4444;
+      top: -15px;
+      right: -15px;
+      background: linear-gradient(135deg, #ff4444, #cc0000);
       color: white;
-      border-radius: 50%;
-      width: 28px;
-      height: 28px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 0.8em;
+      padding: 12px 16px;
+      border-radius: 25px;
+      font-size: 0.75em;
       font-weight: bold;
       border: 2px solid var(--dark-bg);
-      box-shadow: 0 2px 8px rgba(255, 68, 68, 0.6);
-      animation: pulse 1.5s infinite, bounce 0.5s ease;
+      box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
+      z-index: 10;
+      white-space: nowrap;
+      transform: scale(0);
+      transform-origin: top right;
+      animation: popOut 0.5s ease-out forwards, float 3s ease-in-out infinite;
+      max-width: 200px;
+      text-align: center;
     }
 
-    .billing-indicator.warning {
-      background: #ff8800;
-      box-shadow: 0 2px 8px rgba(255, 136, 0, 0.6);
+    .popout-message::after {
+      content: '';
+      position: absolute;
+      bottom: -8px;
+      right: 20px;
+      width: 0;
+      height: 0;
+      border-left: 8px solid transparent;
+      border-right: 8px solid transparent;
+      border-top: 8px solid #cc0000;
     }
 
-    .billing-indicator.urgent {
-      background: #ff4444;
-      box-shadow: 0 2px 8px rgba(255, 68, 68, 0.8);
-      animation: pulse 0.8s infinite, bounce 0.5s ease;
+    .popout-message.warning {
+      background: linear-gradient(135deg, #ff8800, #cc6600);
+    }
+
+    .popout-message.warning::after {
+      border-top-color: #cc6600;
+    }
+
+    .popout-message.urgent {
+      background: linear-gradient(135deg, #ff4444, #990000);
+      animation: popOut 0.5s ease-out forwards, float 2s ease-in-out infinite, pulse 1s infinite;
+    }
+
+    .popout-message.urgent::after {
+      border-top-color: #990000;
     }
 
     /* Global Loading Spinner */
@@ -144,16 +164,40 @@
     }
 
     /* Animations */
-    @keyframes pulse {
-      0% { transform: scale(1); }
-      50% { transform: scale(1.1); }
-      100% { transform: scale(1); }
+    @keyframes popOut {
+      0% {
+        transform: scale(0);
+        opacity: 0;
+      }
+      70% {
+        transform: scale(1.1);
+        opacity: 1;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 1;
+      }
     }
 
-    @keyframes bounce {
-      0%, 20%, 50%, 80%, 100% {transform: translateY(0);}
-      40% {transform: translateY(-8px);}
-      60% {transform: translateY(-4px);}
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(0) scale(1);
+      }
+      50% {
+        transform: translateY(-5px) scale(1.02);
+      }
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
+      }
+      50% {
+        box-shadow: 0 4px 25px rgba(255, 68, 68, 0.9);
+      }
+      100% {
+        box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
+      }
     }
 
     @keyframes borderPulse {
@@ -271,12 +315,22 @@
         font-size: 1.2em;
       }
 
-      .billing-indicator {
-        width: 24px;
-        height: 24px;
+      .popout-message {
+        top: -12px;
+        right: -12px;
+        padding: 10px 14px;
         font-size: 0.7em;
-        top: -8px;
-        right: -8px;
+        max-width: 160px;
+        white-space: normal;
+        text-align: center;
+      }
+
+      .popout-message::after {
+        right: 15px;
+        bottom: -6px;
+        border-left: 6px solid transparent;
+        border-right: 6px solid transparent;
+        border-top: 6px solid #cc0000;
       }
 
       .welcome-modal {
@@ -321,12 +375,20 @@
         font-size: 0.85em;
       }
 
-      .billing-indicator {
-        width: 22px;
-        height: 22px;
+      .popout-message {
+        top: -10px;
+        right: -10px;
+        padding: 8px 12px;
         font-size: 0.65em;
-        top: -6px;
-        right: -6px;
+        max-width: 140px;
+      }
+
+      .popout-message::after {
+        right: 12px;
+        bottom: -5px;
+        border-left: 5px solid transparent;
+        border-right: 5px solid transparent;
+        border-top: 5px solid #cc0000;
       }
     }
 
@@ -367,11 +429,11 @@
         <p>Check your parcel status</p>
       </div>
       
-      <!-- Billing Thumbnail with enhanced indicator -->
+      <!-- Billing Thumbnail with pop-out message -->
       <div class="thumbnail" onclick="showBillingInfo()" id="billingThumbnail">
         <h2>💰 Billing Info</h2>
         <p>View parcel billing details and make payments</p>
-        <div id="billingIndicator" class="billing-indicator" style="display: none;"></div>
+        <div id="popoutMessage" class="popout-message" style="display: none;"></div>
       </div>
     </div>
     
@@ -499,23 +561,31 @@
         });
 
         const count = response.count || 0;
-        const indicator = document.getElementById('billingIndicator');
+        const popout = document.getElementById('popoutMessage');
         const billingThumbnail = document.getElementById('billingThumbnail');
         
         if (count > 0) {
-          indicator.textContent = count;
-          indicator.style.display = 'flex';
+          // Create appropriate message based on count
+          let message = '';
+          if (count === 1) {
+            message = '⚠️ 1 Unpaid Parcel!';
+          } else {
+            message = `⚠️ ${count} Unpaid Parcels!`;
+          }
+          
+          popout.textContent = message;
+          popout.style.display = 'block';
           billingThumbnail.classList.add('has-uncollected');
           
           // Add urgency levels
           if (count >= 5) {
-            indicator.classList.add('urgent');
-            indicator.classList.remove('warning');
+            popout.classList.add('urgent');
+            popout.classList.remove('warning');
           } else if (count >= 2) {
-            indicator.classList.add('warning');
-            indicator.classList.remove('urgent');
+            popout.classList.add('warning');
+            popout.classList.remove('urgent');
           } else {
-            indicator.classList.remove('warning', 'urgent');
+            popout.classList.remove('warning', 'urgent');
           }
           
           // Add shake animation for attention
@@ -524,9 +594,9 @@
             setTimeout(() => billingThumbnail.classList.remove('shake'), 500);
           }, 1000);
           
-          console.log(`Found ${count} uncollected parcels - indicator shown`);
+          console.log(`Found ${count} uncollected parcels - popout shown`);
         } else {
-          indicator.style.display = 'none';
+          popout.style.display = 'none';
           billingThumbnail.classList.remove('has-uncollected');
           console.log('No uncollected parcels found');
         }
