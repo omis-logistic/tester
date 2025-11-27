@@ -635,29 +635,51 @@
 
 let paidOrders = [];
 
-    async function loadBillingData() {
-      try {
-        showLoading(true);
-        const userData = checkSession();
-        if (!userData?.phone) return safeRedirect('login.html');
-    
-        // Load paid orders first
-        const paymentStatus = await checkPaymentStatusForUser(userData.phone);
-        if (paymentStatus.success) {
-          paidOrders = paymentStatus.paidOrders || [];
+      async function loadBillingData() {
+        try {
+          showLoading(true, "Please wait, loading billing information...");
+          const userData = checkSession();
+          if (!userData?.phone) return safeRedirect('login.html');
+      
+          console.log('Starting to load billing data...');
+          
+          // Load billing data and payment status in parallel to speed up
+          const [billingResponse, paymentStatus] = await Promise.all([
+            loadBillingDataFromServer(userData.phone),
+            checkPaymentStatusForUser(userData.phone)
+          ]);
+      
+          if (!billingResponse.success) {
+            showError(billingResponse.message || 'Failed to load billing information', 'connectionError');
+            return;
+          }
+      
+          allBillingData = billingResponse.data || [];
+          paidOrders = paymentStatus.success ? (paymentStatus.paidOrders || []) : [];
+          
+          console.log(`Loaded ${allBillingData.length} billing records and ${paidOrders.length} paid orders`);
+          renderBillingSections(allBillingData);
+      
+        } catch (error) {
+          console.error('Billing load error:', error);
+          showError('Connection failed. Please try again.', 'connectionError');
+        } finally {
+          showLoading(false);
         }
-    
-        // Then load billing data
+      }
+
+// Separate function for server call
+      async function loadBillingDataFromServer(phone) {
         const callbackName = `billingCallback_${Date.now()}`;
-        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(userData.phone)}`;
-    
-        const response = await new Promise((resolve, reject) => {
+        const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(phone)}`;
+      
+        return new Promise((resolve, reject) => {
           window[callbackName] = (data) => {
             delete window[callbackName];
             document.getElementById(callbackName)?.remove();
             resolve(data);
           };
-    
+      
           const script = document.createElement('script');
           script.id = callbackName;
           script.src = url;
@@ -667,22 +689,7 @@ let paidOrders = [];
           };
           document.head.appendChild(script);
         });
-    
-        if (!response.success) {
-          showError(response.message || 'Failed to load billing information', 'connectionError');
-          return;
-        }
-    
-        allBillingData = response.data || [];
-        renderBillingSections(allBillingData);
-    
-      } catch (error) {
-        console.error('Billing load error:', error);
-        showError('Connection failed. Please try again.', 'connectionError');
-      } finally {
-        showLoading(false);
       }
-    }
 
         async function checkPaymentStatusForUser(phone) {
       try {
@@ -784,7 +791,7 @@ let paidOrders = [];
                   ${isUncollected && receiptNumber !== 'N/A' ? 
                     (isPaid ? 
                       `<a href="invoice.html?orderNumber=${receiptNumber}" 
-                         class="pay-now-btn" target="_blank">Paid</a>` :
+                         class="pay-now-btn">Paid</a>` :
                       `<a href="https://omis-logistic.github.io/caz-paymentgateway/index.html?orderNumber=${receiptNumber}" 
                          class="pay-now-btn" target="_blank">Pay Now</a>`
                     ) :
