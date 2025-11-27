@@ -63,7 +63,6 @@
       margin-bottom: 15px;
       border-bottom: 1px solid #ddd;
       padding-bottom: 8px;
-      font-size: 1.2em;
     }
     
     .detail-item {
@@ -77,14 +76,12 @@
       font-weight: bold;
       color: #555;
       min-width: 120px;
-      font-size: 0.95em;
     }
     
     .detail-value {
       color: #333;
       text-align: right;
       flex: 1;
-      font-size: 0.95em;
     }
     
     .amount-card {
@@ -115,7 +112,6 @@
       margin-bottom: 15px;
       border-bottom: 1px solid #b8d4f0;
       padding-bottom: 8px;
-      font-size: 1.2em;
     }
     
     .tracking-details {
@@ -174,7 +170,7 @@
     .back-btn:hover {
       opacity: 0.9;
     }
-
+    
     .dashboard-btn {
       background: #4a90e2;
       color: white;
@@ -231,118 +227,84 @@
       }
     }
     
-    /* PRINT STYLES - Proper invoice format */
+    /* PRINT STYLES - UPDATED FOR SINGLE PAGE */
     @media print {
-      /* Force light theme for print */
-      body {
-        background: white !important;
-        color: black !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        -webkit-print-color-adjust: exact !important;
-        print-color-adjust: exact !important;
-      }
-      
       .invoice-page {
-        box-shadow: none !important;
-        margin: 0 !important;
-        padding: 20px !important;
-        max-width: none !important;
-        width: 100% !important;
-        background: white !important;
-        color: black !important;
-        border: none !important;
+        box-shadow: none;
+        margin: 0;
+        padding: 15px;
+        max-width: none;
+        width: 100%;
+        font-size: 12px;
       }
       
-      /* Hide action buttons */
-      .action-buttons {
-        display: none !important;
-      }
-      
-      /* Header styling for print */
       .invoice-header {
-        border-bottom: 2px solid #000 !important;
-        padding-bottom: 15px !important;
-        margin-bottom: 20px !important;
+        padding-bottom: 15px;
+        margin-bottom: 20px;
       }
       
       .company-name {
-        color: #000 !important;
-        font-size: 24px !important;
+        font-size: 1.8em;
       }
       
       .invoice-title {
-        color: #000 !important;
-        font-size: 20px !important;
+        font-size: 1.4em;
       }
       
-      .invoice-subtitle {
-        color: #000 !important;
-      }
-      
-      /* Content styling for print */
       .detail-grid {
-        display: grid !important;
-        grid-template-columns: 1fr 1fr !important;
-        gap: 15px !important;
-        margin-bottom: 20px !important;
+        gap: 10px;
+        margin-bottom: 15px;
       }
       
       .detail-card {
-        background: #fff !important;
-        border: 1px solid #000 !important;
-        border-left: 3px solid #000 !important;
-        padding: 15px !important;
+        padding: 12px;
       }
       
       .detail-card h3 {
-        color: #000 !important;
-        border-bottom: 1px solid #000 !important;
-      }
-      
-      .detail-item {
-        color: #000 !important;
-      }
-      
-      .detail-label, .detail-value {
-        color: #000 !important;
+        font-size: 1.1em;
+        margin-bottom: 10px;
       }
       
       .amount-card {
-        background: #f8f8f8 !important;
-        color: #000 !important;
-        border: 1px solid #000 !important;
+        padding: 15px;
+        margin: 15px 0;
       }
       
       .total-amount {
-        color: #000 !important;
+        font-size: 1.8em;
       }
       
       .details-card {
-        background: #fff !important;
-        border: 1px solid #000 !important;
-        border-left: 3px solid #000 !important;
-      }
-      
-      .details-card h3 {
-        color: #000 !important;
-        border-bottom: 1px solid #000 !important;
+        padding: 15px;
+        margin: 15px 0;
       }
       
       .tracking-details {
-        background: #fff !important;
-        border: 1px solid #ccc !important;
-        color: #000 !important;
+        padding: 10px;
+        font-size: 0.9em;
+      }
+      
+      .action-buttons {
+        display: none;
       }
       
       .invoice-footer {
-        border-top: 1px solid #000 !important;
-        color: #000 !important;
+        margin-top: 20px;
+        padding-top: 15px;
+        font-size: 0.9em;
       }
       
-      /* Ensure all text is black for print */
-      * {
-        color: black !important;
+      /* Ensure no page breaks inside important sections */
+      .detail-grid,
+      .amount-card,
+      .details-card {
+        page-break-inside: avoid;
+      }
+      
+      /* Reduce spacing for print */
+      .detail-item {
+        margin-bottom: 5px;
+        padding: 3px 0;
       }
     }
   </style>
@@ -382,48 +344,9 @@
     
     let invoiceData = null;
   
-    // Enhanced session check for invoice page
-    function checkInvoiceSession() {
-      try {
-        const sessionData = sessionStorage.getItem('userData');
-        const lastActivity = localStorage.getItem('lastActivity');
-
-        if (!sessionData) {
-          console.log('No session data found, redirecting to login');
-          safeRedirect('login.html');
-          return null;
-        }
-
-        if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-          console.log('Session expired, redirecting to login');
-          safeRedirect('login.html');
-          return null;
-        }
-
-        // Update last activity
-        localStorage.setItem('lastActivity', Date.now());
-        const userData = JSON.parse(sessionData);
-        
-        // Check if user has temp password but isn't on password reset page
-        if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-          console.log('Temp password detected, redirecting to password reset');
-          safeRedirect('login.html');
-          return null;
-        }
-        
-        return userData;
-        
-      } catch (error) {
-        console.error('Session check error:', error);
-        safeRedirect('login.html');
-        return null;
-      }
-    }
-  
     // Fixed back button function
     function goBackToBilling() {
       console.log('Navigating back to billing page');
-      // Use safeRedirect to ensure proper navigation
       safeRedirect('billing-info.html');
     }
   
@@ -545,6 +468,7 @@
       const location = billingData?.location || 'N/A';
       const code = billingData?.code || paymentData.code || 'N/A';
 
+      // UPDATED: Parcel details moved below order information & customer information
       container.innerHTML = `
         <div class="invoice-content">
           <div class="detail-grid">
