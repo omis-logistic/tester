@@ -300,7 +300,7 @@
         showLoading(true, "Loading invoice data...");
         
         // Check session first
-        const userData = checkInvoiceSession();
+        const userData = checkSession();
         if (!userData) {
           console.error('No valid session found');
           return;
