@@ -459,10 +459,17 @@
       loader.style.display = 'none';
     }
 
+    let modalWasShown = false;
+
     function closeWelcomeModal() {
       const modal = document.getElementById('welcomeModal');
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
+      
+      // Show loading spinner only after modal is closed
+      if (modalWasShown) {
+        checkUncollectedParcels();
+      }
     }
 
     async function checkUncollectedParcels() {
@@ -535,31 +542,32 @@
       if (!userData) return safeRedirect('login.html');
       if (userData.tempPassword) return safeRedirect('password-reset.html');
 
-      // Check for uncollected parcels on dashboard load
-      checkUncollectedParcels();
-
-      // New URL parameter check
+      // Check if modal should be shown
       const urlParams = new URLSearchParams(window.location.search);
-      if (urlParams.has('fresh')) {
+      const shouldShowModal = urlParams.has('fresh') || 
+                             (localStorage.getItem('freshLogin') === 'true' && 
+                              sessionStorage.getItem('modalShown') === 'false');
+
+      if (shouldShowModal) {
+        modalWasShown = true;
         // Show modal and clean URL
         document.getElementById('welcomeModal').style.display = 'block';
+        document.body.style.overflow = 'hidden';
         window.history.replaceState({}, '', 'dashboard.html');
+        
+        // Set session storage to prevent showing modal again
+        sessionStorage.setItem('modalShown', 'true');
+        localStorage.removeItem('freshLogin');
+      } else {
+        // If no modal is shown, check uncollected parcels immediately
+        checkUncollectedParcels();
       }
 
       const modal = document.getElementById('welcomeModal');
 
-      // Dual verification check
-      if (localStorage.getItem('freshLogin') === 'true' && 
-          sessionStorage.getItem('modalShown') === 'false') {
-        document.body.style.overflow = 'hidden';
-        modal.style.display = 'block';
-        sessionStorage.setItem('modalShown', 'true');
-        localStorage.removeItem('freshLogin');
-      }
-
       window.onclick = (event) => {
         if(event.target === document.getElementById('welcomeModal')) {
-          document.getElementById('welcomeModal').style.display = 'none';
+          closeWelcomeModal();
         }
       }
 
