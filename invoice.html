@@ -138,6 +138,7 @@
       gap: 15px;
       justify-content: center;
       margin: 30px 0;
+      flex-wrap: wrap;
     }
     
     .print-btn {
@@ -170,6 +171,21 @@
       opacity: 0.9;
     }
     
+    .dashboard-btn {
+      background: #4a90e2;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    
+    .dashboard-btn:hover {
+      opacity: 0.9;
+    }
+    
     @media (max-width: 768px) {
       .invoice-page {
         padding: 20px;
@@ -194,7 +210,7 @@
         align-items: center;
       }
       
-      .print-btn, .back-btn {
+      .print-btn, .back-btn, .dashboard-btn {
         width: 200px;
       }
       
@@ -211,15 +227,84 @@
       }
     }
     
+    /* PRINT STYLES - UPDATED FOR SINGLE PAGE */
     @media print {
+      .invoice-page {
+        box-shadow: none;
+        margin: 0;
+        padding: 15px;
+        max-width: none;
+        width: 100%;
+        font-size: 12px;
+      }
+      
+      .invoice-header {
+        padding-bottom: 15px;
+        margin-bottom: 20px;
+      }
+      
+      .company-name {
+        font-size: 1.8em;
+      }
+      
+      .invoice-title {
+        font-size: 1.4em;
+      }
+      
+      .detail-grid {
+        gap: 10px;
+        margin-bottom: 15px;
+      }
+      
+      .detail-card {
+        padding: 12px;
+      }
+      
+      .detail-card h3 {
+        font-size: 1.1em;
+        margin-bottom: 10px;
+      }
+      
+      .amount-card {
+        padding: 15px;
+        margin: 15px 0;
+      }
+      
+      .total-amount {
+        font-size: 1.8em;
+      }
+      
+      .details-card {
+        padding: 15px;
+        margin: 15px 0;
+      }
+      
+      .tracking-details {
+        padding: 10px;
+        font-size: 0.9em;
+      }
+      
       .action-buttons {
         display: none;
       }
       
-      .invoice-page {
-        box-shadow: none;
-        margin: 0;
-        padding: 0;
+      .invoice-footer {
+        margin-top: 20px;
+        padding-top: 15px;
+        font-size: 0.9em;
+      }
+      
+      /* Ensure no page breaks inside important sections */
+      .detail-grid,
+      .amount-card,
+      .details-card {
+        page-break-inside: avoid;
+      }
+      
+      /* Reduce spacing for print */
+      .detail-item {
+        margin-bottom: 5px;
+        padding: 3px 0;
       }
     }
   </style>
@@ -241,6 +326,7 @@
     <div class="action-buttons">
       <button class="print-btn" onclick="window.print()">Print Invoice</button>
       <button class="back-btn" onclick="goBackToBilling()">Back to Billing</button>
+      <button class="dashboard-btn" onclick="safeRedirect('dashboard.html')">Back to Dashboard</button>
     </div>
     
     <div class="invoice-footer">
@@ -251,7 +337,6 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    
     console.log('Page loaded - checking session...');
     const userData = checkSession();
     console.log('Session data:', userData);
@@ -259,39 +344,9 @@
     
     let invoiceData = null;
   
-    // Enhanced session check for invoice page
-    function checkInvoiceSession() {
-      try {
-        const sessionData = localStorage.getItem('userData');
-        const lastActivity = localStorage.getItem('lastActivity');
-  
-        if (!sessionData) {
-          console.log('No session data found, redirecting to login');
-          safeRedirect('login.html');
-          return null;
-        }
-  
-        if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-          console.log('Session expired, redirecting to login');
-          safeRedirect('login.html');
-          return null;
-        }
-  
-        // Update last activity
-        localStorage.setItem('lastActivity', Date.now());
-        return JSON.parse(sessionData);
-        
-      } catch (error) {
-        console.error('Session check error:', error);
-        safeRedirect('login.html');
-        return null;
-      }
-    }
-  
     // Fixed back button function
     function goBackToBilling() {
       console.log('Navigating back to billing page');
-      // Use safeRedirect to ensure proper navigation
       safeRedirect('billing-info.html');
     }
   
@@ -413,6 +468,7 @@
       const location = billingData?.location || 'N/A';
       const code = billingData?.code || paymentData.code || 'N/A';
 
+      // UPDATED: Parcel details moved below order information & customer information
       container.innerHTML = `
         <div class="invoice-content">
           <div class="detail-grid">
@@ -453,21 +509,22 @@
             </div>
           </div>
           
+          <!-- UPDATED: Parcel Details moved here (below order & customer info) -->
+          <div class="details-card">
+            <h3>Parcel Details</h3>
+            <div class="tracking-details">${trackingDetails}</div>
+          </div>
+          
           <div class="amount-card">
             <div>Total Amount Paid</div>
             <div class="total-amount">${formattedPrice}</div>
             <div>Payment Successfully Processed</div>
           </div>
-          
-          <div class="details-card">
-            <h3>Parcel Details</h3>
-            <div class="tracking-details">${trackingDetails}</div>
-          </div>
         </div>
       `;
     }
 
-    // Currency and date formatting functions (same as billing-info.html)
+    // Currency and date formatting functions
     function formatCurrencyBND(amount) {
       if (!amount && amount !== 0) return 'N/A';
       const num = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
