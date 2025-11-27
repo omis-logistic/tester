@@ -5,50 +5,39 @@
   <title>Payment Invoice - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
-    /* SCREEN STYLES - Light theme only for invoice */
-    body {
-      background: white !important;
-      color: #333 !important;
-      margin: 0;
-      padding: 20px;
-    }
-    
     .invoice-page {
       max-width: 800px;
-      margin: 0 auto;
+      margin: 20px auto;
       background: white;
       color: #333;
       padding: 30px;
-      border-radius: 0;
-      box-shadow: none;
-      border: 1px solid #ddd;
-      font-family: Arial, sans-serif;
+      border-radius: 10px;
+      box-shadow: 0 0 20px rgba(0,0,0,0.1);
     }
     
     .invoice-header {
       text-align: center;
-      border-bottom: 3px solid #000;
+      border-bottom: 3px solid var(--gold);
       padding-bottom: 20px;
       margin-bottom: 30px;
     }
     
     .company-name {
-      color: #000;
-      font-size: 28px;
+      color: var(--gold);
+      font-size: 2.5em;
       font-weight: bold;
       margin-bottom: 10px;
     }
     
     .invoice-title {
-      font-size: 24px;
-      color: #000;
+      font-size: 1.8em;
+      color: #333;
       margin-bottom: 5px;
-      font-weight: bold;
     }
     
     .invoice-subtitle {
       color: #666;
-      font-size: 16px;
+      font-size: 1.1em;
     }
     
     .invoice-content {
@@ -65,88 +54,87 @@
     .detail-card {
       background: #f9f9f9;
       padding: 20px;
-      border: 1px solid #000;
-      border-left: 4px solid #000;
+      border-radius: 8px;
+      border-left: 4px solid var(--gold);
     }
     
     .detail-card h3 {
-      color: #000;
+      color: var(--gold);
       margin-bottom: 15px;
-      border-bottom: 1px solid #000;
+      border-bottom: 1px solid #ddd;
       padding-bottom: 8px;
-      font-size: 18px;
-      font-weight: bold;
+      font-size: 1.2em;
     }
     
     .detail-item {
       display: flex;
       justify-content: space-between;
       margin-bottom: 10px;
-      padding: 5px 0;
+      padding: 6px 0;
     }
     
     .detail-label {
       font-weight: bold;
-      color: #000;
+      color: #555;
       min-width: 120px;
+      font-size: 0.95em;
     }
     
     .detail-value {
-      color: #000;
+      color: #333;
       text-align: right;
       flex: 1;
+      font-size: 0.95em;
     }
     
     .amount-card {
-      background: #f0f0f0;
-      color: #000;
+      background: var(--gold);
+      color: white;
       padding: 25px;
-      border: 2px solid #000;
+      border-radius: 8px;
       text-align: center;
       margin: 25px 0;
     }
     
     .total-amount {
-      font-size: 32px;
+      font-size: 2.5em;
       font-weight: bold;
       margin: 10px 0;
-      color: #000;
     }
     
     .details-card {
-      background: #f8f8f8;
-      padding: 20px;
-      border: 1px solid #000;
-      border-left: 4px solid #000;
-      margin: 20px 0;
+      background: #f0f8ff;
+      padding: 25px;
+      border-radius: 8px;
+      border-left: 4px solid #4a90e2;
+      margin: 25px 0;
     }
     
     .details-card h3 {
-      color: #000;
+      color: #4a90e2;
       margin-bottom: 15px;
-      border-bottom: 1px solid #000;
+      border-bottom: 1px solid #b8d4f0;
       padding-bottom: 8px;
-      font-size: 18px;
-      font-weight: bold;
+      font-size: 1.2em;
     }
     
     .tracking-details {
       white-space: pre-line;
-      font-family: 'Courier New', monospace;
-      font-size: 14px;
-      line-height: 1.4;
+      font-family: monospace;
+      font-size: 0.95em;
+      line-height: 1.5;
       background: white;
       padding: 15px;
-      border: 1px solid #ccc;
+      border-radius: 5px;
+      border: 1px solid #ddd;
     }
     
     .invoice-footer {
       text-align: center;
       margin-top: 40px;
       padding-top: 20px;
-      border-top: 2px solid #000;
-      color: #000;
-      font-size: 14px;
+      border-top: 2px solid #ddd;
+      color: #666;
     }
     
     .action-buttons {
@@ -157,30 +145,55 @@
       flex-wrap: wrap;
     }
     
-    .print-btn, .back-btn, .dashboard-btn {
-      padding: 12px 25px;
-      border: 1px solid #000;
-      border-radius: 0;
+    .print-btn {
+      background: var(--gold);
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
       font-weight: bold;
       cursor: pointer;
-      font-size: 16px;
-      background: white;
-      color: #000;
+      transition: opacity 0.3s;
     }
     
-    .print-btn:hover, .back-btn:hover, .dashboard-btn:hover {
-      background: #000;
+    .print-btn:hover {
+      opacity: 0.9;
+    }
+    
+    .back-btn {
+      background: #666;
       color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    
+    .back-btn:hover {
+      opacity: 0.9;
     }
 
+    .dashboard-btn {
+      background: #4a90e2;
+      color: white;
+      padding: 12px 30px;
+      border: none;
+      border-radius: 5px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+    
+    .dashboard-btn:hover {
+      opacity: 0.9;
+    }
+    
     @media (max-width: 768px) {
-      body {
-        padding: 10px;
-      }
-      
       .invoice-page {
         padding: 20px;
-        margin: 0;
+        margin: 10px;
       }
       
       .detail-grid {
@@ -189,11 +202,11 @@
       }
       
       .company-name {
-        font-size: 24px;
+        font-size: 2em;
       }
       
-      .invoice-title {
-        font-size: 20px;
+      .total-amount {
+        font-size: 2em;
       }
       
       .action-buttons {
@@ -202,196 +215,43 @@
       }
       
       .print-btn, .back-btn, .dashboard-btn {
-        width: 100%;
-        max-width: 300px;
-      }
-    }
-
-    /* PROPER PRINT STYLES - Completely separate from screen styles */
-    @media print {
-      /* Reset everything for print */
-      @page {
-        margin: 0.5cm;
-        size: A4;
+        width: 200px;
       }
       
-      body, html {
-        margin: 0 !important;
-        padding: 0 !important;
+      .detail-item {
+        flex-direction: column;
+      }
+      
+      .detail-label {
+        margin-bottom: 5px;
+      }
+      
+      .detail-value {
+        text-align: left;
+      }
+    }
+    
+    /* PRINT STYLES - Proper invoice format */
+    @media print {
+      /* Force light theme for print */
+      body {
         background: white !important;
         color: black !important;
-        font-family: "Times New Roman", Times, serif !important;
-        font-size: 12pt !important;
-        line-height: 1.2 !important;
+        margin: 0 !important;
+        padding: 0 !important;
         -webkit-print-color-adjust: exact !important;
         print-color-adjust: exact !important;
       }
       
-      /* Hide everything except the invoice page */
-      body * {
-        display: none !important;
-      }
-      
-      .invoice-page, .invoice-page * {
-        display: block !important;
-        visibility: visible !important;
-      }
-      
       .invoice-page {
-        position: absolute !important;
-        left: 0 !important;
-        top: 0 !important;
-        width: 100% !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 0.5cm !important;
-        background: white !important;
         box-shadow: none !important;
+        margin: 0 !important;
+        padding: 20px !important;
+        max-width: none !important;
+        width: 100% !important;
+        background: white !important;
+        color: black !important;
         border: none !important;
-        border-radius: 0 !important;
-        font-family: "Times New Roman", Times, serif !important;
-        page-break-after: avoid;
-        break-after: avoid;
-      }
-      
-      /* Invoice Header */
-      .invoice-header {
-        text-align: center;
-        border-bottom: 2px solid #000 !important;
-        padding-bottom: 0.3cm !important;
-        margin-bottom: 0.5cm !important;
-        page-break-after: avoid;
-      }
-      
-      .company-name {
-        color: black !important;
-        font-size: 16pt !important;
-        font-weight: bold;
-        margin-bottom: 0.2cm !important;
-      }
-      
-      .invoice-title {
-        color: black !important;
-        font-size: 14pt !important;
-        font-weight: bold;
-        margin-bottom: 0.1cm !important;
-      }
-      
-      .invoice-subtitle {
-        color: black !important;
-        font-size: 10pt !important;
-        font-style: italic;
-      }
-      
-      /* Content Layout - Single column for print */
-      .invoice-content {
-        margin-bottom: 0 !important;
-      }
-      
-      .detail-grid {
-        display: block !important;
-        margin-bottom: 0.4cm !important;
-        page-break-inside: avoid;
-      }
-      
-      .detail-card {
-        background: white !important;
-        border: 1px solid #000 !important;
-        border-left: 3px solid #000 !important;
-        padding: 0.3cm !important;
-        margin-bottom: 0.3cm !important;
-        page-break-inside: avoid;
-      }
-      
-      .detail-card h3 {
-        color: black !important;
-        font-size: 11pt !important;
-        font-weight: bold;
-        border-bottom: 1px solid #000 !important;
-        margin-bottom: 0.2cm !important;
-        padding-bottom: 0.1cm !important;
-      }
-      
-      .detail-item {
-        display: table-row !important;
-        margin-bottom: 0.05cm !important;
-        padding: 0 !important;
-      }
-      
-      .detail-label, .detail-value {
-        display: table-cell !important;
-        padding: 0.05cm 0 !important;
-        font-size: 9pt !important;
-        color: black !important;
-      }
-      
-      .detail-label {
-        font-weight: bold;
-        padding-right: 0.3cm !important;
-        width: 30% !important;
-      }
-      
-      .detail-value {
-        text-align: left !important;
-        width: 70% !important;
-      }
-      
-      /* Amount Section */
-      .amount-card {
-        background: white !important;
-        border: 2px solid #000 !important;
-        color: black !important;
-        padding: 0.3cm !important;
-        margin: 0.3cm 0 !important;
-        text-align: center;
-        page-break-inside: avoid;
-      }
-      
-      .total-amount {
-        color: black !important;
-        font-size: 14pt !important;
-        font-weight: bold;
-        margin: 0.1cm 0 !important;
-      }
-      
-      /* Parcel Details */
-      .details-card {
-        background: white !important;
-        border: 1px solid #000 !important;
-        border-left: 3px solid #000 !important;
-        padding: 0.3cm !important;
-        margin: 0.3cm 0 !important;
-        page-break-inside: avoid;
-      }
-      
-      .details-card h3 {
-        color: black !important;
-        font-size: 11pt !important;
-        font-weight: bold;
-        border-bottom: 1px solid #000 !important;
-        margin-bottom: 0.2cm !important;
-        padding-bottom: 0.1cm !important;
-      }
-      
-      .tracking-details {
-        background: white !important;
-        border: 1px solid #ccc !important;
-        padding: 0.2cm !important;
-        font-size: 8pt !important;
-        font-family: "Courier New", monospace !important;
-        line-height: 1.1 !important;
-        white-space: pre-line;
-        color: black !important;
-      }
-      
-      /* Footer */
-      .invoice-footer {
-        border-top: 1px solid #000 !important;
-        margin-top: 0.4cm !important;
-        padding-top: 0.2cm !important;
-        color: black !important;
-        font-size: 8pt !important;
-        page-break-before: avoid;
       }
       
       /* Hide action buttons */
@@ -399,10 +259,90 @@
         display: none !important;
       }
       
-      /* Force black text everywhere */
-      .invoice-page * {
+      /* Header styling for print */
+      .invoice-header {
+        border-bottom: 2px solid #000 !important;
+        padding-bottom: 15px !important;
+        margin-bottom: 20px !important;
+      }
+      
+      .company-name {
+        color: #000 !important;
+        font-size: 24px !important;
+      }
+      
+      .invoice-title {
+        color: #000 !important;
+        font-size: 20px !important;
+      }
+      
+      .invoice-subtitle {
+        color: #000 !important;
+      }
+      
+      /* Content styling for print */
+      .detail-grid {
+        display: grid !important;
+        grid-template-columns: 1fr 1fr !important;
+        gap: 15px !important;
+        margin-bottom: 20px !important;
+      }
+      
+      .detail-card {
+        background: #fff !important;
+        border: 1px solid #000 !important;
+        border-left: 3px solid #000 !important;
+        padding: 15px !important;
+      }
+      
+      .detail-card h3 {
+        color: #000 !important;
+        border-bottom: 1px solid #000 !important;
+      }
+      
+      .detail-item {
+        color: #000 !important;
+      }
+      
+      .detail-label, .detail-value {
+        color: #000 !important;
+      }
+      
+      .amount-card {
+        background: #f8f8f8 !important;
+        color: #000 !important;
+        border: 1px solid #000 !important;
+      }
+      
+      .total-amount {
+        color: #000 !important;
+      }
+      
+      .details-card {
+        background: #fff !important;
+        border: 1px solid #000 !important;
+        border-left: 3px solid #000 !important;
+      }
+      
+      .details-card h3 {
+        color: #000 !important;
+        border-bottom: 1px solid #000 !important;
+      }
+      
+      .tracking-details {
+        background: #fff !important;
+        border: 1px solid #ccc !important;
+        color: #000 !important;
+      }
+      
+      .invoice-footer {
+        border-top: 1px solid #000 !important;
+        color: #000 !important;
+      }
+      
+      /* Ensure all text is black for print */
+      * {
         color: black !important;
-        background: white !important;
       }
     }
   </style>
@@ -415,7 +355,7 @@
       <div class="invoice-subtitle">Official Payment Receipt</div>
     </div>
     
-    <div id="connectionError" class="error-message" style="display: none; background: #ff4444; color: white; padding: 15px; margin: 20px 0;"></div>
+    <div id="connectionError" class="error-message" style="display: none; background: #ff4444; color: white; padding: 15px; border-radius: 5px; margin: 20px 0;"></div>
     
     <div id="invoiceContent">
       <div class="empty-state">Loading invoice data...</div>
@@ -442,8 +382,48 @@
     
     let invoiceData = null;
   
+    // Enhanced session check for invoice page
+    function checkInvoiceSession() {
+      try {
+        const sessionData = sessionStorage.getItem('userData');
+        const lastActivity = localStorage.getItem('lastActivity');
+
+        if (!sessionData) {
+          console.log('No session data found, redirecting to login');
+          safeRedirect('login.html');
+          return null;
+        }
+
+        if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
+          console.log('Session expired, redirecting to login');
+          safeRedirect('login.html');
+          return null;
+        }
+
+        // Update last activity
+        localStorage.setItem('lastActivity', Date.now());
+        const userData = JSON.parse(sessionData);
+        
+        // Check if user has temp password but isn't on password reset page
+        if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+          console.log('Temp password detected, redirecting to password reset');
+          safeRedirect('login.html');
+          return null;
+        }
+        
+        return userData;
+        
+      } catch (error) {
+        console.error('Session check error:', error);
+        safeRedirect('login.html');
+        return null;
+      }
+    }
+  
+    // Fixed back button function
     function goBackToBilling() {
       console.log('Navigating back to billing page');
+      // Use safeRedirect to ensure proper navigation
       safeRedirect('billing-info.html');
     }
   
@@ -451,12 +431,14 @@
       try {
         showLoading(true, "Loading invoice data...");
         
+        // Check session first
         const userData = checkSession();
         if (!userData) {
           console.error('No valid session found');
           return;
         }
         
+        // Get order number from URL parameters
         const urlParams = new URLSearchParams(window.location.search);
         const orderNumber = urlParams.get('orderNumber');
         
@@ -465,7 +447,8 @@
         }
   
         console.log('Loading invoice for order:', orderNumber);
-
+  
+        // Load invoice data and billing details in parallel
         const [invoiceResponse, billingDetails] = await Promise.all([
           loadInvoiceDataFromServer(orderNumber),
           loadBillingDetails(orderNumber, userData.phone)
@@ -486,6 +469,7 @@
       }
     }
   
+    // Separate function for server call
     async function loadInvoiceDataFromServer(orderNumber) {
       const callbackName = `invoiceCallback_${Date.now()}`;
       const url = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getInvoiceData&orderNumber=${encodeURIComponent(orderNumber)}`;
@@ -508,6 +492,7 @@
       });
     }
   
+    // Updated billing details loader with session
     async function loadBillingDetails(orderNumber, phone) {
       try {
         console.log('Loading billing details for order:', orderNumber);
@@ -533,6 +518,7 @@
         });
   
         if (response.success && response.data) {
+          // Find the order in billing data
           const order = response.data.find(item => item.receipt === orderNumber);
           console.log('Found billing details:', order ? 'Yes' : 'No');
           return order || null;
@@ -590,7 +576,7 @@
               </div>
               <div class="detail-item">
                 <span class="detail-label">Payment Status:</span>
-                <span class="detail-value"><strong>PAID</strong></span>
+                <span class="detail-value" style="color: #28a745; font-weight: bold;">PAID</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Reference:</span>
@@ -599,6 +585,7 @@
             </div>
           </div>
           
+          <!-- UPDATED: Parcel Details moved here (below order & customer info) -->
           <div class="details-card">
             <h3>Parcel Details</h3>
             <div class="tracking-details">${trackingDetails}</div>
@@ -613,6 +600,7 @@
       `;
     }
 
+    // Currency and date formatting functions
     function formatCurrencyBND(amount) {
       if (!amount && amount !== 0) return 'N/A';
       const num = typeof amount === 'string' ? parseFloat(amount.replace(/[^\d.-]/g, '')) : amount;
@@ -650,6 +638,7 @@
       }
     }
 
+    // Initialize page with better error handling
     document.addEventListener('DOMContentLoaded', () => {
       console.log('Invoice page loaded, starting data load...');
       try {
