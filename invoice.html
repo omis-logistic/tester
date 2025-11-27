@@ -232,56 +232,61 @@
       .invoice-page {
         box-shadow: none;
         margin: 0;
-        padding: 15px;
+        padding: 10px;
         max-width: none;
         width: 100%;
-        font-size: 12px;
+        font-size: 11px;
       }
       
       .invoice-header {
-        padding-bottom: 15px;
-        margin-bottom: 20px;
-      }
-      
-      .company-name {
-        font-size: 1.8em;
-      }
-      
-      .invoice-title {
-        font-size: 1.4em;
-      }
-      
-      .detail-grid {
-        gap: 10px;
+        padding-bottom: 10px;
         margin-bottom: 15px;
       }
       
-      .detail-card {
-        padding: 12px;
+      .company-name {
+        font-size: 1.5em;
       }
       
-      .detail-card h3 {
-        font-size: 1.1em;
+      .invoice-title {
+        font-size: 1.2em;
+      }
+      
+      .invoice-subtitle {
+        font-size: 0.9em;
+      }
+      
+      .detail-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 8px;
         margin-bottom: 10px;
       }
       
+      .detail-card {
+        padding: 8px;
+      }
+      
+      .detail-card h3 {
+        font-size: 1em;
+        margin-bottom: 8px;
+      }
+      
       .amount-card {
-        padding: 15px;
-        margin: 15px 0;
+        padding: 10px;
+        margin: 10px 0;
       }
       
       .total-amount {
-        font-size: 1.8em;
+        font-size: 1.5em;
       }
       
       .details-card {
-        padding: 15px;
-        margin: 15px 0;
+        padding: 10px;
+        margin: 10px 0;
       }
       
       .tracking-details {
-        padding: 10px;
-        font-size: 0.9em;
+        padding: 8px;
+        font-size: 0.85em;
       }
       
       .action-buttons {
@@ -289,9 +294,9 @@
       }
       
       .invoice-footer {
-        margin-top: 20px;
-        padding-top: 15px;
-        font-size: 0.9em;
+        margin-top: 15px;
+        padding-top: 10px;
+        font-size: 0.8em;
       }
       
       /* Ensure no page breaks inside important sections */
@@ -303,8 +308,15 @@
       
       /* Reduce spacing for print */
       .detail-item {
-        margin-bottom: 5px;
-        padding: 3px 0;
+        margin-bottom: 3px;
+        padding: 2px 0;
+        font-size: 0.9em;
+      }
+      
+      /* Force single page */
+      body, .invoice-page {
+        height: auto;
+        overflow: visible;
       }
     }
   </style>
