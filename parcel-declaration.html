@@ -125,10 +125,11 @@
       <div class="input-group">
         <label for="fileUpload">Upload Documents:</label>
         <input type="file" 
-               id="fileUpload" 
-               name="files[]"  <!-- This is important -->
-               multiple
-               accept="image/jpeg, image/png, application/pdf">
+       id="fileUpload" 
+       name="files"
+       multiple
+       accept="image/jpeg, image/png, application/pdf"
+       onchange="handleFileSelection(this)">
         <small id="fileHelp" class="form-text">
           Required for starred (*) categories: JPEG, PNG, PDF (Max 5MB each)
         </small>
@@ -148,19 +149,5 @@
   </div>
 
   <script src="scripts/app.js"></script>
-  <script>
-// Prevent Safari form resubmission on back/forward
-if (window.performance && performance.navigation.type === performance.navigation.TYPE_BACK_FORWARD) {
-  document.getElementById('declarationForm').reset();
-}
-
-// Safari autocomplete fix
-document.addEventListener('DOMContentLoaded', function() {
-  const inputs = document.querySelectorAll('input');
-  inputs.forEach(input => {
-    input.setAttribute('autocomplete', 'on');
-  });
-});
-</script>
 </body>
 </html>
