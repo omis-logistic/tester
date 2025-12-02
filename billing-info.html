@@ -606,36 +606,49 @@
 
     // Better date formatting for billing page
     function formatBillingDate(dateString) {
-      if (!dateString) return 'N/A';
+      if (!dateString || dateString === 'N/A') return 'N/A';
+      
       try {
-        // Handle Google Sheets date format and various date string formats
-        if (typeof dateString === 'string') {
-          // Try to parse different date formats
-          const date = new Date(dateString);
-          if (!isNaN(date.getTime())) {
-            return date.toLocaleDateString('en-MY', {
-              year: 'numeric',
-              month: 'short',
-              day: 'numeric'
-            });
-          }
-          // If it's already in a good format, return as is
+        let date;
+        
+        // Check if it's already in "2 Feb 2025" format
+        if (typeof dateString === 'string' && dateString.match(/^\d+\s+\w+\s+\d{4}$/)) {
           return dateString;
         }
         
-        // Handle Date objects
-        if (dateString instanceof Date) {
-          return dateString.toLocaleDateString('en-MY', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric'
-          });
+        // Parse day/month/year format (e.g., "2/12/2025")
+        if (typeof dateString === 'string' && dateString.includes('/')) {
+          const parts = dateString.split('/');
+          if (parts.length === 3) {
+            const day = parseInt(parts[0], 10);
+            const month = parseInt(parts[1], 10) - 1;
+            const year = parseInt(parts[2], 10);
+            
+            // Validate date
+            if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
+              date = new Date(year, month, day);
+            }
+          }
         }
         
-        return 'N/A';
-      } catch {
-        return dateString || 'N/A';
+        // If not parsed yet, try standard Date parsing
+        if (!date || isNaN(date.getTime())) {
+          date = new Date(dateString);
+        }
+        
+        // Format the date if valid
+        if (date && !isNaN(date.getTime())) {
+          const day = date.getDate();
+          const month = date.toLocaleDateString('en-MY', { month: 'short' });
+          const year = date.getFullYear();
+          return `${day} ${month} ${year}`;
+        }
+      } catch (error) {
+        console.warn('Date formatting error:', error);
       }
+      
+      // Return original if formatting fails
+      return dateString || 'N/A';
     }
 
 let paidOrders = [];
