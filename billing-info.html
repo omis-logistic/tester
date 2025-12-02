@@ -604,51 +604,75 @@
       return 'B$' + (num || 0).toFixed(2);
     }
 
-    // Better date formatting for billing page
+    // Fixed date formatting for billing page - handles day/month/year format correctly
     function formatBillingDate(dateString) {
-      if (!dateString || dateString === 'N/A') return 'N/A';
-      
+      if (!dateString) return 'N/A';
       try {
-        let date;
-        
-        // Check if it's already in "2 Feb 2025" format
-        if (typeof dateString === 'string' && dateString.match(/^\d+\s+\w+\s+\d{4}$/)) {
-          return dateString;
+        // Handle empty or invalid dates
+        if (dateString.toString().trim() === '' || dateString.toString().trim() === 'N/A') {
+          return 'N/A';
         }
         
-        // Parse day/month/year format (e.g., "2/12/2025")
-        if (typeof dateString === 'string' && dateString.includes('/')) {
-          const parts = dateString.split('/');
-          if (parts.length === 3) {
+        // Handle Google Sheets date objects (if they come as Date objects)
+        if (dateString instanceof Date) {
+          return dateString.toLocaleDateString('en-MY', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
+        }
+        
+        // Convert to string and clean up
+        const dateStr = dateString.toString().trim();
+        
+        // Handle various date formats
+        if (dateStr.includes('/')) {
+          // Parse day/month/year format (e.g., "2/12/2025")
+          const parts = dateStr.split('/');
+          
+          // Ensure we have 3 parts: day, month, year
+          if (parts.length >= 3) {
             const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10) - 1;
+            const month = parseInt(parts[1], 10);
             const year = parseInt(parts[2], 10);
             
-            // Validate date
-            if (day >= 1 && day <= 31 && month >= 0 && month <= 11 && year >= 1900) {
-              date = new Date(year, month, day);
+            // Validate date components
+            if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
+                day >= 1 && day <= 31 && 
+                month >= 1 && month <= 12 && 
+                year >= 2000 && year <= 2100) {
+              
+              // Create a proper Date object (note: month is 0-indexed in JavaScript)
+              const date = new Date(year, month - 1, day);
+              
+              // Check if date is valid
+              if (!isNaN(date.getTime())) {
+                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+                
+                // Format as "day Month year" (e.g., "2 Dec 2025")
+                return `${day} ${monthNames[month - 1]} ${year}`;
+              }
             }
           }
         }
         
-        // If not parsed yet, try standard Date parsing
-        if (!date || isNaN(date.getTime())) {
-          date = new Date(dateString);
+        // Fallback: Try to parse as a standard date string
+        const date = new Date(dateStr);
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString('en-MY', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+          });
         }
         
-        // Format the date if valid
-        if (date && !isNaN(date.getTime())) {
-          const day = date.getDate();
-          const month = date.toLocaleDateString('en-MY', { month: 'short' });
-          const year = date.getFullYear();
-          return `${day} ${month} ${year}`;
-        }
+        // If all parsing fails, return the original string
+        return dateStr;
       } catch (error) {
-        console.warn('Date formatting error:', error);
+        console.error('Date formatting error:', error, 'for date:', dateString);
+        return dateString || 'N/A';
       }
-      
-      // Return original if formatting fails
-      return dateString || 'N/A';
     }
 
 let paidOrders = [];
