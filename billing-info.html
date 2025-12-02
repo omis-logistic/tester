@@ -604,16 +604,14 @@
       return 'B$' + (num || 0).toFixed(2);
     }
 
-    // Fixed date formatting for billing page - handles day/month/year format correctly
+    // Simpler fix - swaps day and month for date parsing
     function formatBillingDate(dateString) {
       if (!dateString) return 'N/A';
       try {
-        // Handle empty or invalid dates
         if (dateString.toString().trim() === '' || dateString.toString().trim() === 'N/A') {
           return 'N/A';
         }
         
-        // Handle Google Sheets date objects (if they come as Date objects)
         if (dateString instanceof Date) {
           return dateString.toLocaleDateString('en-MY', {
             year: 'numeric',
@@ -622,96 +620,33 @@
           });
         }
         
-        // Convert to string and clean up
         const dateStr = dateString.toString().trim();
         
-        // Handle various date formats
+        // Handle the specific case of day/month/year format being misinterpreted
         if (dateStr.includes('/')) {
-          // Parse day/month/year format (e.g., "2/12/2025" should be 2 Dec 2025)
           const parts = dateStr.split('/');
-          
-          // Ensure we have 3 parts: day, month, year
           if (parts.length >= 3) {
-            // IMPORTANT: First part is DAY, second is MONTH (day/month/year format)
-            const day = parseInt(parts[0], 10);
-            const month = parseInt(parts[1], 10);
+            // SWAP: First part becomes month, second becomes day
+            // This converts from month/day/year to day/month/year display
+            const month = parseInt(parts[0], 10);
+            const day = parseInt(parts[1], 10);
             const year = parseInt(parts[2], 10);
             
-            // Validate date components
             if (!isNaN(day) && !isNaN(month) && !isNaN(year) && 
                 day >= 1 && day <= 31 && 
-                month >= 1 && month <= 12 && 
-                year >= 2000 && year <= 2100) {
+                month >= 1 && month <= 12) {
               
-              // Create a proper Date object (note: month is 0-indexed in JavaScript)
-              const date = new Date(year, month - 1, day);
+              const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
+                                 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
               
-              // Check if date is valid
-              if (!isNaN(date.getTime())) {
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                
-                // Format as "day Month year" (e.g., "2 Dec 2025")
-                return `${day} ${monthNames[month - 1]} ${year}`;
-              }
-            }
-            
-            // Alternative check: If the date appears to be swapped (month/day/year),
-            // swap the day and month to interpret as day/month/year
-            if (parseInt(parts[0], 10) > 12 && parseInt(parts[1], 10) <= 12) {
-              // This looks like day > 12 and month <= 12, which suggests it's already day/month/year
-              // For example: "12/2/2025" -> day=12, month=2 -> 12 Feb 2025
-              const day = parseInt(parts[0], 10);
-              const month = parseInt(parts[1], 10);
-              const year = parseInt(parts[2], 10);
-              
-              const date = new Date(year, month - 1, day);
-              if (!isNaN(date.getTime())) {
-                const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                   'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                return `${day} ${monthNames[month - 1]} ${year}`;
-              }
+              return `${day} ${monthNames[month - 1]} ${year}`;
             }
           }
         }
         
-        // Fallback: Try to parse as a standard date string
+        // Fallback
         const date = new Date(dateStr);
         if (!isNaN(date.getTime())) {
-          // Check if this is likely a swapped date
-          const day = date.getDate();
-          const month = date.getMonth() + 1;
-          const year = date.getFullYear();
-          
-          // If the parsed month doesn't match the original pattern, it might be swapped
-          // For example: "12/2/2025" parsed as month=12, day=2 -> December 2, 2025
-          // But we want day=12, month=2 -> February 12, 2025
-          if (dateStr.includes('/')) {
-            const parts = dateStr.split('/');
-            if (parts.length >= 3) {
-              const originalFirst = parseInt(parts[0], 10);
-              const originalSecond = parseInt(parts[1], 10);
-              
-              // If the original first part (day) doesn't match the parsed month,
-              // and the original second part (month) doesn't match the parsed day,
-              // then the date was likely swapped
-              if (originalFirst !== month && originalSecond !== day) {
-                // Try swapping: use first part as day, second as month
-                const day = originalFirst;
-                const month = originalSecond;
-                const year = parseInt(parts[2], 10);
-                
-                const swappedDate = new Date(year, month - 1, day);
-                if (!isNaN(swappedDate.getTime())) {
-                  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-                                     'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
-                  return `${day} ${monthNames[month - 1]} ${year}`;
-                }
-              }
-            }
-          }
-          
-          // If no swapping needed, format normally
           return date.toLocaleDateString('en-MY', {
             year: 'numeric',
             month: 'short',
@@ -719,10 +654,9 @@
           });
         }
         
-        // If all parsing fails, return the original string
         return dateStr;
       } catch (error) {
-        console.error('Date formatting error:', error, 'for date:', dateString);
+        console.error('Date formatting error:', error);
         return dateString || 'N/A';
       }
     }
