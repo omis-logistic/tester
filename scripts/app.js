@@ -624,42 +624,60 @@ function initValidationListeners() {
 
 // ================= AUTHENTICATION HANDLERS =================
 async function handleLogin() {
+  const btn = document.getElementById('loginBtn');
+  const originalHtml = btn.innerHTML;
+  
+  btn.innerHTML = '<div class="button-loader"></div> Processing...';
+  btn.disabled = true;
+
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  try {
-    const callbackName = `jsonp_${Date.now()}`;
-    const script = document.createElement('script');
-    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+  if (!validatePhone(phone)) {
+    showError('Invalid phone number format');
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+    return;
+  }
 
-    window[callbackName] = (response) => {
-      console.log('Login response:', response); // Debug log
-      if (response.success) {
-        const userData = {
-          phone: response.phone,
-          email: response.email,
-          tempPassword: response.tempPassword
-        };
-        console.log('Storing session:', userData); // Debug log
-        sessionStorage.setItem('userData', JSON.stringify(userData));
+  try {
+    // Use fetch with CORS
+    const response = await fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`, {
+      method: 'GET',
+      mode: 'cors',
+      credentials: 'omit'
+    });
+    
+    const text = await response.text();
+    const match = text.match(/^\w+\((.*)\)$/);
+    
+    if (match) {
+      const result = JSON.parse(match[1]);
+      
+      if (result.success) {
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: result.phone,
+          email: result.email,
+          tempPassword: result.tempPassword
+        }));
         localStorage.setItem('lastActivity', Date.now());
         
-        if (response.tempPassword) {
-          safeRedirect('password-reset.html');
-        } else {
-          safeRedirect('dashboard.html');
-        }
+        window.location.href = result.tempPassword 
+          ? 'password-reset.html?force=true'
+          : 'dashboard.html?fresh=1';
       } else {
-        showError(response.message || 'Authentication failed');
+        document.getElementById('password').value = '';
+        showError(result.message || 'Authentication failed');
       }
-      document.body.removeChild(script);
-      delete window[callbackName];
-    };
-    
-    document.body.appendChild(script);
+    } else {
+      throw new Error('Invalid response format');
+    }
   } catch (error) {
     console.error('Login error:', error);
-    showError('Login failed - please try again');
+    showError('Login failed. Please try again.');
+  } finally {
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
   }
 }
 
