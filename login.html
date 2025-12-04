@@ -205,15 +205,6 @@ window[callbackName] = (response) => {
     function showForgotPassword() {
       safeRedirect('forgot-password.html');
     }
-
-    function handleLoginWithFallback() {
-  if (shouldUsePostForLogin()) {
-    handleLogin(); // Use the new POST version
-  } else {
-    handleLoginJSONP(); // Use old JSONP version
-  }
-}
-    
   </script>
 </body>
 </html>
