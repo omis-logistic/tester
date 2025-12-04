@@ -148,8 +148,8 @@
 
   <script src="scripts/app.js"></script>
   <script>
-// Replace the entire handleLogin function in login.html
-function handleLogin() {
+    // Integrated with app.js functions
+    function handleLogin() {
   const btn = document.querySelector('.login-container button');
   const originalText = btn.innerHTML;
   btn.disabled = true;
@@ -162,49 +162,49 @@ function handleLogin() {
   const script = document.createElement('script');
   script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
-  window[callbackName] = (response) => {
-    // Always restore button state first
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    delete window[callbackName];
-    document.body.removeChild(script);
-    
-    if (response.success) {
+window[callbackName] = (response) => {
+  // Always restore button state first
+  btn.disabled = false;
+  btn.innerHTML = originalText;
+  
+  delete window[callbackName];
+  document.body.removeChild(script);
+  
+  if (response.success) {
       sessionStorage.setItem('userData', JSON.stringify(response));
       localStorage.setItem('lastActivity', Date.now());
       safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-    } else {
-      const errorContainer = document.getElementById('loginError');
-      errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
-      errorContainer.style.display = 'block';
-      document.getElementById('password').value = '';
-    }
-  };
+  } else {
+    const errorContainer = document.getElementById('loginError');
+    errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+    errorContainer.style.display = 'block';
+    document.getElementById('password').value = '';
+  }
+};
 
   document.body.appendChild(script);
 }
 
-// ======== ADD ENTER KEY HANDLING HERE ========
-document.getElementById('password').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    handleLogin();
-  }
-});
+  // ======== ADD ENTER KEY HANDLING HERE ========
+  document.getElementById('password').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  });
 
-document.getElementById('phone').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    document.getElementById('password').focus();
-  }
-});
+  document.getElementById('phone').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      document.getElementById('password').focus();
+    }
+  });
     
-function showRegistration() {
-  safeRedirect('register.html');
-}
+    function showRegistration() {
+      safeRedirect('register.html');
+    }
 
-function showForgotPassword() {
-  safeRedirect('forgot-password.html');
-}
-</script>
+    function showForgotPassword() {
+      safeRedirect('forgot-password.html');
+    }
+  </script>
 </body>
 </html>
