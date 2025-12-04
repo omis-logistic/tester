@@ -150,7 +150,7 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // Use a hybrid approach - try JSONP first, fallback to fetch if needed
+    // EXACT Mark 1 login implementation
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const originalHtml = btn.innerHTML;
@@ -169,42 +169,20 @@
         return;
       }
 
-      // Try JSONP first (works when third-party cookies are blocked)
-      tryJsonpLogin(phone, password, btn, originalHtml);
-    }
-
-    function tryJsonpLogin(phone, password, btn, originalHtml) {
       const callbackName = `jsonp_${Date.now()}`;
       const script = document.createElement('script');
       
-      // Add crossorigin attribute for CORS
+      // EXACTLY like Mark 1 - with crossorigin attribute
       script.crossOrigin = 'anonymous';
-      
-      // Create URL with cache busting
-      const url = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}&_=${Date.now()}`;
-      script.src = url;
-
-      // Set timeout for JSONP request
-      const timeoutId = setTimeout(() => {
-        // JSONP failed, try fetch as fallback
-        if (window[callbackName]) {
-          delete window[callbackName];
-        }
-        if (script.parentNode) {
-          document.body.removeChild(script);
-        }
-        tryFetchLogin(phone, password, btn, originalHtml);
-      }, 5000); // 5 second timeout
+      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
       window[callbackName] = (response) => {
-        clearTimeout(timeoutId);
-        
         // Restore button state
         btn.innerHTML = originalHtml;
         btn.disabled = false;
 
         if (response.success) {
-          console.log('JSONP Login successful:', response);
+          console.log('TempPassword flag:', response.tempPassword);
           sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
@@ -220,77 +198,28 @@
           showError(response.message || 'Authentication failed');
         }
         
-        // Cleanup
+        // Cleanup - EXACTLY like Mark 1
         if (script.parentNode) {
           document.body.removeChild(script);
         }
         delete window[callbackName];
       };
       
-      // Handle script error
+      // Add error handler
       script.onerror = function() {
-        clearTimeout(timeoutId);
-        // JSONP failed, try fetch
-        tryFetchLogin(phone, password, btn, originalHtml);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        showError('Network error. Please try again.');
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
+        delete window[callbackName];
       };
       
       document.body.appendChild(script);
     }
 
-    function tryFetchLogin(phone, password, btn, originalHtml) {
-      console.log('Trying fetch login as fallback...');
-      
-      // Use fetch with CORS mode
-      fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`, {
-        method: 'GET',
-        mode: 'cors',
-        credentials: 'omit', // Don't send cookies
-        headers: {
-          'Accept': 'application/javascript',
-          'Cache-Control': 'no-cache'
-        }
-      })
-      .then(response => {
-        if (!response.ok) throw new Error('Network response was not ok');
-        return response.text();
-      })
-      .then(text => {
-        // Parse JSONP response
-        const match = text.match(/^\w+\((.*)\)$/);
-        if (match) {
-          const response = JSON.parse(match[1]);
-          
-          btn.innerHTML = originalHtml;
-          btn.disabled = false;
-
-          if (response.success) {
-            sessionStorage.setItem('userData', JSON.stringify({
-              phone: response.phone,
-              email: response.email,
-              tempPassword: response.tempPassword
-            }));
-            localStorage.setItem('lastActivity', Date.now());
-            
-            window.location.href = response.tempPassword 
-              ? 'password-reset.html?force=true'
-              : 'dashboard.html?fresh=1';
-          } else {
-            document.getElementById('password').value = '';
-            showError(response.message || 'Authentication failed');
-          }
-        } else {
-          throw new Error('Invalid response format');
-        }
-      })
-      .catch(error => {
-        console.error('Fetch login failed:', error);
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
-        showError('Login failed. Please check your connection and try again.');
-      });
-    }
-
-    // ======== ADD ENTER KEY HANDLING HERE ========
+    // ======== EXACT Mark 1 ENTER KEY HANDLING ========
     document.getElementById('password').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         handleLogin();
@@ -311,12 +240,13 @@
       safeRedirect('forgot-password.html');
     }
 
-    // Validation function
+    // EXACT Mark 1 validation function
     function validatePhone(phone) {
       const regex = /^(673\d{7,}|60\d{9,})$/;
       return regex.test(phone);
     }
 
+    // EXACT Mark 1 error display
     function showError(message) {
       const errorDiv = document.getElementById('error-message');
       if (errorDiv) {
@@ -328,8 +258,28 @@
       }
     }
 
+    // EXACT Mark 1 redirect function
     function safeRedirect(path) {
-      window.location.href = path;
+      try {
+        // Extract base path without query parameters
+        const basePath = path.split('?')[0].split('#')[0];
+        
+        const allowedPaths = [
+          'login.html', 'register.html', 'dashboard.html',
+          'forgot-password.html', 'password-reset.html',
+          'my-info.html', 'parcel-declaration.html', 'track-parcel.html',
+          'billing-info.html', 'invoice.html'
+        ];
+        
+        if (!allowedPaths.includes(basePath)) {
+          throw new Error('Unauthorized path');
+        }
+        
+        window.location.href = path;
+      } catch (error) {
+        console.error('Redirect error:', error);
+        showError('Navigation failed. Please try again.');
+      }
     }
   </script>
 </body>
