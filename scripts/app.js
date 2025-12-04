@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz7hQ3xcxbu7FDhDl9kvTxcAK7fEus9EBfictbL8iP_wRiLfsXk9kuEp4lQqKUaSQVd/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxnnrC_n4H72pi7W-GSdPO39FTdafi1SPLSK1RjPgzMpZ6kCM3jdONA0iAY8NhgXsPD/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -127,49 +127,6 @@ async function callAPI(action, payload) {
   } catch (error) {
     console.error('API Call Failed:', error);
     return { success: false, message: error.message };
-  }
-}
-
-async function handleLoginPost(phone, password) {
-  try {
-    // Use POST instead of JSONP for Chrome mobile
-    const formData = new URLSearchParams();
-    formData.append('phone', phone);
-    formData.append('password', password);
-    
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      body: formData,
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
-      mode: 'cors'
-    });
-    
-    const result = await response.json();
-    
-    if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      return {
-        success: true,
-        tempPassword: result.tempPassword,
-        phone: result.phone,
-        email: result.email
-      };
-    } else {
-      return {
-        success: false,
-        message: result.message
-      };
-    }
-  } catch (error) {
-    console.error('POST login error:', error);
-    return {
-      success: false,
-      message: 'Network error. Please try again.'
-    };
   }
 }
 
