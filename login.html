@@ -150,7 +150,7 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // Use Mark 1's JSONP approach instead of fetch
+    // Use a hybrid approach - try JSONP first, fallback to fetch if needed
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const originalHtml = btn.innerHTML;
@@ -169,18 +169,42 @@
         return;
       }
 
-      // Use JSONP instead of fetch - works better with third-party cookies
+      // Try JSONP first (works when third-party cookies are blocked)
+      tryJsonpLogin(phone, password, btn, originalHtml);
+    }
+
+    function tryJsonpLogin(phone, password, btn, originalHtml) {
       const callbackName = `jsonp_${Date.now()}`;
       const script = document.createElement('script');
-      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+      
+      // Add crossorigin attribute for CORS
+      script.crossOrigin = 'anonymous';
+      
+      // Create URL with cache busting
+      const url = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}&_=${Date.now()}`;
+      script.src = url;
+
+      // Set timeout for JSONP request
+      const timeoutId = setTimeout(() => {
+        // JSONP failed, try fetch as fallback
+        if (window[callbackName]) {
+          delete window[callbackName];
+        }
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
+        tryFetchLogin(phone, password, btn, originalHtml);
+      }, 5000); // 5 second timeout
 
       window[callbackName] = (response) => {
+        clearTimeout(timeoutId);
+        
         // Restore button state
         btn.innerHTML = originalHtml;
         btn.disabled = false;
 
         if (response.success) {
-          console.log('Login successful:', response);
+          console.log('JSONP Login successful:', response);
           sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
@@ -195,19 +219,75 @@
           document.getElementById('password').value = '';
           showError(response.message || 'Authentication failed');
         }
-        document.body.removeChild(script);
+        
+        // Cleanup
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
         delete window[callbackName];
       };
       
       // Handle script error
       script.onerror = function() {
-        btn.innerHTML = originalHtml;
-        btn.disabled = false;
-        showError('Network error. Please try again.');
-        delete window[callbackName];
+        clearTimeout(timeoutId);
+        // JSONP failed, try fetch
+        tryFetchLogin(phone, password, btn, originalHtml);
       };
       
       document.body.appendChild(script);
+    }
+
+    function tryFetchLogin(phone, password, btn, originalHtml) {
+      console.log('Trying fetch login as fallback...');
+      
+      // Use fetch with CORS mode
+      fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`, {
+        method: 'GET',
+        mode: 'cors',
+        credentials: 'omit', // Don't send cookies
+        headers: {
+          'Accept': 'application/javascript',
+          'Cache-Control': 'no-cache'
+        }
+      })
+      .then(response => {
+        if (!response.ok) throw new Error('Network response was not ok');
+        return response.text();
+      })
+      .then(text => {
+        // Parse JSONP response
+        const match = text.match(/^\w+\((.*)\)$/);
+        if (match) {
+          const response = JSON.parse(match[1]);
+          
+          btn.innerHTML = originalHtml;
+          btn.disabled = false;
+
+          if (response.success) {
+            sessionStorage.setItem('userData', JSON.stringify({
+              phone: response.phone,
+              email: response.email,
+              tempPassword: response.tempPassword
+            }));
+            localStorage.setItem('lastActivity', Date.now());
+            
+            window.location.href = response.tempPassword 
+              ? 'password-reset.html?force=true'
+              : 'dashboard.html?fresh=1';
+          } else {
+            document.getElementById('password').value = '';
+            showError(response.message || 'Authentication failed');
+          }
+        } else {
+          throw new Error('Invalid response format');
+        }
+      })
+      .catch(error => {
+        console.error('Fetch login failed:', error);
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        showError('Login failed. Please check your connection and try again.');
+      });
     }
 
     // ======== ADD ENTER KEY HANDLING HERE ========
