@@ -150,91 +150,40 @@
   <script>
     // Integrated with app.js functions
     function handleLogin() {
-      const btn = document.querySelector('.login-container button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-    
-      const phone = document.getElementById('phone').value;
-      const password = document.getElementById('password').value;
-    
-      // Create a timeout for mobile Chrome
-      const timeout = setTimeout(() => {
-        if (typeof window[callbackName] === 'function') {
-          delete window[callbackName];
-        }
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        const errorContainer = document.getElementById('loginError');
-        errorContainer.textContent = 'Connection timeout. Please try again or check your network.';
-        errorContainer.style.display = 'block';
-      }, 10000); // 10 second timeout
-    
-      const callbackName = `jsonp_${Date.now()}`;
-      const script = document.createElement('script');
-      
-      // Use alternative approach for mobile Chrome
-      const isMobileChrome = /chrome|chromium/i.test(navigator.userAgent) && 
-                            /mobile|android/i.test(navigator.userAgent);
-      
-      // Add cache busting and no-cors headers for mobile Chrome
-      const timestamp = Date.now();
-      let url = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-      
-      if (isMobileChrome) {
-        // Add cache-busting parameter for Chrome mobile
-        url += `&_=${timestamp}`;
-        
-        // Try alternative approach with fetch if JSONP fails
-        setTimeout(() => {
-          fetch(`${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&_=${timestamp}`, {
-            mode: 'no-cors',
-            credentials: 'omit'
-          }).catch(e => {
-            console.log('Fallback fetch attempted');
-          });
-        }, 500);
-      }
-    
-      window[callbackName] = (response) => {
-        clearTimeout(timeout);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        
-        delete window[callbackName];
-        document.body.removeChild(script);
-        
-        if (response.success) {
-          sessionStorage.setItem('userData', JSON.stringify(response));
-          localStorage.setItem('lastActivity', Date.now());
-          
-          // Force page reload to ensure fresh session
-          if (isMobileChrome) {
-            window.location.replace(response.tempPassword ? 
-              'password-reset.html' : 'dashboard.html?fresh=1&t=' + Date.now());
-          } else {
-            safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-          }
-        } else {
-          const errorContainer = document.getElementById('loginError');
-          errorContainer.textContent = response.message || 'Incorrect Phone Number or Password. Try again';
-          errorContainer.style.display = 'block';
-          document.getElementById('password').value = '';
-        }
-      };
-    
-      script.src = url;
-      script.onerror = function() {
-        clearTimeout(timeout);
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        const errorContainer = document.getElementById('loginError');
-        errorContainer.textContent = 'Network error. Please check your connection and try again.';
-        errorContainer.style.display = 'block';
-      };
-      
-      document.body.appendChild(script);
-    }
+  const btn = document.querySelector('.login-container button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
+
+  const phone = document.getElementById('phone').value;
+  const password = document.getElementById('password').value;
+
+  const callbackName = `jsonp_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+window[callbackName] = (response) => {
+  // Always restore button state first
+  btn.disabled = false;
+  btn.innerHTML = originalText;
+  
+  delete window[callbackName];
+  document.body.removeChild(script);
+  
+  if (response.success) {
+      sessionStorage.setItem('userData', JSON.stringify(response));
+      localStorage.setItem('lastActivity', Date.now());
+      safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
+  } else {
+    const errorContainer = document.getElementById('loginError');
+    errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+    errorContainer.style.display = 'block';
+    document.getElementById('password').value = '';
+  }
+};
+
+  document.body.appendChild(script);
+}
 
   // ======== ADD ENTER KEY HANDLING HERE ========
   document.getElementById('password').addEventListener('keypress', function(e) {
