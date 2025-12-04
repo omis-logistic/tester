@@ -217,6 +217,79 @@
     function showForgotPassword() {
       window.location.href = 'forgot-password.html';
     }
+
+    // ======== MOBILE CHROME FIX ONLY ========
+// Check if it's Chrome Mobile with third-party cookies allowed
+function isMobileChromeWithThirdPartyCookies() {
+  const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+  const isChrome = /Chrome/.test(navigator.userAgent);
+  
+  // Try to detect if third-party cookies might be blocked
+  // This is a simple heuristic
+  return isMobile && isChrome;
+}
+
+// Override the handleLogin for mobile Chrome only
+if (isMobileChromeWithThirdPartyCookies()) {
+  // Store original function
+  const originalHandleLogin = handleLogin;
+  
+  // Override with mobile-friendly version
+  handleLogin = function() {
+    const phone = document.getElementById('phone').value;
+    const password = document.getElementById('password').value;
+    const btn = document.querySelector('.login-container button');
+    
+    btn.disabled = true;
+    btn.innerHTML = 'Trying mobile method...';
+    
+    // Try a different approach for mobile Chrome
+    const xhr = new XMLHttpRequest();
+    xhr.open('GET', `https://script.google.com/macros/s/YPB1ReFcx84GToxG-a3MZxgof81wIm/exec?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&_=${Date.now()}`, true);
+    
+    xhr.onload = function() {
+      try {
+        // Parse the response (it might be JSONP or plain JSON)
+        let response;
+        try {
+          response = JSON.parse(xhr.responseText);
+        } catch(e) {
+          // Try to extract JSONP
+          const match = xhr.responseText.match(/callback\((.*)\)/);
+          if (match) {
+            response = JSON.parse(match[1]);
+          } else {
+            throw new Error('Invalid response format');
+          }
+        }
+        
+        if (response.success) {
+          sessionStorage.setItem('userData', JSON.stringify(response));
+          localStorage.setItem('lastActivity', Date.now());
+          window.location.href = response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1';
+        } else {
+          const errorContainer = document.getElementById('loginError');
+          errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+          errorContainer.style.display = 'block';
+          document.getElementById('password').value = '';
+        }
+      } catch(error) {
+        // If XHR fails, try the original JSONP method as fallback
+        originalHandleLogin();
+      } finally {
+        btn.disabled = false;
+        btn.innerHTML = 'LOGIN';
+      }
+    };
+    
+    xhr.onerror = function() {
+      // If XHR fails, fall back to original method
+      originalHandleLogin();
+    };
+    
+    xhr.send();
+  };
+}
   </script>
 </body>
 </html>
