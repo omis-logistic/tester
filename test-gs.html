@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html>
+<body>
+  <h1>Test Google Apps Script Connection</h1>
+  <button onclick="testURL1()">Test URL 1</button>
+  <button onclick="testURL2()">Test URL 2</button>
+  <div id="result"></div>
+
+  <script>
+    const URL1 = 'https://script.google.com/macros/s/YPB1ReFcx84GToxG-a3MZxgof81wIm/exec';
+    const URL2 = 'https://script.google.com/macros/s/0bXkehRi6vJQvXlxFsJvlo4w/exec';
+
+    async function testURL1() {
+      testConnection(URL1, 'URL1');
+    }
+
+    async function testURL2() {
+      testConnection(URL2, 'URL2');
+    }
+
+    async function testConnection(url, name) {
+      const resultDiv = document.getElementById('result');
+      resultDiv.innerHTML = `Testing ${name}...`;
+      
+      try {
+        // Try GET first
+        const getUrl = `${url}?action=processLogin&phone=test&password=test&callback=test`;
+        const response = await fetch(getUrl);
+        const text = await response.text();
+        resultDiv.innerHTML = `${name} GET Response: ${text.substring(0, 200)}...`;
+        
+        // Also test POST
+        setTimeout(async () => {
+          const formData = new URLSearchParams();
+          formData.append('action', 'processLogin');
+          formData.append('phone', 'test');
+          formData.append('password', 'test');
+          
+          const postResponse = await fetch(url, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: formData.toString()
+          });
+          const postText = await postResponse.text();
+          resultDiv.innerHTML += `<br><br>${name} POST Response: ${postText.substring(0, 200)}...`;
+        }, 1000);
+        
+      } catch (error) {
+        resultDiv.innerHTML = `${name} Error: ${error.message}`;
+      }
+    }
+  </script>
+</body>
+</html>
