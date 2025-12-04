@@ -149,54 +149,41 @@
   <script src="scripts/app.js"></script>
   <script>
     // Integrated with app.js functions
-    async function handleLogin() {
-      const btn = document.querySelector('.login-container button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-    
-      const phone = document.getElementById('phone').value;
-      const password = document.getElementById('password').value;
-    
-      try {
-        // Use POST instead of JSONP
-        const response = await fetch(CONFIG.GAS_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-          },
-          body: JSON.stringify({
-            action: 'processLogin',
-            phone: phone,
-            password: password
-          }),
-          mode: 'cors',
-          credentials: 'omit' // Don't send cookies
-        });
-    
-        const result = await response.json();
-        
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        
-        if (result.success) {
-          sessionStorage.setItem('userData', JSON.stringify(result));
-          localStorage.setItem('lastActivity', Date.now());
-          safeRedirect(result.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-        } else {
-          const errorContainer = document.getElementById('loginError');
-          errorContainer.textContent = result.message || 'Incorrect Phone Number or Password';
-          errorContainer.style.display = 'block';
-          document.getElementById('password').value = '';
-        }
-      } catch (error) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        const errorContainer = document.getElementById('loginError');
-        errorContainer.textContent = 'Network error. Please try again.';
-        errorContainer.style.display = 'block';
-      }
-    }
+    function handleLogin() {
+  const btn = document.querySelector('.login-container button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
+
+  const phone = document.getElementById('phone').value;
+  const password = document.getElementById('password').value;
+
+  const callbackName = `jsonp_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+window[callbackName] = (response) => {
+  // Always restore button state first
+  btn.disabled = false;
+  btn.innerHTML = originalText;
+  
+  delete window[callbackName];
+  document.body.removeChild(script);
+  
+  if (response.success) {
+      sessionStorage.setItem('userData', JSON.stringify(response));
+      localStorage.setItem('lastActivity', Date.now());
+      safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
+  } else {
+    const errorContainer = document.getElementById('loginError');
+    errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+    errorContainer.style.display = 'block';
+    document.getElementById('password').value = '';
+  }
+};
+
+  document.body.appendChild(script);
+}
 
   // ======== ADD ENTER KEY HANDLING HERE ========
   document.getElementById('password').addEventListener('keypress', function(e) {
@@ -218,6 +205,15 @@
     function showForgotPassword() {
       safeRedirect('forgot-password.html');
     }
+
+    function handleLoginWithFallback() {
+  if (shouldUsePostForLogin()) {
+    handleLogin(); // Use the new POST version
+  } else {
+    handleLoginJSONP(); // Use old JSONP version
+  }
+}
+    
   </script>
 </body>
 </html>
