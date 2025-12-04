@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwh0dtdWsQxZI6kfXnPEWDesEa1C7LJYM8kxlZvhsUoT6sdlAqeJYMq-n857F4aCRMd/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxniPvRneTvSTly8WvA5rz6r0H_3KnOZKVKXXRuVk9_6gYqJI2AHEckud1zrEwDXT1_/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -627,32 +627,51 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
 
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-
   try {
-    const result = await callAPI('processLogin', { phone, password });
+    // Clear previous errors
+    document.getElementById('loginError').textContent = '';
     
-    if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      if (result.tempPassword) {
-        safeRedirect('password-reset.html');
-      } else {
-        safeRedirect('dashboard.html');
-      }
-    } else {
-      showError(result.message || 'Authentication failed');
+    if (!validatePhone(phone)) {
+      showError('Invalid phone number format');
+      return;
     }
+
+    if (!password) {
+      showError('Please enter your password');
+      return;
+    }
+
+    // Create JSONP request (this works with third-party cookies)
+    const callbackName = `login_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+      console.log('Login response:', response);
+      if (response.success) {
+        // Store session data
+        sessionStorage.setItem('userData', JSON.stringify(response));
+        localStorage.setItem('lastActivity', Date.now());
+        
+        // Redirect based on password status
+        if (response.tempPassword) {
+          window.location.href = 'password-reset.html?force=true';
+        } else {
+          window.location.href = 'dashboard.html?fresh=1';
+        }
+      } else {
+        document.getElementById('password').value = '';
+        showError(response.message || 'Authentication failed');
+      }
+      
+      // Cleanup
+      document.body.removeChild(script);
+      delete window[callbackName];
+    };
+    
+    document.body.appendChild(script);
   } catch (error) {
+    console.error('Login error:', error);
     showError('Login failed - please try again');
   }
 }
