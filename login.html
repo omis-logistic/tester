@@ -150,40 +150,96 @@
   <script>
     // Integrated with app.js functions
     function handleLogin() {
-  const btn = document.querySelector('.login-container button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-
-  const phone = document.getElementById('phone').value;
-  const password = document.getElementById('password').value;
-
-  const callbackName = `jsonp_${Date.now()}`;
-  const script = document.createElement('script');
-  script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
-window[callbackName] = (response) => {
-  // Always restore button state first
-  btn.disabled = false;
-  btn.innerHTML = originalText;
-  
-  delete window[callbackName];
-  document.body.removeChild(script);
-  
-  if (response.success) {
-      sessionStorage.setItem('userData', JSON.stringify(response));
-      localStorage.setItem('lastActivity', Date.now());
-      safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-  } else {
-    const errorContainer = document.getElementById('loginError');
-    errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
-    errorContainer.style.display = 'block';
-    document.getElementById('password').value = '';
-  }
-};
-
-  document.body.appendChild(script);
-}
+      const btn = document.querySelector('.login-container button');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
+    
+      const phone = document.getElementById('phone').value;
+      const password = document.getElementById('password').value;
+    
+      // Use fetch API instead of JSONP for mobile Chrome with third-party cookies
+      const isMobileChrome = /Chrome/.test(navigator.userAgent) && /Mobile/.test(navigator.userAgent);
+      const allowThirdPartyCookies = true; // Assume it's allowed since that's the problem case
+    
+      if (isMobileChrome && allowThirdPartyCookies) {
+        // Use fetch API with CORS headers
+        fetch(CONFIG.GAS_URL, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+          },
+          body: `action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}`
+        })
+        .then(response => response.json())
+        .then(result => {
+          handleLoginResponse(result, btn, originalText);
+        })
+        .catch(error => {
+          console.error('Login error:', error);
+          handleLoginError(btn, originalText);
+        });
+      } else {
+        // Original JSONP method for other browsers
+        const callbackName = `jsonp_${Date.now()}`;
+        const script = document.createElement('script');
+        script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+    
+        window[callbackName] = (response) => {
+          handleLoginResponse(response, btn, originalText);
+          delete window[callbackName];
+          document.body.removeChild(script);
+        };
+    
+        script.onerror = () => {
+          handleLoginError(btn, originalText);
+          delete window[callbackName];
+          if (script.parentNode) {
+            document.body.removeChild(script);
+          }
+        };
+    
+        document.body.appendChild(script);
+        
+        // Add timeout for JSONP fallback
+        setTimeout(() => {
+          if (window[callbackName]) {
+            handleLoginError(btn, originalText);
+            delete window[callbackName];
+            if (script.parentNode) {
+              document.body.removeChild(script);
+            }
+          }
+        }, 10000); // 10 second timeout
+      }
+    }
+    
+    function handleLoginResponse(result, btn, originalText) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      
+      if (result.success) {
+        sessionStorage.setItem('userData', JSON.stringify(result));
+        localStorage.setItem('lastActivity', Date.now());
+        // Add a small delay to ensure session storage is saved
+        setTimeout(() => {
+          safeRedirect(result.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
+        }, 100);
+      } else {
+        const errorContainer = document.getElementById('loginError');
+        errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+        errorContainer.style.display = 'block';
+        document.getElementById('password').value = '';
+      }
+    }
+    
+    function handleLoginError(btn, originalText) {
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      const errorContainer = document.getElementById('loginError');
+      errorContainer.textContent = 'Connection error. Please try again.';
+      errorContainer.style.display = 'block';
+    }
 
   // ======== ADD ENTER KEY HANDLING HERE ========
   document.getElementById('password').addEventListener('keypress', function(e) {
