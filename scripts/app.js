@@ -1,4 +1,11 @@
 //scripts/app.js
+
+// ================= DEBUG =================
+console.log('App initialized');
+console.log('CONFIG.GAS_URL:', CONFIG.GAS_URL);
+console.log('User Agent:', navigator.userAgent);
+console.log('Is Mobile:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
+
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbx76Vwi9DSzNr4dPgbyiMKWil5UMFgv39FfX2M_PHPjjBsJzX7ajn6eU8dyl_gjiriA/exec',
