@@ -148,56 +148,52 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // Integrated with app.js functions
-    function handleLogin() {
-  const btn = document.querySelector('.login-container button');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-
-  const phone = document.getElementById('phone').value;
-  const password = document.getElementById('password').value;
-
-  const callbackName = `jsonp_${Date.now()}`;
-  const script = document.createElement('script');
-  script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
-window[callbackName] = (response) => {
-  // Always restore button state first
-  btn.disabled = false;
-  btn.innerHTML = originalText;
-  
-  delete window[callbackName];
-  document.body.removeChild(script);
-  
-  if (response.success) {
-      sessionStorage.setItem('userData', JSON.stringify(response));
-      localStorage.setItem('lastActivity', Date.now());
-      safeRedirect(response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-  } else {
-    const errorContainer = document.getElementById('loginError');
-    errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
-    errorContainer.style.display = 'block';
-    document.getElementById('password').value = '';
-  }
-};
-
-  document.body.appendChild(script);
-}
-
-  // ======== ADD ENTER KEY HANDLING HERE ========
-  document.getElementById('password').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      handleLogin();
-    }
-  });
-
-  document.getElementById('phone').addEventListener('keypress', function(e) {
-    if (e.key === 'Enter') {
-      document.getElementById('password').focus();
-    }
-  });
+  function handleLogin() {
+    const btn = document.getElementById('loginBtn');
+    const originalHtml = btn.innerHTML;
     
+    // Show loading state
+    btn.innerHTML = '<div class="button-loader"></div> Processing...';
+    btn.disabled = true;
+
+    const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!validatePhone(phone)) {
+      showError('Invalid phone number format');
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+      return;
+    }
+
+    const callbackName = `jsonp_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+    window[callbackName] = (response) => {
+      // Restore button state
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+
+      if (response.success) {
+        console.log('TempPassword flag:', response.tempPassword);
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: response.phone,
+          tempPassword: response.tempPassword
+        }));
+        window.location.href = response.tempPassword 
+          ? 'password-reset.html?force=true'
+          : 'dashboard.html?fresh=1';
+      } else {
+        document.getElementById('password').value = '';
+        showError(response.message || 'Authentication failed');
+      }
+      document.body.removeChild(script);
+    };
+    
+    document.body.appendChild(script);
+  }
+
     function showRegistration() {
       safeRedirect('register.html');
     }
@@ -205,6 +201,12 @@ window[callbackName] = (response) => {
     function showForgotPassword() {
       safeRedirect('forgot-password.html');
     }
+
+  document.getElementById('password').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      handleLogin();
+    }
+  });
   </script>
 </body>
 </html>
