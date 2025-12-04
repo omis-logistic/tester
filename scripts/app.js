@@ -130,6 +130,49 @@ async function callAPI(action, payload) {
   }
 }
 
+async function handleLoginPost(phone, password) {
+  try {
+    // Use POST instead of JSONP for Chrome mobile
+    const formData = new URLSearchParams();
+    formData.append('phone', phone);
+    formData.append('password', password);
+    
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      body: formData,
+      headers: {
+        'Content-Type': 'application/x-www-form-urlencoded'
+      },
+      mode: 'cors'
+    });
+    
+    const result = await response.json();
+    
+    if (result.success) {
+      sessionStorage.setItem('userData', JSON.stringify(result));
+      localStorage.setItem('lastActivity', Date.now());
+      
+      return {
+        success: true,
+        tempPassword: result.tempPassword,
+        phone: result.phone,
+        email: result.email
+      };
+    } else {
+      return {
+        success: false,
+        message: result.message
+      };
+    }
+  } catch (error) {
+    console.error('POST login error:', error);
+    return {
+      success: false,
+      message: 'Network error. Please try again.'
+    };
+  }
+}
+
 function showLoading(show = true, message = 'Processing...') {
   const loader = document.getElementById('loadingOverlay');
   if (!loader) return;
