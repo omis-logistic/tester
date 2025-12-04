@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwSeOKO6gbnRkjVLvsftHNveXqnMU_nr8NYBVqwbuw8hNvzT4_XSe6zTMTLY0fq2fg/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwxDbcPfMjmf52_3uosSQ_qd7WOplERIuUIuTC1faKRADw8jfS8cobL1FJqI8Zj70_o/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -69,12 +69,11 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= SESSION MANAGEMENT =================
+// ================= IMPROVED SESSION CHECK =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
-  // If no session data, logout immediately
   if (!sessionData) {
     console.log('No session data found');
     return null;
@@ -88,11 +87,11 @@ const checkSession = () => {
     return null;
   }
 
-  // Update last activity
-  localStorage.setItem('lastActivity', Date.now());
-  
   try {
     const userData = JSON.parse(sessionData);
+    
+    // Update last activity
+    localStorage.setItem('lastActivity', Date.now());
     
     // Check if temp password requires reset
     if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
@@ -104,6 +103,7 @@ const checkSession = () => {
   } catch (error) {
     console.error('Error parsing session data:', error);
     sessionStorage.clear();
+    localStorage.removeItem('lastActivity');
     return null;
   }
 };
@@ -930,5 +930,189 @@ function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
+  }
+}
+
+// ================= BILLING SYSTEM HELPERS =================
+async function loadBillingDataWithRetry(phone, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Loading billing data (attempt ${attempt}/${maxRetries})`);
+      
+      // Add exponential backoff
+      if (attempt > 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const result = await loadBillingDataFromServer(phone);
+      
+      if (result && result.success) {
+        return result;
+      }
+      
+      lastError = new Error(result?.message || 'Billing data load failed');
+      
+    } catch (error) {
+      console.error(`Billing load attempt ${attempt} failed:`, error);
+      lastError = error;
+      
+      // If it's a network error, try again
+      if (attempt < maxRetries) {
+        continue;
+      }
+    }
+  }
+  
+  throw lastError || new Error('Failed to load billing data after all retries');
+}
+
+async function checkPaymentStatusWithRetry(phone, maxRetries = 2) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Checking payment status (attempt ${attempt}/${maxRetries})`);
+      
+      if (attempt > 1) {
+        const delay = Math.min(500 * Math.pow(2, attempt - 1), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const result = await checkPaymentStatusForUser(phone);
+      
+      if (result && (result.success || result.paidOrders)) {
+        return result;
+      }
+      
+      lastError = new Error('Payment status check failed');
+      
+    } catch (error) {
+      console.error(`Payment status attempt ${attempt} failed:`, error);
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        continue;
+      }
+    }
+  }
+  
+  // Return empty if all retries fail
+  return { success: false, paidOrders: [] };
+}
+
+// ================= IMPROVED LOADING FUNCTION =================
+async function loadBillingData() {
+  try {
+    showLoading(true, "Please wait, loading billing information...");
+    const userData = checkSession();
+    if (!userData?.phone) {
+      handleLogout();
+      return;
+    }
+
+    console.log('Starting to load billing data...');
+    
+    // Load billing data with retry
+    const billingResponse = await loadBillingDataWithRetry(userData.phone);
+    
+    if (!billingResponse.success) {
+      showError(billingResponse.message || 'Failed to load billing information', 'connectionError');
+      return;
+    }
+
+    // Load payment status with retry (non-critical)
+    const paymentStatus = await checkPaymentStatusWithRetry(userData.phone);
+    
+    allBillingData = billingResponse.data || [];
+    paidOrders = paymentStatus.paidOrders || [];
+    
+    console.log(`Loaded ${allBillingData.length} billing records and ${paidOrders.length} paid orders`);
+    
+    // Store in session for offline access
+    try {
+      sessionStorage.setItem('billingCache', JSON.stringify({
+        data: allBillingData,
+        paidOrders: paidOrders,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.warn('Could not cache billing data:', e);
+    }
+    
+    renderBillingSections(allBillingData);
+
+  } catch (error) {
+    console.error('Billing load error:', error);
+    
+    // Try to use cached data
+    try {
+      const cached = sessionStorage.getItem('billingCache');
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const cacheAge = Date.now() - cacheData.timestamp;
+        
+        // Use cache if less than 10 minutes old
+        if (cacheAge < 10 * 60 * 1000) {
+          console.log('Using cached billing data');
+          allBillingData = cacheData.data || [];
+          paidOrders = cacheData.paidOrders || [];
+          renderBillingSections(allBillingData);
+          showError('Using cached data. Some information may be outdated.', 'connectionError');
+          return;
+        }
+      }
+    } catch (cacheError) {
+      console.warn('Cache error:', cacheError);
+    }
+    
+    showError('Connection failed. Please try again.', 'connectionError');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ================= CONNECTION HEALTH CHECK =================
+async function checkBackendHealth() {
+  try {
+    const healthCheck = await new Promise((resolve, reject) => {
+      const callbackName = `health_${Date.now()}`;
+      const script = document.createElement('script');
+      script.crossOrigin = 'anonymous';
+      script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=processLogin&phone=test&password=test`;
+      
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Backend timeout'));
+      }, 5000);
+      
+      function cleanup() {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
+      }
+      
+      window[callbackName] = (response) => {
+        cleanup();
+        // Even if login fails, backend is responding
+        resolve(true);
+      };
+      
+      script.onerror = () => {
+        cleanup();
+        reject(new Error('Backend unavailable'));
+      };
+      
+      document.body.appendChild(script);
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Backend health check failed:', error);
+    return false;
   }
 }
