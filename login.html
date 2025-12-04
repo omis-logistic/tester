@@ -148,179 +148,75 @@
 
   <script src="scripts/app.js"></script>
   <script>
-// Simple login handler that works on all devices
-async function handleLogin() {
-  const phone = document.getElementById('phone').value.trim();
-  const password = document.getElementById('password').value;
-  const btn = document.querySelector('.login-container button');
-  const originalText = btn.innerHTML;
-  
-  // Validate phone format
-  if (!/^(673\d{7,}|60\d{9,})$/.test(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-  
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-  
-  // Show loading state
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-  
-  try {
-    // Use fetch instead of JSONP - works better on mobile
-    const formData = new URLSearchParams();
-    formData.append('phone', phone);
-    formData.append('password', password);
-    
-    const response = await fetch('https://script.google.com/macros/s/YPB1ReFcx84GToxG-a3MZxgof81wIm/exec', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded',
-      },
-      body: formData.toString()
+    // ======== ORIGINAL WORKING CODE ========
+    function handleLogin() {
+      const btn = document.querySelector('.login-container button');
+      const originalText = btn.innerHTML;
+      btn.disabled = true;
+      btn.innerHTML = 'Authenticating...';
+
+      const phone = document.getElementById('phone').value;
+      const password = document.getElementById('password').value;
+
+      const callbackName = `jsonp_${Date.now()}`;
+      const script = document.createElement('script');
+      script.src = `https://script.google.com/macros/s/YPB1ReFcx84GToxG-a3MZxgof81wIm/exec?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
+      window[callbackName] = (response) => {
+        // Always restore button state first
+        btn.disabled = false;
+        btn.innerHTML = originalText;
+        
+        delete window[callbackName];
+        document.body.removeChild(script);
+        
+        if (response.success) {
+            sessionStorage.setItem('userData', JSON.stringify(response));
+            localStorage.setItem('lastActivity', Date.now());
+            window.location.href = response.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1';
+        } else {
+          const errorContainer = document.getElementById('loginError');
+          errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+          errorContainer.style.display = 'block';
+          document.getElementById('password').value = '';
+        }
+      };
+
+      // Add timeout cleanup
+      setTimeout(() => {
+        if (window[callbackName]) {
+          btn.disabled = false;
+          btn.innerHTML = originalText;
+          delete window[callbackName];
+          if (script.parentNode) {
+            document.body.removeChild(script);
+          }
+        }
+      }, 15000); // 15 second timeout
+
+      document.body.appendChild(script);
+    }
+
+    // ======== ADD ENTER KEY HANDLING ========
+    document.getElementById('password').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        handleLogin();
+      }
+    });
+
+    document.getElementById('phone').addEventListener('keypress', function(e) {
+      if (e.key === 'Enter') {
+        document.getElementById('password').focus();
+      }
     });
     
-    if (!response.ok) {
-      throw new Error(`HTTP error! status: ${response.status}`);
+    function showRegistration() {
+      window.location.href = 'register.html';
     }
-    
-    const result = await response.json();
-    
-    // Restore button
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    if (result.success) {
-      // Store session data
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      // Clear any error messages
-      const errorContainer = document.getElementById('loginError');
-      if (errorContainer) errorContainer.style.display = 'none';
-      
-      // Redirect based on password type
-      if (result.tempPassword) {
-        window.location.href = 'password-reset.html';
-      } else {
-        window.location.href = 'dashboard.html?fresh=1';
-      }
-    } else {
-      // Show error
-      const errorContainer = document.getElementById('loginError');
-      if (errorContainer) {
-        errorContainer.textContent = result.message || 'Invalid credentials';
-        errorContainer.style.display = 'block';
-      }
-      document.getElementById('password').value = '';
+
+    function showForgotPassword() {
+      window.location.href = 'forgot-password.html';
     }
-    
-  } catch (error) {
-    console.error('Login error:', error);
-    
-    // Restore button
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    // Try alternative method if first fails
-    tryAlternativeLogin(phone, password, btn);
-  }
-}
-
-// Alternative login method using JSONP as fallback
-function tryAlternativeLogin(phone, password, btn) {
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Trying alternative method...';
-  
-  const callbackName = `jsonp_${Date.now()}`;
-  const script = document.createElement('script');
-  
-  // Use GET request with JSONP
-  script.src = `https://script.google.com/macros/s/YPB1ReFcx84GToxG-a3MZxgof81wIm/exec?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-  
-  window[callbackName] = function(response) {
-    // Clean up
-    delete window[callbackName];
-    document.body.removeChild(script);
-    
-    // Restore button
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    if (response.success) {
-      sessionStorage.setItem('userData', JSON.stringify(response));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      if (response.tempPassword) {
-        window.location.href = 'password-reset.html';
-      } else {
-        window.location.href = 'dashboard.html?fresh=1';
-      }
-    } else {
-      const errorContainer = document.getElementById('loginError');
-      if (errorContainer) {
-        errorContainer.textContent = response.message || 'Login failed';
-        errorContainer.style.display = 'block';
-      }
-      document.getElementById('password').value = '';
-    }
-  };
-  
-  // Add timeout
-  setTimeout(() => {
-    if (window[callbackName]) {
-      delete window[callbackName];
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      
-      const errorContainer = document.getElementById('loginError');
-      if (errorContainer) {
-        errorContainer.textContent = 'Connection timeout. Please check your network.';
-        errorContainer.style.display = 'block';
-      }
-    }
-  }, 10000);
-  
-  document.body.appendChild(script);
-}
-
-// Add enter key handling
-document.getElementById('password').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    handleLogin();
-  }
-});
-
-document.getElementById('phone').addEventListener('keypress', function(e) {
-  if (e.key === 'Enter') {
-    document.getElementById('password').focus();
-  }
-});
-
-function showRegistration() {
-  window.location.href = 'register.html';
-}
-
-function showForgotPassword() {
-  window.location.href = 'forgot-password.html';
-}
-
-// Add simple error display function
-function showError(message) {
-  const errorContainer = document.getElementById('loginError') || document.getElementById('error-message');
-  if (errorContainer) {
-    errorContainer.textContent = message;
-    errorContainer.style.display = 'block';
-    setTimeout(() => {
-      errorContainer.style.display = 'none';
-    }, 5000);
-  }
-}
-</script>
+  </script>
 </body>
 </html>
