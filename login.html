@@ -148,8 +148,8 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // Integrated with app.js functions
-async function handleLogin() {
+// Replace the entire handleLogin function in login.html
+function handleLogin() {
   const btn = document.querySelector('.login-container button');
   const originalText = btn.innerHTML;
   btn.disabled = true;
@@ -158,64 +158,12 @@ async function handleLogin() {
   const phone = document.getElementById('phone').value;
   const password = document.getElementById('password').value;
 
-  try {
-    // Use POST with proper headers
-    const response = await fetch(CONFIG.GAS_URL, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'Accept': 'application/json'
-      },
-      body: JSON.stringify({
-        action: 'processLogin',
-        phone: phone,
-        password: password
-      })
-    });
-
-    // Check if response is OK
-    if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
-    }
-
-    const result = await response.json();
-    
-    // Always restore button state
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    
-    if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      safeRedirect(result.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-    } else {
-      const errorContainer = document.getElementById('loginError');
-      errorContainer.textContent = result.message || 'Incorrect credentials';
-      errorContainer.style.display = 'block';
-      document.getElementById('password').value = '';
-    }
-  } catch (error) {
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    console.error('Login error:', error);
-    
-    const errorContainer = document.getElementById('loginError');
-    errorContainer.textContent = 'Network error. Please check connection and try again.';
-    errorContainer.style.display = 'block';
-    
-    // Fallback to JSONP if POST fails
-    console.log('Attempting JSONP fallback...');
-    handleLoginWithJSONP(phone, password, btn, originalText);
-  }
-}
-
-// Keep the original JSONP function as fallback
-function handleLoginWithJSONP(phone, password, btn, originalText) {
   const callbackName = `jsonp_${Date.now()}`;
   const script = document.createElement('script');
   script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
   window[callbackName] = (response) => {
+    // Always restore button state first
     btn.disabled = false;
     btn.innerHTML = originalText;
     
@@ -237,7 +185,7 @@ function handleLoginWithJSONP(phone, password, btn, originalText) {
   document.body.appendChild(script);
 }
 
-// Enter key handling remains the same
+// ======== ADD ENTER KEY HANDLING HERE ========
 document.getElementById('password').addEventListener('keypress', function(e) {
   if (e.key === 'Enter') {
     handleLogin();
@@ -257,6 +205,6 @@ function showRegistration() {
 function showForgotPassword() {
   safeRedirect('forgot-password.html');
 }
-  </script>
+</script>
 </body>
 </html>
