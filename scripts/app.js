@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzwNHzuxJvsuFYc-9Mt-wMoJv-uv1t1F6PVkuuhw7Ywqb1SIQKHiCnNZ7R5nJnTlJXG/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbx76Vwi9DSzNr4dPgbyiMKWil5UMFgv39FfX2M_PHPjjBsJzX7ajn6eU8dyl_gjiriA/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -626,34 +626,60 @@ function initValidationListeners() {
 async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
+  
+  // Clear previous errors
+  document.getElementById('loginError').textContent = '';
+  
+  if (!validatePhone(phone)) {
+    showError('Invalid phone number format');
+    return;
+  }
+
+  if (!password) {
+    showError('Please enter your password');
+    return;
+  }
+
+  // Show loading state
+  const btn = document.querySelector('.login-container button') || document.getElementById('loginBtn');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
 
   try {
-    // Clear previous errors
-    document.getElementById('loginError').textContent = '';
-    
-    if (!validatePhone(phone)) {
-      showError('Invalid phone number format');
-      return;
-    }
-
-    if (!password) {
-      showError('Please enter your password');
-      return;
-    }
-
-    // Create JSONP request (this works with third-party cookies)
+    // Create JSONP request
     const callbackName = `login_${Date.now()}`;
+    const url = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+    
+    // Remove any existing script with same callback
+    const existingScript = document.getElementById(callbackName);
+    if (existingScript) existingScript.remove();
+    
+    // Create script element
     const script = document.createElement('script');
-    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
+    script.id = callbackName;
+    script.src = url;
+    
+    // Set up callback function
     window[callbackName] = (response) => {
       console.log('Login response:', response);
+      
+      // Clean up
+      delete window[callbackName];
+      document.body.removeChild(script);
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      
       if (response.success) {
         // Store session data
-        sessionStorage.setItem('userData', JSON.stringify(response));
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: response.phone,
+          email: response.email,
+          tempPassword: response.tempPassword
+        }));
         localStorage.setItem('lastActivity', Date.now());
         
-        // Redirect based on password status
+        // Redirect
         if (response.tempPassword) {
           window.location.href = 'password-reset.html?force=true';
         } else {
@@ -663,16 +689,25 @@ async function handleLogin() {
         document.getElementById('password').value = '';
         showError(response.message || 'Authentication failed');
       }
-      
-      // Cleanup
-      document.body.removeChild(script);
-      delete window[callbackName];
     };
     
+    // Handle script error
+    script.onerror = () => {
+      delete window[callbackName];
+      document.body.removeChild(script);
+      btn.disabled = false;
+      btn.innerHTML = originalText;
+      showError('Network error. Please try again.');
+    };
+    
+    // Add script to trigger request
     document.body.appendChild(script);
+    
   } catch (error) {
     console.error('Login error:', error);
-    showError('Login failed - please try again');
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    showError('Login failed. Please try again.');
   }
 }
 
