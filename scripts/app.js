@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxZfY_TlI_xoe5ySegttY8fD00B3JZxCqfk_YPvB6nv413R09P3V14x1Cv1hKQohgf1/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz7hQ3xcxbu7FDhDl9kvTxcAK7fEus9EBfictbL8iP_wRiLfsXk9kuEp4lQqKUaSQVd/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -962,4 +962,14 @@ function setupCategoryChangeListener() {
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
+}
+
+// Add this function to detect problematic Chrome mobile
+function shouldUsePostForLogin() {
+  const userAgent = navigator.userAgent.toLowerCase();
+  const isChromeMobile = /chrome.*mobile/.test(userAgent);
+  const isIOSChrome = /crios/.test(userAgent);
+  
+  // Use POST for Chrome mobile on iOS/Android
+  return isChromeMobile || isIOSChrome;
 }
