@@ -718,67 +718,73 @@
       }
     }
 
-    // EXACT Mark 1 JSONP approach for server calls
-    async function loadBillingDataFromServer(phone) {
-      const callbackName = `billingCallback_${Date.now()}`;
-      
+    // Update your existing JSONP functions in billing-info.html:
+    function loadBillingDataFromServer(phone) {
       return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
+        const callbackName = `billingCallback_${Date.now()}`;
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          reject(new Error('Billing data request timeout'));
+        }, 20000); // 20 second timeout
         
-        // Mark 1 approach with crossorigin attribute
-        script.crossOrigin = 'anonymous';
-        script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(phone)}`;
-        script.id = callbackName;
-        
-        window[callbackName] = (data) => {
-          // Cleanup - EXACT Mark 1 approach
+        function cleanup() {
+          clearTimeout(timeoutId);
           delete window[callbackName];
-          if (script.parentNode) {
+          const script = document.getElementById(callbackName);
+          if (script && script.parentNode) {
             document.head.removeChild(script);
           }
+        }
+        
+        const script = document.createElement('script');
+        script.id = callbackName;
+        script.crossOrigin = 'anonymous';
+        script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getBillingInfo&phone=${encodeURIComponent(phone)}`;
+        
+        window[callbackName] = (data) => {
+          cleanup();
           resolve(data);
         };
         
-        // Error handling - Mark 1 approach
-        script.onerror = function() {
-          delete window[callbackName];
-          if (script.parentNode) {
-            document.head.removeChild(script);
-          }
+        script.onerror = () => {
+          cleanup();
           reject(new Error('Failed to load billing data'));
         };
         
         document.head.appendChild(script);
       });
     }
-
-    async function checkPaymentStatusForUser(phone) {
-      const callbackName = `paymentStatusCallback_${Date.now()}`;
-      
+    
+    function checkPaymentStatusForUser(phone) {
       return new Promise((resolve, reject) => {
-        const script = document.createElement('script');
+        const callbackName = `paymentStatusCallback_${Date.now()}`;
+        const timeoutId = setTimeout(() => {
+          cleanup();
+          resolve({ success: false, paidOrders: [] }); // Don't reject, just return empty
+        }, 10000); // 10 second timeout
         
-        // Mark 1 approach with crossorigin attribute
-        script.crossOrigin = 'anonymous';
-        script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=checkPaymentStatus&phone=${encodeURIComponent(phone)}`;
-        script.id = callbackName;
-        
-        window[callbackName] = (data) => {
-          // Cleanup - EXACT Mark 1 approach
+        function cleanup() {
+          clearTimeout(timeoutId);
           delete window[callbackName];
-          if (script.parentNode) {
+          const script = document.getElementById(callbackName);
+          if (script && script.parentNode) {
             document.head.removeChild(script);
           }
+        }
+        
+        const script = document.createElement('script');
+        script.id = callbackName;
+        script.crossOrigin = 'anonymous';
+        script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=checkPaymentStatus&phone=${encodeURIComponent(phone)}`;
+        
+        window[callbackName] = (data) => {
+          cleanup();
           resolve(data);
         };
         
-        // Error handling - Mark 1 approach
-        script.onerror = function() {
-          delete window[callbackName];
-          if (script.parentNode) {
-            document.head.removeChild(script);
-          }
-          reject(new Error('Failed to load payment status'));
+        script.onerror = () => {
+          cleanup();
+          resolve({ success: false, paidOrders: [] }); // Don't reject, just return empty
         };
         
         document.head.appendChild(script);
