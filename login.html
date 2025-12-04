@@ -149,74 +149,74 @@
   <script src="scripts/app.js"></script>
   <script>
     // Integrated with app.js functions
-    async function handleLogin() {
-      const btn = document.querySelector('.login-container button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
-    
-      const phone = document.getElementById('phone').value;
-      const password = document.getElementById('password').value;
-    
-      try {
-        // Use POST request instead of JSONP
-        const response = await fetch(CONFIG.GAS_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json'
-          },
-          body: JSON.stringify({
-            action: 'processLogin',
-            phone: phone,
-            password: password
-          })
-        });
-    
-        const result = await response.json();
-        
-        // Always restore button state first
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        
-        if (result.success) {
-          sessionStorage.setItem('userData', JSON.stringify(result));
-          localStorage.setItem('lastActivity', Date.now());
-          safeRedirect(result.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
-        } else {
-          const errorContainer = document.getElementById('loginError');
-          errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
-          errorContainer.style.display = 'block';
-          document.getElementById('password').value = '';
-        }
-      } catch (error) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        const errorContainer = document.getElementById('loginError');
-        errorContainer.textContent = 'Network error. Please try again.';
-        errorContainer.style.display = 'block';
-      }
-    }
-    
-    // ======== ADD ENTER KEY HANDLING HERE ========
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        handleLogin();
-      }
+async function handleLogin() {
+  const btn = document.querySelector('.login-container button');
+  const originalText = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
+
+  const phone = document.getElementById('phone').value;
+  const password = document.getElementById('password').value;
+
+  try {
+    // Use POST request instead of JSONP
+    const response = await fetch(CONFIG.GAS_URL, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify({
+        action: 'processLogin',
+        phone: phone,
+        password: password
+      })
     });
+
+    const result = await response.json();
     
-    document.getElementById('phone').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        document.getElementById('password').focus();
-      }
-    });
-        
-    function showRegistration() {
-      safeRedirect('register.html');
-    }
+    // Always restore button state first
+    btn.disabled = false;
+    btn.innerHTML = originalText;
     
-    function showForgotPassword() {
-      safeRedirect('forgot-password.html');
+    if (result.success) {
+      sessionStorage.setItem('userData', JSON.stringify(result));
+      localStorage.setItem('lastActivity', Date.now());
+      safeRedirect(result.tempPassword ? 'password-reset.html' : 'dashboard.html?fresh=1');
+    } else {
+      const errorContainer = document.getElementById('loginError');
+      errorContainer.textContent = 'Incorrect Phone Number or Password. Try again';
+      errorContainer.style.display = 'block';
+      document.getElementById('password').value = '';
     }
-    </script>
+  } catch (error) {
+    btn.disabled = false;
+    btn.innerHTML = originalText;
+    const errorContainer = document.getElementById('loginError');
+    errorContainer.textContent = 'Network error. Please try again.';
+    errorContainer.style.display = 'block';
+  }
+}
+
+// ======== ADD ENTER KEY HANDLING HERE ========
+document.getElementById('password').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    handleLogin();
+  }
+});
+
+document.getElementById('phone').addEventListener('keypress', function(e) {
+  if (e.key === 'Enter') {
+    document.getElementById('password').focus();
+  }
+});
+    
+function showRegistration() {
+  safeRedirect('register.html');
+}
+
+function showForgotPassword() {
+  safeRedirect('forgot-password.html');
+}
+  </script>
 </body>
 </html>
