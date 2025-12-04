@@ -1,14 +1,7 @@
 //scripts/app.js
-
-// ================= DEBUG =================
-console.log('App initialized');
-console.log('CONFIG.GAS_URL:', CONFIG.GAS_URL);
-console.log('User Agent:', navigator.userAgent);
-console.log('Is Mobile:', /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent));
-
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbx76Vwi9DSzNr4dPgbyiMKWil5UMFgv39FfX2M_PHPjjBsJzX7ajn6eU8dyl_gjiriA/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwkaP5lMmlKToBFqpJvPu68nBr2pUKUBF4uIAroaubwzhR-IMTuEAm0Jyk8mEAiLnUt/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -103,7 +96,7 @@ const checkSession = () => {
 };
 
 function handleLogout() {
-  sessionStorage.clear(); // This clears the freshLogin flag
+  sessionStorage.clear();
   localStorage.removeItem('lastActivity');
   safeRedirect('login.html');
 }
@@ -633,88 +626,40 @@ function initValidationListeners() {
 async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
-  
-  // Clear previous errors
-  document.getElementById('loginError').textContent = '';
-  
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-
-  // Show loading state
-  const btn = document.querySelector('.login-container button') || document.getElementById('loginBtn');
-  const originalText = btn.innerHTML;
-  btn.disabled = true;
-  btn.innerHTML = '<div class="button-loader"></div> Authenticating...';
 
   try {
-    // Create JSONP request
-    const callbackName = `login_${Date.now()}`;
-    const url = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-    
-    // Remove any existing script with same callback
-    const existingScript = document.getElementById(callbackName);
-    if (existingScript) existingScript.remove();
-    
-    // Create script element
+    const callbackName = `jsonp_${Date.now()}`;
     const script = document.createElement('script');
-    script.id = callbackName;
-    script.src = url;
-    
-    // Set up callback function
+    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+
     window[callbackName] = (response) => {
-      console.log('Login response:', response);
-      
-      // Clean up
-      delete window[callbackName];
-      document.body.removeChild(script);
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      
+      console.log('Login response:', response); // Debug log
       if (response.success) {
-        // Store session data
-        sessionStorage.setItem('userData', JSON.stringify({
+        const userData = {
           phone: response.phone,
           email: response.email,
           tempPassword: response.tempPassword
-        }));
+        };
+        console.log('Storing session:', userData); // Debug log
+        sessionStorage.setItem('userData', JSON.stringify(userData));
         localStorage.setItem('lastActivity', Date.now());
         
-        // Redirect
         if (response.tempPassword) {
-          window.location.href = 'password-reset.html?force=true';
+          safeRedirect('password-reset.html');
         } else {
-          window.location.href = 'dashboard.html?fresh=1';
+          safeRedirect('dashboard.html');
         }
       } else {
-        document.getElementById('password').value = '';
         showError(response.message || 'Authentication failed');
       }
-    };
-    
-    // Handle script error
-    script.onerror = () => {
-      delete window[callbackName];
       document.body.removeChild(script);
-      btn.disabled = false;
-      btn.innerHTML = originalText;
-      showError('Network error. Please try again.');
+      delete window[callbackName];
     };
     
-    // Add script to trigger request
     document.body.appendChild(script);
-    
   } catch (error) {
     console.error('Login error:', error);
-    btn.disabled = false;
-    btn.innerHTML = originalText;
-    showError('Login failed. Please try again.');
+    showError('Login failed - please try again');
   }
 }
 
