@@ -118,67 +118,43 @@
   <script src="scripts/app.js"></script>
   
   <script>
-// Enhanced tracking prefill with session persistence
+// Enhanced prefill tracking number logic
 document.addEventListener('DOMContentLoaded', function() {
-  console.log('Parcel declaration page loaded');
-  
-  // Check session first
-  const userData = checkSession();
-  if (!userData) {
-    // Not logged in - check if we have tracking parameter
+    // Check for prefill tracking from session storage
+    const prefillTracking = sessionStorage.getItem('prefillTracking');
+    
+    if (prefillTracking) {
+        const trackingInput = document.getElementById('trackingNumber');
+        if (trackingInput) {
+            trackingInput.value = prefillTracking;
+            trackingInput.readOnly = true;
+            trackingInput.style.backgroundColor = '#2a2a2a';
+            trackingInput.style.color = '#888';
+            trackingInput.title = "Tracking number from login link - cannot be modified";
+            
+            // Also store in session for verification
+            sessionStorage.setItem('prefilledTracking', prefillTracking);
+            
+            // Remove after 1 minute to prevent stale data
+            setTimeout(() => {
+                sessionStorage.removeItem('prefillTracking');
+                sessionStorage.removeItem('prefilledTracking');
+            }, 60000);
+        }
+    }
+    
+    // Check for pending tracking parameter from URL (if accessed directly)
     const urlParams = new URLSearchParams(window.location.search);
     const urlTracking = urlParams.get('tracking');
-    
-    if (urlTracking) {
-      // Store tracking and redirect to login
-      sessionStorage.setItem('pendingTracking', urlTracking);
-      sessionStorage.setItem('trackingRedirect', 'true');
-      
-      // Redirect to login page with correct path
-      const loginUrl = window.location.origin + '/zarizqlogin/login.html';
-      window.location.href = loginUrl;
-    } else {
-      // No tracking, just redirect to login
-      safeRedirect('login.html');
+    if (urlTracking && !prefillTracking) {
+        const trackingInput = document.getElementById('trackingNumber');
+        if (trackingInput) {
+            trackingInput.value = urlTracking;
+            trackingInput.readOnly = true;
+            trackingInput.style.backgroundColor = '#2a2a2a';
+            trackingInput.style.color = '#888';
+        }
     }
-    return;
-  }
-  
-  // We're logged in - handle tracking prefill
-  let trackingToPrefill = null;
-  
-  // Check URL for tracking parameter first
-  const urlParams = new URLSearchParams(window.location.search);
-  const urlTracking = urlParams.get('tracking');
-  
-  if (urlTracking) {
-    trackingToPrefill = urlTracking;
-    // Clean URL
-    if (window.history.replaceState) {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-    }
-  }
-  
-  // Then check sessionStorage
-  if (!trackingToPrefill) {
-    trackingToPrefill = sessionStorage.getItem('prefillTracking');
-  }
-  
-  if (trackingToPrefill) {
-    console.log('Prefilling tracking:', trackingToPrefill);
-    const trackingInput = document.getElementById('trackingNumber');
-    if (trackingInput) {
-      trackingInput.value = trackingToPrefill;
-      trackingInput.readOnly = true;
-      trackingInput.style.backgroundColor = '#2a2a2a';
-      trackingInput.style.color = '#888';
-      trackingInput.style.cursor = 'not-allowed';
-      
-      // Clear after use
-      sessionStorage.removeItem('prefillTracking');
-    }
-  }
 });
 </script>
 </body>
