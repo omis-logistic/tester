@@ -766,7 +766,8 @@ function safeRedirect(path) {
     const allowedPaths = [
       'login.html', 'register.html', 'dashboard.html',
       'forgot-password.html', 'password-reset.html',
-      'my-info.html', 'parcel-declaration.html', 'track-parcel.html'
+      'my-info.html', 'parcel-declaration.html', 'track-parcel.html',
+      'billing-info.html', 'invoice.html'
     ];
     
     if (!allowedPaths.includes(basePath)) {
