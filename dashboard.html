@@ -428,7 +428,14 @@
         <h2>🚚 Track Parcel</h2>
         <p>Check your parcel status</p>
       </div>
-      
+
+      <!-- Billing Thumbnail with pop-out message -->
+      <div class="thumbnail" onclick="showBillingInfo()" id="billingThumbnail">
+        <h2>💰 Billing Info</h2>
+        <p>View parcel billing details and make payments</p>
+        <div id="popoutMessage" class="popout-message" style="display: none;"></div>
+      </div>
+    </div>
     
     <button class="logout-btn" onclick="handleLogout()">Log Out</button>
   </div>
