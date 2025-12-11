@@ -118,42 +118,44 @@
   <script src="scripts/app.js"></script>
   
   <script>
-// Enhanced prefill tracking number logic
+// Enhanced prefill tracking number logic with loop prevention
 document.addEventListener('DOMContentLoaded', function() {
+    console.log('Parcel declaration page loaded');
+    
     // Check for prefill tracking from session storage
     const prefillTracking = sessionStorage.getItem('prefillTracking');
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTracking = urlParams.get('tracking');
     
-    if (prefillTracking) {
+    console.log('Prefill tracking from session:', prefillTracking);
+    console.log('Tracking from URL:', urlTracking);
+    
+    let trackingToUse = prefillTracking || urlTracking;
+    
+    if (trackingToUse) {
         const trackingInput = document.getElementById('trackingNumber');
         if (trackingInput) {
-            trackingInput.value = prefillTracking;
+            trackingInput.value = trackingToUse;
             trackingInput.readOnly = true;
             trackingInput.style.backgroundColor = '#2a2a2a';
             trackingInput.style.color = '#888';
             trackingInput.title = "Tracking number from login link - cannot be modified";
             
-            // Also store in session for verification
-            sessionStorage.setItem('prefilledTracking', prefillTracking);
+            console.log('Tracking prefilled:', trackingToUse);
             
-            // Remove after 1 minute to prevent stale data
-            setTimeout(() => {
-                sessionStorage.removeItem('prefillTracking');
-                sessionStorage.removeItem('prefilledTracking');
-            }, 60000);
+            // Clean up session storage after use
+            if (prefillTracking) {
+                setTimeout(() => {
+                    sessionStorage.removeItem('prefillTracking');
+                }, 1000);
+            }
         }
     }
     
-    // Check for pending tracking parameter from URL (if accessed directly)
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlTracking = urlParams.get('tracking');
-    if (urlTracking && !prefillTracking) {
-        const trackingInput = document.getElementById('trackingNumber');
-        if (trackingInput) {
-            trackingInput.value = urlTracking;
-            trackingInput.readOnly = true;
-            trackingInput.style.backgroundColor = '#2a2a2a';
-            trackingInput.style.color = '#888';
-        }
+    // Clean URL if it has tracking parameter
+    if (urlTracking) {
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
     }
 });
 </script>
