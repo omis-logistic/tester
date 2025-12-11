@@ -656,49 +656,39 @@ function initValidationListeners() {
 }
 
 // ================= AUTHENTICATION HANDLERS =================
-// ================= MODIFIED LOGIN HANDLER =================
-async function handleLogin() {
-  const phone = document.getElementById('phone').value.trim();
-  const password = document.getElementById('password').value;
-
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-
+// Update handleLogin function in scripts/app.js (the one in app.js, not login.html)
+async function handleLogin(phone, password) {
   try {
     const result = await callAPI('processLogin', { phone, password });
     
     if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
+      const userData = JSON.stringify(result);
+      // Store in both sessionStorage and localStorage for tab persistence
+      sessionStorage.setItem('userData', userData);
+      localStorage.setItem('userSession', userData);
       localStorage.setItem('lastActivity', Date.now());
       
       // Check for pending tracking
-      if (hasPendingTracking()) {
-        const tracking = getPendingTracking();
-        clearPendingTracking();
-        
-        // Store for parcel declaration page
-        sessionStorage.setItem('prefillTracking', tracking);
+      const pendingTracking = sessionStorage.getItem('pendingTracking');
+      
+      if (pendingTracking) {
         // Bypass modal and go directly to parcel declaration
+        sessionStorage.setItem('prefillTracking', pendingTracking);
+        sessionStorage.removeItem('pendingTracking');
+        sessionStorage.setItem('bypassModal', 'true');
         safeRedirect('parcel-declaration.html');
       } else if (result.tempPassword) {
         safeRedirect('password-reset.html');
       } else {
-        // Normal login flow
         localStorage.setItem('freshLogin', 'true');
         safeRedirect('dashboard.html');
       }
-    } else {
-      showError(result.message || 'Authentication failed');
+      return true;
     }
+    return false;
   } catch (error) {
-    showError('Login failed - please try again');
+    console.error('Login failed:', error);
+    return false;
   }
 }
 
@@ -722,27 +712,6 @@ async function handleRegistration() {
     }
   } catch (error) {
     showError('Registration failed - please try again');
-  }
-}
-
-// ================= DIRECT ACCESS HANDLER =================
-function handleDirectParcelAccess() {
-  // Only run on parcel declaration page
-  if (!window.location.pathname.includes('parcel-declaration.html')) {
-    return;
-  }
-  
-  const userData = checkSession();
-  const urlTracking = getTrackingFromURL();
-  
-  // If user is logged in and URL has tracking parameter
-  if (userData && urlTracking) {
-    // Store for prefilling and clean URL
-    sessionStorage.setItem('prefillTracking', urlTracking);
-    if (window.history.replaceState) {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-    }
   }
 }
 
@@ -790,7 +759,6 @@ function handleTrackingParameter() {
     }
   }
   return false;
-}
 }
 
 // ================= PASSWORD MANAGEMENT =================
