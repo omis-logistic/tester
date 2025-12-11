@@ -505,21 +505,24 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // Global loading functions
+    // ================= GLOBAL VARIABLES =================
+    let modalWasShown = false;
+    
+    // ================= GLOBAL FUNCTIONS =================
+    // Move these functions outside initDashboard so they're available globally
+    
     function showGlobalLoading(message = 'Loading...') {
       const loader = document.getElementById('globalLoading');
       const text = loader.querySelector('.loading-text');
       text.textContent = message;
       loader.style.display = 'flex';
     }
-
+  
     function hideGlobalLoading() {
       const loader = document.getElementById('globalLoading');
       loader.style.display = 'none';
     }
-
-    let modalWasShown = false;
-
+  
     function closeWelcomeModal() {
       const modal = document.getElementById('welcomeModal');
       modal.style.display = 'none';
@@ -530,8 +533,27 @@
         checkUncollectedParcels();
       }
     }
-
-    // EXACT Mark 1 JSONP approach for uncollected count
+  
+    function showMyInfo() {
+      safeRedirect('my-info.html');
+    }
+  
+    function showParcelDeclaration() {
+      safeRedirect('parcel-declaration.html');
+    }
+  
+    function showTrackParcel() {
+      safeRedirect('track-parcel.html');
+    }
+  
+    function handleLogout() {
+      sessionStorage.clear();
+      localStorage.removeItem('lastActivity');
+      localStorage.removeItem('freshLogin');
+      safeRedirect('login.html');
+    }
+  
+    // ================= EXACT Mark 1 JSONP approach =================
     async function checkUncollectedParcels() {
       try {
         showGlobalLoading('Checking for pending payments...');
@@ -540,7 +562,7 @@
           handleLogout();
           return;
         }
-
+  
         const count = await getUncollectedCountWithRetry(userData.phone);
         
         const popout = document.getElementById('popoutMessage');
@@ -588,7 +610,7 @@
         hideGlobalLoading();
       }
     }
-
+  
     // Mark 1 JSONP approach with retry logic
     async function getUncollectedCountWithRetry(phone, maxRetries = 2) {
       let lastError;
@@ -623,7 +645,7 @@
       
       throw lastError || new Error('Failed to get uncollected count');
     }
-
+  
     function getUncollectedCountFromServer(phone) {
       return new Promise((resolve, reject) => {
         const callbackName = `uncollectedCallback_${Date.now()}`;
@@ -644,6 +666,13 @@
         const script = document.createElement('script');
         script.id = callbackName;
         
+        // Use the CONFIG from app.js - make sure it's loaded
+        if (typeof CONFIG === 'undefined') {
+          console.error('CONFIG not loaded from app.js');
+          reject(new Error('Configuration not loaded'));
+          return;
+        }
+        
         // EXACT Mark 1 approach with crossorigin attribute
         script.crossOrigin = 'anonymous';
         script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getUncollectedCount&phone=${encodeURIComponent(phone)}`;
@@ -662,6 +691,7 @@
       });
     }
     
+    // ================= DASHBOARD INITIALIZATION =================
     function initDashboard() {
       // EXACT Mark 1 session check
       const userData = checkSession();
@@ -674,7 +704,7 @@
         safeRedirect('password-reset.html');
         return;
       }
-    
+  
       // Check if we have a pending tracking redirect (should bypass modal)
       const pendingTracking = sessionStorage.getItem('pendingTracking');
       const pendingRedirect = sessionStorage.getItem('pendingRedirect');
@@ -687,13 +717,13 @@
         safeRedirect('parcel-declaration.html');
         return;
       }
-    
+  
       // Original modal display logic (only if no tracking pending)
       const urlParams = new URLSearchParams(window.location.search);
       const shouldShowModal = urlParams.has('fresh') || 
                              (localStorage.getItem('freshLogin') === 'true' && 
                               sessionStorage.getItem('modalShown') === 'false');
-    
+  
       if (shouldShowModal) {
         modalWasShown = true;
         // Show modal and clean URL
@@ -708,39 +738,33 @@
         // If no modal is shown, check uncollected parcels immediately
         checkUncollectedParcels();
       }
-    }
-
+  
       const modal = document.getElementById('welcomeModal');
-
+  
       window.onclick = (event) => {
         if(event.target === document.getElementById('welcomeModal')) {
           closeWelcomeModal();
         }
       }
-
-      window.showBillingInfo = () => {
-        showGlobalLoading('Loading billing information...');
-        safeRedirect('billing-info.html');
-      };
-      window.showMyInfo = () => safeRedirect('my-info.html');
-      window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
-      window.showTrackParcel = () => safeRedirect('track-parcel.html');
-      
-      // EXACT Mark 1 logout approach
-      window.handleLogout = () => {
-        sessionStorage.clear();
-        localStorage.removeItem('lastActivity');
-        localStorage.removeItem('freshLogin');
-        safeRedirect('login.html');
-      }
     }
-
+  
+    // ================= EVENT LISTENERS =================
     // Initialize on DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => {
-      detectViewMode();
-      initDashboard();
+      // Call detectViewMode from app.js
+      if (typeof detectViewMode === 'function') {
+        detectViewMode();
+      }
+      
+      // Also ensure the functions from app.js are available
+      if (typeof checkSession === 'function' && typeof safeRedirect === 'function') {
+        initDashboard();
+      } else {
+        console.error('Required functions from app.js not loaded');
+        showError('System error. Please refresh the page.');
+      }
     });
-
+  
     // Add keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -762,9 +786,6 @@
           case '3':
             showTrackParcel();
             break;
-          case '4':
-            showBillingInfo();
-            break;
           case 'l':
           case 'L':
             handleLogout();
@@ -772,6 +793,38 @@
         }
       }
     });
+  
+    // ================= ERROR HANDLING =================
+    function showError(message) {
+      // Use the showError function from app.js if available
+      if (typeof showError === 'function' && typeof window.showError !== 'function') {
+        // We're shadowing the global showError, so use window.showError if it exists
+        if (window.showError) {
+          window.showError(message);
+          return;
+        }
+      }
+      
+      // Fallback error display
+      const errorDiv = document.createElement('div');
+      errorDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        left: 50%;
+        transform: translateX(-50%);
+        padding: 15px;
+        background: #ff4444dd;
+        color: white;
+        border-radius: 5px;
+        z-index: 1000;
+      `;
+      errorDiv.textContent = message;
+      document.body.appendChild(errorDiv);
+      
+      setTimeout(() => {
+        errorDiv.remove();
+      }, 5000);
+    }
   </script>
 </body>
 </html>
