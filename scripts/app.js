@@ -115,8 +115,10 @@ function handleLogout() {
   sessionStorage.clear();
   localStorage.removeItem('lastActivity');
   
-  // Redirect to login with cache-busting parameter
-  window.location.href = 'login.html?logout=' + Date.now();
+  // Only redirect if not already on login page
+  if (!window.location.pathname.includes('login.html')) {
+    window.location.href = 'login.html?logout=' + Date.now();
+  }
 }
 
 // ================= API HANDLER =================
@@ -514,8 +516,6 @@ function setupSafariCompatibleForm() {
     });
   }
 }
-
-
 
 // ================= VALIDATION CORE =================
 // New function for input element validation
@@ -1022,79 +1022,95 @@ function formatDate(dateString) {
 }
 
 // ================= SAFARI-SPECIFIC INITIALIZATION =================
+// FIXED: Added proper page detection to prevent infinite reload loop
 document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
   
-  // Check if Safari
-  if (isSafariBrowser()) {
-    console.log('Safari browser detected - applying compatibility fixes');
+  // Get current page
+  const currentPage = window.location.pathname.split('/').pop() || 'login.html';
+  
+  // Define public pages (no session check required)
+  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
+  const isPublicPage = publicPages.includes(currentPage);
+  
+  // Only run session checks on protected pages
+  if (!isPublicPage) {
+    const userData = checkSession();
+    if (!userData) {
+      handleLogout();
+      return;
+    }
     
-    // Apply Safari-specific form setup
-    setupSafariCompatibleForm();
-    
-    // Add Safari-specific styles
-    const style = document.createElement('style');
-    style.textContent = `
-      /* Safari-specific fixes */
-      input[type="file"] {
-        -webkit-appearance: none;
+    // Set phone field only on parcel declaration page
+    if (currentPage === 'parcel-declaration.html') {
+      const phoneField = document.getElementById('phone');
+      if (phoneField) {
+        phoneField.value = userData.phone || '';
+        phoneField.readOnly = true;
       }
-      
-      .gold-button {
-        -webkit-appearance: none;
-        -webkit-tap-highlight-color: rgba(0,0,0,0);
-      }
-      
-      /* Prevent zoom on input focus in Safari mobile */
-      @media screen and (max-width: 768px) {
-        input, select, textarea {
-          font-size: 16px !important;
-        }
-      }
-    `;
-    document.head.appendChild(style);
-  } else {
-    // Original setup for other browsers
-    const parcelForm = document.getElementById('declarationForm');
-    if (parcelForm) {
-      parcelForm.addEventListener('submit', handleParcelSubmission);
     }
   }
   
-  // Rest of initialization...
+  // Initialize common components
   createLoaderElement();
-  setupCategoryChangeListener();
-  initValidationListeners();
   
-  // Check session
-  const userData = checkSession();
-  if (!userData) {
-    handleLogout();
-    return;
-  }
-  
-  // Set phone field
-  const phoneField = document.getElementById('phone');
-  if (phoneField) {
-    phoneField.value = userData.phone || '';
-    phoneField.readOnly = true;
+  // Initialize form only if on parcel declaration page
+  if (currentPage === 'parcel-declaration.html') {
+    // Check if Safari
+    if (isSafariBrowser()) {
+      console.log('Safari browser detected - applying compatibility fixes');
+      
+      // Apply Safari-specific form setup
+      setupSafariCompatibleForm();
+      
+      // Add Safari-specific styles
+      const style = document.createElement('style');
+      style.textContent = `
+        /* Safari-specific fixes */
+        input[type="file"] {
+          -webkit-appearance: none;
+        }
+        
+        .gold-button {
+          -webkit-appearance: none;
+          -webkit-tap-highlight-color: rgba(0,0,0,0);
+        }
+        
+        /* Prevent zoom on input focus in Safari mobile */
+        @media screen and (max-width: 768px) {
+          input, select, textarea {
+            font-size: 16px !important;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    } else {
+      // Original setup for other browsers
+      const parcelForm = document.getElementById('declarationForm');
+      if (parcelForm) {
+        parcelForm.addEventListener('submit', handleParcelSubmission);
+      }
+    }
+    
+    // Setup category change listener
+    setupCategoryChangeListener();
+    
+    // Initialize validation listeners
+    initValidationListeners();
+    
+    // Check category requirements on load
+    checkCategoryRequirements();
   }
 
-  // 8. Cleanup on page unload - Mark 1 approach
+  // Cleanup on page unload
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // 9. Focus management - Mark 1 approach
+  // Focus management
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
-  
-  // 10. Setup category change listener if exists
-  const categorySelect = document.getElementById('itemCategory');
-  if (categorySelect) {
-    categorySelect.addEventListener('change', checkCategoryRequirements);
-  }
 });
 
 // New functions for category requirements =================
@@ -1363,4 +1379,34 @@ function safariFetchEnhancement() {
       throw error;
     });
   };
+}
+
+// ================= LOGIN PAGE SPECIFIC FUNCTIONS =================
+// These functions should only be available on the login page
+function initLoginPage() {
+  // Check if we're on the login page
+  if (!window.location.pathname.includes('login.html')) {
+    return;
+  }
+  
+  // Clear any existing session data when loading login page
+  // This prevents the infinite loop
+  const urlParams = new URLSearchParams(window.location.search);
+  if (urlParams.has('logout')) {
+    sessionStorage.clear();
+    localStorage.removeItem('lastActivity');
+  }
+  
+  // Focus on phone input
+  const phoneInput = document.getElementById('phone');
+  if (phoneInput) {
+    phoneInput.focus();
+  }
+}
+
+// Initialize login page when DOM is ready
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initLoginPage);
+} else {
+  initLoginPage();
 }
