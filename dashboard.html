@@ -663,23 +663,6 @@
     }
     
     function initDashboard() {
-      // Check if we should bypass dashboard entirely (coming from tracking link)
-      const bypassModal = sessionStorage.getItem('bypassModal');
-      const prefillTracking = sessionStorage.getItem('prefillTracking');
-      
-      if (bypassModal && prefillTracking) {
-        // Bypass dashboard and go directly to parcel declaration
-        sessionStorage.removeItem('bypassModal');
-        const parcelUrl = window.location.origin + '/zarizqlogin/parcel-declaration.html';
-        window.location.href = parcelUrl;
-        return;
-      }
-      
-      // Clear bypass flag if set but no tracking
-      if (bypassModal) {
-        sessionStorage.removeItem('bypassModal');
-      }
-      
       // EXACT Mark 1 session check
       const userData = checkSession();
       if (!userData) {
@@ -692,7 +675,20 @@
         return;
       }
     
-      // Check if modal should be shown
+      // Check if we have a pending tracking redirect (should bypass modal)
+      const pendingTracking = sessionStorage.getItem('pendingTracking');
+      const pendingRedirect = sessionStorage.getItem('pendingRedirect');
+      
+      if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
+        // Bypass dashboard and modal - redirect directly to parcel declaration
+        sessionStorage.removeItem('pendingTracking');
+        sessionStorage.removeItem('pendingRedirect');
+        sessionStorage.setItem('prefillTracking', pendingTracking);
+        safeRedirect('parcel-declaration.html');
+        return;
+      }
+    
+      // Original modal display logic (only if no tracking pending)
       const urlParams = new URLSearchParams(window.location.search);
       const shouldShowModal = urlParams.has('fresh') || 
                              (localStorage.getItem('freshLogin') === 'true' && 
@@ -712,6 +708,7 @@
         // If no modal is shown, check uncollected parcels immediately
         checkUncollectedParcels();
       }
+    }
 
       const modal = document.getElementById('welcomeModal');
 
