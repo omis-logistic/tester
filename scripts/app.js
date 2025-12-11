@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwwDz2GxhuGRmA0-iYhYWp1ug6oBmeTTNwpbXWCx9GUV0HKsFjM_FW4l-5adlfob-b8/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzOgXif9ro_Hc-h8cCaUYAkuJo_-cXsb5MqAULkrfvP2rFzo2xtznM78fId5Bh5mHRa/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxF6HepFTI8tTFdlIrxKav8Iy2wCEy3MLvkIyTga-lqSeZc6HCIvIeeu4kt7kOi0Ge9/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyWgzQoSFsylkMhSfpTFzLQchha8JlH7nywtWWkjnCOvB2EvinAcoHqz0sCqpa_F2_F/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -69,36 +69,54 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= SESSION MANAGEMENT =================
+// ================= IMPROVED SESSION CHECK =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
   if (!sessionData) {
-    handleLogout();
+    console.log('No session data found');
     return null;
   }
 
+  // Check session timeout (1 hour)
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-    handleLogout();
+    console.log('Session expired');
+    sessionStorage.clear();
+    localStorage.removeItem('lastActivity');
     return null;
   }
 
-  localStorage.setItem('lastActivity', Date.now());
-  const userData = JSON.parse(sessionData);
-  
-  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-    handleLogout();
+  try {
+    const userData = JSON.parse(sessionData);
+    
+    // Update last activity
+    localStorage.setItem('lastActivity', Date.now());
+    
+    // Check if temp password requires reset
+    if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+      console.log('Temp password detected but not on reset page');
+      return null;
+    }
+
+    return userData;
+  } catch (error) {
+    console.error('Error parsing session data:', error);
+    sessionStorage.clear();
+    localStorage.removeItem('lastActivity');
     return null;
   }
-
-  return userData;
 };
 
 function handleLogout() {
-  sessionStorage.clear(); // This clears the freshLogin flag
+  console.log('Logging out...');
+  
+  // Clear all session data
+  sessionStorage.clear();
   localStorage.removeItem('lastActivity');
-  safeRedirect('login.html');
+  
+  // Redirect to login with cache-busting parameter
+  window.location.href = 'login.html?logout=' + Date.now();
 }
 
 // ================= API HANDLER =================
@@ -130,9 +148,25 @@ async function callAPI(action, payload) {
   }
 }
 
-function showLoading(show = true) {
-  const loader = document.getElementById('loadingOverlay') || createLoaderElement();
+function showLoading(show = true, message = 'Processing...') {
+  const loader = document.getElementById('loadingOverlay');
+  if (!loader) return;
+
+  const textElement = loader.querySelector('.loading-text');
+  if (textElement) {
+    textElement.textContent = message;
+  }
+
   loader.style.display = show ? 'flex' : 'none';
+  
+  // Add a timeout to show "this may take a while" for long operations
+  if (show) {
+    setTimeout(() => {
+      if (loader.style.display === 'flex' && textElement) {
+        textElement.textContent = message + ' This may take a while...';
+      }
+    }, 3000); // Show after 3 seconds
+  }
 }
 
 function createLoaderElement() {
@@ -213,55 +247,104 @@ function resetForm() {
   }
 }
 
-// ================= PARCEL DECLARATION HANDLER =================
+// ================= SAFARI-COMPATIBLE PARCEL SUBMISSION =================
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  showLoading(true);
+  showLoading(true, "Processing submission...");
 
   try {
+    // Safari-safe form data extraction
     const formData = new FormData(form);
-    const files = Array.from(formData.getAll('files'));
+    const payload = {};
     
-    // Process files for all submissions
-    if (files.length === 0) {
-      throw new Error('Files required for submission');
+    // Extract all form fields (Safari-safe method)
+    for (let [key, value] of formData.entries()) {
+      if (key !== 'files') {
+        payload[key] = value;
+      }
     }
+
+    // Format tracking number
+    payload.trackingNumber = payload.trackingNumber?.trim().toUpperCase() || '';
     
-    const processedFiles = await Promise.all(
-      files.map(async file => ({
-        name: file.name,
-        type: file.type,
-        data: await readFileAsBase64(file)
-      }))
-    );
+    // Get phone from session
+    const userData = checkSession();
+    if (userData?.phone) {
+      payload.phone = userData.phone;
+    }
 
-      const payload = {
-        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-        nameOnParcel: formData.get('nameOnParcel').trim(),
-        phone: document.getElementById('phone').value,
-        itemDescription: formData.get('itemDescription').trim(),
-        quantity: formData.get('quantity'),
-        price: formData.get('price'),
-        shippingPrice: formData.get('shippingPrice'), // New field
-        collectionPoint: formData.get('collectionPoint'),
-        itemCategory: formData.get('itemCategory'),
-        files: processedFiles,
-        remark: formData.get('remarks')?.trim() || ''
-      };
+    // Handle files specifically for Safari
+    let filesToUpload = [];
+    const fileInput = document.getElementById('fileUpload');
+    const category = document.getElementById('itemCategory')?.value || '';
+    
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
 
-    await fetch(CONFIG.PROXY_URL, {
-      method: 'POST',
-      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-    });
+    // Check if files are required
+    if (starredCategories.includes(category) && fileInput?.files?.length > 0) {
+      filesToUpload = Array.from(fileInput.files);
+      
+      // Safari-specific file size validation
+      for (const file of filesToUpload) {
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          throw new Error(`File ${file.name} exceeds 5MB limit`);
+        }
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          throw new Error(`File ${file.name} must be JPG, PNG, or PDF`);
+        }
+      }
+    }
+
+    // Use direct fetch instead of FormData for Safari compatibility
+    const submissionData = {
+      action: 'submitParcelDeclaration',
+      data: {
+        trackingNumber: payload.trackingNumber,
+        nameOnParcel: payload.nameOnParcel || '',
+        phoneNumber: payload.phone || '',
+        itemDescription: payload.itemDescription || '',
+        quantity: Number(payload.quantity) || 1,
+        price: Number(payload.price) || 0,
+        collectionPoint: payload.collectionPoint || '',
+        itemCategory: category
+      },
+      files: []
+    };
+
+    // Process files for Safari (simpler approach)
+    if (filesToUpload.length > 0) {
+      for (const file of filesToUpload) {
+        const base64Data = await readFileAsBase64Safari(file);
+        submissionData.files.push({
+          name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+          type: file.type,
+          base64: base64Data
+        });
+      }
+    }
+
+    // Submit using JSONP approach (Safari compatible)
+    await submitViaJSONP(submissionData);
+
+    // Success handling
+    showSuccessMessage();
+    resetForm();
+    
+    // Optional: Verify submission was recorded
+    setTimeout(() => {
+      verifySubmission(payload.trackingNumber);
+    }, 2000);
 
   } catch (error) {
-    // Still ignore errors but files are handled
+    console.error('Submission error:', error);
+    showError(error.message || 'Submission failed. Please try again.');
   } finally {
     showLoading(false);
-    resetForm();
-    showSuccessMessage();
   }
 }
 
@@ -272,6 +355,167 @@ function readFileAsBase64(file) {
     reader.readAsDataURL(file);
   });
 }
+
+// ================= SAFARI-COMPATIBLE FILE READING =================
+function readFileAsBase64Safari(file) {
+  return new Promise((resolve, reject) => {
+    // Safari-compatible FileReader
+    const reader = new FileReader();
+    
+    reader.onload = function(e) {
+      // Remove data URL prefix
+      const base64 = e.target.result.split(',')[1];
+      resolve(base64);
+    };
+    
+    reader.onerror = function() {
+      reject(new Error('Failed to read file'));
+    };
+    
+    // Safari handles this differently
+    reader.readAsDataURL(file);
+  });
+}
+
+// ================= SAFARI-COMPATIBLE JSONP SUBMISSION =================
+function submitViaJSONP(payload) {
+  return new Promise((resolve, reject) => {
+    // Create callback name
+    const callbackName = 'jsonpCallback_' + Date.now();
+    
+    // Create script element
+    const script = document.createElement('script');
+    
+    // Build URL with payload
+    const url = new URL(CONFIG.GAS_URL);
+    url.searchParams.append('callback', callbackName);
+    url.searchParams.append('action', 'submitParcelDeclaration');
+    url.searchParams.append('payload', JSON.stringify(payload));
+    
+    // Set script source
+    script.src = url.toString();
+    script.async = true;
+    
+    // Define callback function
+    window[callbackName] = function(response) {
+      // Clean up
+      delete window[callbackName];
+      document.head.removeChild(script);
+      
+      if (response.success) {
+        resolve(response);
+      } else {
+        reject(new Error(response.message || 'Submission failed'));
+      }
+    };
+    
+    // Handle errors
+    script.onerror = function() {
+      delete window[callbackName];
+      document.head.removeChild(script);
+      reject(new Error('Network error - submission failed'));
+    };
+    
+    // Add timeout for Safari
+    setTimeout(() => {
+      if (window[callbackName]) {
+        delete window[callbackName];
+        document.head.removeChild(script);
+        reject(new Error('Submission timeout'));
+      }
+    }, 30000); // 30 second timeout
+    
+    // Execute
+    document.head.appendChild(script);
+  });
+}
+
+// ================= ENHANCED VERIFICATION FOR SAFARI =================
+async function verifySubmissionSafari(trackingNumber) {
+  try {
+    // Use simple GET request for Safari
+    const response = await fetch(`${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`, {
+      method: 'GET',
+      headers: {
+        'Accept': 'application/json'
+      },
+      mode: 'cors',
+      cache: 'no-store'
+    });
+    
+    if (!response.ok) {
+      throw new Error('Verification service unavailable');
+    }
+    
+    const result = await response.json();
+    return result;
+    
+  } catch (error) {
+    console.warn('Verification failed:', error);
+    return { exists: false, error: error.message };
+  }
+}
+
+// ================= SAFARI DETECTION =================
+function isSafariBrowser() {
+  const ua = navigator.userAgent;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+  const isIOS = /iPad|iPhone|iPod/.test(ua);
+  
+  return isSafari || isIOS;
+}
+
+// ================= UPDATE FORM SUBMISSION LISTENER =================
+function setupSafariCompatibleForm() {
+  const form = document.getElementById('declarationForm');
+  if (!form) return;
+  
+  // Remove existing listeners
+  const newForm = form.cloneNode(true);
+  form.parentNode.replaceChild(newForm, form);
+  
+  // Add Safari-compatible listener
+  newForm.addEventListener('submit', function(e) {
+    if (isSafariBrowser()) {
+      e.preventDefault();
+      handleParcelSubmission(e);
+    } else {
+      // Use existing handler for other browsers
+      e.preventDefault();
+      handleParcelSubmission(e);
+    }
+  });
+  
+  // Safari-specific file handling
+  const fileInput = document.getElementById('fileUpload');
+  if (fileInput && isSafariBrowser()) {
+    fileInput.addEventListener('change', function() {
+      const files = this.files;
+      if (files.length > CONFIG.MAX_FILES) {
+        showError(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+        this.value = '';
+        return;
+      }
+      
+      // Validate each file
+      for (let file of files) {
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          showError(`${file.name} exceeds 5MB limit`);
+          this.value = '';
+          return;
+        }
+        
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          showError(`${file.name} must be JPG, PNG, or PDF`);
+          this.value = '';
+          return;
+        }
+      }
+    });
+  }
+}
+
+
 
 // ================= VALIDATION CORE =================
 // New function for input element validation
@@ -338,13 +582,6 @@ function validatePrice(inputElement) {
   return isValid;
 }
 
-function validateShippingPrice(inputElement) {
-  const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value >= 0 && value < 100000;
-  showError(isValid ? '' : 'Valid shipping price (0-100000) required', 'shippingPriceError');
-  return isValid;
-}
-
 function validateCollectionPoint(selectElement) {
   const value = selectElement?.value || '';
   const isValid = value !== '';
@@ -361,10 +598,26 @@ function validateCategory(selectElement) {
 }
 
 function validateInvoiceFiles() {
-  const files = document.getElementById('invoiceFiles')?.files || [];
-  const isValid = files.length >= 1 && files.length <= 3;
-  const errorMessage = isValid ? '' : 'Requires 1-3 documents';
+  const mandatoryCategories = [
+    '* Books', '* Cosmetics/Skincare/Bodycare',
+    '* Food Beverage/Drinks', '* Gadgets',
+    '* Oil Ointment', '* Supplement', '*Others'
+  ];
   
+  const category = document.getElementById('itemCategory')?.value || '';
+  const files = document.getElementById('invoiceFiles')?.files || [];
+  let isValid = true;
+  let errorMessage = '';
+
+  if(files.length > 3) {
+    errorMessage = 'Maximum 3 files allowed';
+    isValid = false;
+  }
+  else if(mandatoryCategories.includes(category)) {
+    isValid = files.length > 0;
+    errorMessage = isValid ? '' : 'At least 1 invoice required';
+  }
+
   showError(errorMessage, 'invoiceFilesError');
   return isValid;
 }
@@ -416,11 +669,20 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
+    const category = document.getElementById('itemCategory').value;
     
-    // Validate for all categories
-    if (files.length < 1) throw new Error('At least 1 file required');
-    if (files.length > 3) throw new Error('Max 3 files allowed');
+    // Validate against starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      if (files.length < 1) throw new Error('At least 1 file required');
+      if (files.length > 3) throw new Error('Max 3 files allowed');
+    }
 
+    // Validate individual files
     files.forEach(file => {
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         throw new Error(`${file.name} exceeds 5MB`);
@@ -438,19 +700,12 @@ function handleFileSelection(input) {
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
   try {
-    // Ensure shippingPrice is included in the payload
-    const fullPayload = {
-      ...payload,
-      shippingPrice: payload.shippingPrice || 0,
-      remark: payload.remark || ''  // Add remark with empty string fallback
-    };
-
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
-      body: `payload=${encodeURIComponent(JSON.stringify(fullPayload))}`,
+      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
       mode: 'cors',
       redirect: 'follow',
       referrerPolicy: 'no-referrer'
@@ -517,8 +772,8 @@ function checkAllFields() {
     validateDescription(document.getElementById('itemDescription')),
     validateQuantity(document.getElementById('quantity')),
     validatePrice(document.getElementById('price')),
-    validateShippingPrice(document.getElementById('shippingPrice')),
     validateCollectionPoint(document.getElementById('collectionPoint')),
+    validateCategory(document.getElementById('itemCategory')),
     validateInvoiceFiles()
   ];
 
@@ -562,18 +817,12 @@ function initValidationListeners() {
           case 'price':
             validatePrice(input);
             break;
-          case 'shippingPrice':
-            validateShippingPrice(input);
-            break;
           case 'collectionPoint':
             validateCollectionPoint(input);
             break;
           case 'itemCategory':
             validateCategory(input);
             break;
-          case 'remarks':
-          // No validation needed for optional field
-          break;
         }
         updateSubmitButtonState();
       });
@@ -590,40 +839,6 @@ function initValidationListeners() {
 }
 
 // ================= AUTHENTICATION HANDLERS =================
-async function handleLogin() {
-  const phone = document.getElementById('phone').value.trim();
-  const password = document.getElementById('password').value;
-
-  if (!validatePhone(phone)) {
-    showError('Invalid phone number format');
-    return;
-  }
-
-  if (!password) {
-    showError('Please enter your password');
-    return;
-  }
-
-  try {
-    const result = await callAPI('processLogin', { phone, password });
-    
-    if (result.success) {
-      sessionStorage.setItem('userData', JSON.stringify(result));
-      localStorage.setItem('lastActivity', Date.now());
-      
-      if (result.tempPassword) {
-        safeRedirect('password-reset.html');
-      } else {
-        safeRedirect('dashboard.html');
-      }
-    } else {
-      showError(result.message || 'Authentication failed');
-    }
-  } catch (error) {
-    showError('Login failed - please try again');
-  }
-}
-
 async function handleRegistration() {
   if (!validateRegistrationForm()) return;
 
@@ -781,6 +996,7 @@ function safeRedirect(path) {
   }
 }
 
+
 function formatTrackingNumber(trackingNumber) {
   return trackingNumber.replace(/[^A-Z0-9-]/g, '').toUpperCase();
 }
@@ -805,129 +1021,103 @@ function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('en-MY', options);
 }
 
-// ================= SESSION VALIDATION =================
-function validateAndRedirectWithTracking() {
-  const userData = checkSession();
-  const urlParams = new URLSearchParams(window.location.search);
-  const tracking = urlParams.get('tracking');
-  
-  if (userData && tracking) {
-    // User is logged in and has tracking parameter
-    sessionStorage.setItem('prefillTracking', tracking);
-    
-    // Clean the URL
-    const cleanUrl = window.location.pathname;
-    window.history.replaceState({}, '', cleanUrl);
-    
-    // Redirect to parcel declaration
-    safeRedirect('parcel-declaration.html');
-    return true;
-  }
-  
-  if (tracking && !userData) {
-    // User not logged in but has tracking - store for post-login
-    sessionStorage.setItem('pendingTracking', tracking);
-    sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
-    return false;
-  }
-  
-  return null;
-}
-
-// ================= TRACKING NUMBER HANDLER =================
-function handleTrackingNumberFromURL() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const tracking = urlParams.get('tracking');
-    
-    if (tracking) {
-        // Store for post-login redirect
-        sessionStorage.setItem('pendingTracking', tracking);
-        sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
-    }
-    
-    return tracking;
-}
-
-function processPendingTracking() {
-    const pendingTracking = sessionStorage.getItem('pendingTracking');
-    const pendingRedirect = sessionStorage.getItem('pendingRedirect');
-    
-    if (pendingTracking && pendingRedirect) {
-        sessionStorage.removeItem('pendingTracking');
-        sessionStorage.removeItem('pendingRedirect');
-        
-        if (pendingRedirect === 'parcel-declaration.html') {
-            // Store tracking for parcel declaration page
-            sessionStorage.setItem('prefillTracking', pendingTracking);
-            safeRedirect('parcel-declaration.html');
-            return true;
-        }
-    }
-    return false;
-}
-
-// ================= INITIALIZATION =================
+// ================= SAFARI-SPECIFIC INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
-  initValidationListeners();
+  
+  // Check if Safari
+  if (isSafariBrowser()) {
+    console.log('Safari browser detected - applying compatibility fixes');
+    
+    // Apply Safari-specific form setup
+    setupSafariCompatibleForm();
+    
+    // Add Safari-specific styles
+    const style = document.createElement('style');
+    style.textContent = `
+      /* Safari-specific fixes */
+      input[type="file"] {
+        -webkit-appearance: none;
+      }
+      
+      .gold-button {
+        -webkit-appearance: none;
+        -webkit-tap-highlight-color: rgba(0,0,0,0);
+      }
+      
+      /* Prevent zoom on input focus in Safari mobile */
+      @media screen and (max-width: 768px) {
+        input, select, textarea {
+          font-size: 16px !important;
+        }
+      }
+    `;
+    document.head.appendChild(style);
+  } else {
+    // Original setup for other browsers
+    const parcelForm = document.getElementById('declarationForm');
+    if (parcelForm) {
+      parcelForm.addEventListener('submit', handleParcelSubmission);
+    }
+  }
+  
+  // Rest of initialization...
   createLoaderElement();
-
-  // Initialize category requirements on page load
-  checkCategoryRequirements();
-
-  // Initialize parcel declaration form
-  const parcelForm = document.getElementById('declarationForm');
-  if (parcelForm) {
-    parcelForm.addEventListener('submit', handleParcelSubmission);
-    
-    // Set up category change listener
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-
-    // Phone field setup
-    const phoneField = document.getElementById('phone');
-    if (phoneField) {
-      const userData = checkSession();
-      phoneField.value = userData?.phone || '';
-      phoneField.readOnly = true;
-    }
+  setupCategoryChangeListener();
+  initValidationListeners();
+  
+  // Check session
+  const userData = checkSession();
+  if (!userData) {
+    handleLogout();
+    return;
+  }
+  
+  // Set phone field
+  const phoneField = document.getElementById('phone');
+  if (phoneField) {
+    phoneField.value = userData.phone || '';
+    phoneField.readOnly = true;
   }
 
-  // Session management
-  const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
-  const isPublicPage = publicPages.some(page => 
-    window.location.pathname.includes(page)
-  );
-
-  if (!isPublicPage) {
-    const userData = checkSession();
-    if (!userData) return;
-    
-    if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      handleLogout();
-    }
-  }
-
+  // 8. Cleanup on page unload - Mark 1 approach
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
+  // 9. Focus management - Mark 1 approach
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
+  
+  // 10. Setup category change listener if exists
+  const categorySelect = document.getElementById('itemCategory');
+  if (categorySelect) {
+    categorySelect.addEventListener('change', checkCategoryRequirements);
+  }
 });
 
 // New functions for category requirements =================
 function checkCategoryRequirements() {
+  const category = document.getElementById('itemCategory')?.value || '';
   const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
   
-  // Always show required for files
-  fileInput.required = true;
-  fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
-  fileHelp.style.color = '#ff4444';
+  const starredCategories = [
+    '*Books', '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks', '*Gadgets',
+    '*Oil Ointment', '*Supplement', '*Others'
+  ];
+
+  if (starredCategories.includes(category)) {
+    fileInput.required = true;
+    fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
+    fileHelp.style.color = '#ff4444';
+  } else {
+    fileInput.required = false;
+    fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
+    fileHelp.style.color = '#888';
+  }
 }
 
 function setupCategoryChangeListener() {
@@ -935,4 +1125,242 @@ function setupCategoryChangeListener() {
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
   }
+}
+
+// ================= BILLING SYSTEM HELPERS =================
+async function loadBillingDataWithRetry(phone, maxRetries = 3) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Loading billing data (attempt ${attempt}/${maxRetries})`);
+      
+      // Add exponential backoff
+      if (attempt > 1) {
+        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const result = await loadBillingDataFromServer(phone);
+      
+      if (result && result.success) {
+        return result;
+      }
+      
+      lastError = new Error(result?.message || 'Billing data load failed');
+      
+    } catch (error) {
+      console.error(`Billing load attempt ${attempt} failed:`, error);
+      lastError = error;
+      
+      // If it's a network error, try again
+      if (attempt < maxRetries) {
+        continue;
+      }
+    }
+  }
+  
+  throw lastError || new Error('Failed to load billing data after all retries');
+}
+
+async function checkPaymentStatusWithRetry(phone, maxRetries = 2) {
+  let lastError;
+  
+  for (let attempt = 1; attempt <= maxRetries; attempt++) {
+    try {
+      console.log(`Checking payment status (attempt ${attempt}/${maxRetries})`);
+      
+      if (attempt > 1) {
+        const delay = Math.min(500 * Math.pow(2, attempt - 1), 5000);
+        await new Promise(resolve => setTimeout(resolve, delay));
+      }
+      
+      const result = await checkPaymentStatusForUser(phone);
+      
+      if (result && (result.success || result.paidOrders)) {
+        return result;
+      }
+      
+      lastError = new Error('Payment status check failed');
+      
+    } catch (error) {
+      console.error(`Payment status attempt ${attempt} failed:`, error);
+      lastError = error;
+      
+      if (attempt < maxRetries) {
+        continue;
+      }
+    }
+  }
+  
+  // Return empty if all retries fail
+  return { success: false, paidOrders: [] };
+}
+
+// ================= IMPROVED LOADING FUNCTION =================
+async function loadBillingData() {
+  try {
+    showLoading(true, "Please wait, loading billing information...");
+    const userData = checkSession();
+    if (!userData?.phone) {
+      handleLogout();
+      return;
+    }
+
+    console.log('Starting to load billing data...');
+    
+    // Load billing data with retry
+    const billingResponse = await loadBillingDataWithRetry(userData.phone);
+    
+    if (!billingResponse.success) {
+      showError(billingResponse.message || 'Failed to load billing information', 'connectionError');
+      return;
+    }
+
+    // Load payment status with retry (non-critical)
+    const paymentStatus = await checkPaymentStatusWithRetry(userData.phone);
+    
+    allBillingData = billingResponse.data || [];
+    paidOrders = paymentStatus.paidOrders || [];
+    
+    console.log(`Loaded ${allBillingData.length} billing records and ${paidOrders.length} paid orders`);
+    
+    // Store in session for offline access
+    try {
+      sessionStorage.setItem('billingCache', JSON.stringify({
+        data: allBillingData,
+        paidOrders: paidOrders,
+        timestamp: Date.now()
+      }));
+    } catch (e) {
+      console.warn('Could not cache billing data:', e);
+    }
+    
+    renderBillingSections(allBillingData);
+
+  } catch (error) {
+    console.error('Billing load error:', error);
+    
+    // Try to use cached data
+    try {
+      const cached = sessionStorage.getItem('billingCache');
+      if (cached) {
+        const cacheData = JSON.parse(cached);
+        const cacheAge = Date.now() - cacheData.timestamp;
+        
+        // Use cache if less than 10 minutes old
+        if (cacheAge < 10 * 60 * 1000) {
+          console.log('Using cached billing data');
+          allBillingData = cacheData.data || [];
+          paidOrders = cacheData.paidOrders || [];
+          renderBillingSections(allBillingData);
+          showError('Using cached data. Some information may be outdated.', 'connectionError');
+          return;
+        }
+      }
+    } catch (cacheError) {
+      console.warn('Cache error:', cacheError);
+    }
+    
+    showError('Connection failed. Please try again.', 'connectionError');
+  } finally {
+    showLoading(false);
+  }
+}
+
+// ================= CONNECTION HEALTH CHECK =================
+async function checkBackendHealth() {
+  try {
+    const healthCheck = await new Promise((resolve, reject) => {
+      const callbackName = `health_${Date.now()}`;
+      const script = document.createElement('script');
+      script.crossOrigin = 'anonymous';
+      script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=processLogin&phone=test&password=test`;
+      
+      const timeoutId = setTimeout(() => {
+        cleanup();
+        reject(new Error('Backend timeout'));
+      }, 5000);
+      
+      function cleanup() {
+        clearTimeout(timeoutId);
+        delete window[callbackName];
+        if (script.parentNode) {
+          document.body.removeChild(script);
+        }
+      }
+      
+      window[callbackName] = (response) => {
+        cleanup();
+        // Even if login fails, backend is responding
+        resolve(true);
+      };
+      
+      script.onerror = () => {
+        cleanup();
+        reject(new Error('Backend unavailable'));
+      };
+      
+      document.body.appendChild(script);
+    });
+    
+    return true;
+  } catch (error) {
+    console.error('Backend health check failed:', error);
+    return false;
+  }
+}
+
+// ================= SAFARI FILE API POLYFILL =================
+function safariFileReaderPolyfill() {
+  if (typeof FileReader === 'undefined') {
+    console.warn('FileReader not supported - using fallback');
+    return false;
+  }
+  
+  // Ensure FileReader events work in Safari
+  const originalAddEventListener = FileReader.prototype.addEventListener;
+  FileReader.prototype.addEventListener = function(type, listener, options) {
+    // Safari sometimes loses event listeners
+    if (type === 'load' || type === 'error') {
+      this['on' + type] = listener;
+    }
+    return originalAddEventListener.call(this, type, listener, options);
+  };
+  
+  return true;
+}
+
+// ================= SAFARI FETCH ENHANCEMENT =================
+function safariFetchEnhancement() {
+  const originalFetch = window.fetch;
+  
+  window.fetch = function(resource, init) {
+    // Safari-specific fetch enhancements
+    const enhancedInit = init || {};
+    
+    // Add Safari-specific headers
+    enhancedInit.headers = {
+      ...enhancedInit.headers,
+      'Accept': 'application/json, text/javascript, */*',
+      'X-Requested-With': 'XMLHttpRequest'
+    };
+    
+    // Disable cache for Safari
+    enhancedInit.cache = 'no-store';
+    
+    // Add timeout for Safari
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    enhancedInit.signal = controller.signal;
+    
+    return originalFetch(resource, enhancedInit).then(response => {
+      clearTimeout(timeoutId);
+      return response;
+    }).catch(error => {
+      clearTimeout(timeoutId);
+      throw error;
+    });
+  };
 }
