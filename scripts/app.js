@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzz4CBNrYX9rh639YsuIDgmptguPTs7c1MkcsDCE7Ez0Kt8HGV9apsdmB9IJWmNlqY/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwBOZEQ0saT94La-rjXAw74XYcJeyhNEH1RtKc2u9_OSCIDPnZCmFHNTkg0H5OWQmce/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxsmDH7WfJK1wXvMxqIF6ib4EEff-CQgXXJ0jSx7bHdi3Us9pUkvM2DbIfHjWijGxGh/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzOgXif9ro_Hc-h8cCaUYAkuJo_-cXsb5MqAULkrfvP2rFzo2xtznM78fId5Bh5mHRa/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -69,54 +69,36 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= IMPROVED SESSION CHECK =================
+// ================= SESSION MANAGEMENT =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
   if (!sessionData) {
-    console.log('No session data found');
+    handleLogout();
     return null;
   }
 
-  // Check session timeout (1 hour)
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
-    console.log('Session expired');
-    sessionStorage.clear();
-    localStorage.removeItem('lastActivity');
+    handleLogout();
     return null;
   }
 
-  try {
-    const userData = JSON.parse(sessionData);
-    
-    // Update last activity
-    localStorage.setItem('lastActivity', Date.now());
-    
-    // Check if temp password requires reset
-    if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
-      console.log('Temp password detected but not on reset page');
-      return null;
-    }
-
-    return userData;
-  } catch (error) {
-    console.error('Error parsing session data:', error);
-    sessionStorage.clear();
-    localStorage.removeItem('lastActivity');
+  localStorage.setItem('lastActivity', Date.now());
+  const userData = JSON.parse(sessionData);
+  
+  if (userData?.tempPassword && !window.location.pathname.includes('password-reset.html')) {
+    handleLogout();
     return null;
   }
+
+  return userData;
 };
 
 function handleLogout() {
-  console.log('Logging out...');
-  
-  // Clear all session data
-  sessionStorage.clear();
+  sessionStorage.clear(); // This clears the freshLogin flag
   localStorage.removeItem('lastActivity');
-  
-  // Redirect to login with cache-busting parameter
-  window.location.href = 'login.html?logout=' + Date.now();
+  safeRedirect('login.html');
 }
 
 // ================= API HANDLER =================
@@ -148,25 +130,9 @@ async function callAPI(action, payload) {
   }
 }
 
-function showLoading(show = true, message = 'Processing...') {
-  const loader = document.getElementById('loadingOverlay');
-  if (!loader) return;
-
-  const textElement = loader.querySelector('.loading-text');
-  if (textElement) {
-    textElement.textContent = message;
-  }
-
+function showLoading(show = true) {
+  const loader = document.getElementById('loadingOverlay') || createLoaderElement();
   loader.style.display = show ? 'flex' : 'none';
-  
-  // Add a timeout to show "this may take a while" for long operations
-  if (show) {
-    setTimeout(() => {
-      if (loader.style.display === 'flex' && textElement) {
-        textElement.textContent = message + ' This may take a while...';
-      }
-    }, 3000); // Show after 3 seconds
-  }
 }
 
 function createLoaderElement() {
@@ -255,46 +221,34 @@ async function handleParcelSubmission(e) {
 
   try {
     const formData = new FormData(form);
-    const itemCategory = formData.get('itemCategory');
     const files = Array.from(formData.getAll('files'));
     
-    // Mandatory file check for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        throw new Error('Files required for this category');
-      }
-      
-      // Process files for starred categories
-      const processedFiles = await Promise.all(
-        files.map(async file => ({
-          name: file.name,
-          type: file.type,
-          data: await readFileAsBase64(file)
-        }))
-      );
-      
-      var filesPayload = processedFiles;
-    } else {
-      var filesPayload = [];
+    // Process files for all submissions
+    if (files.length === 0) {
+      throw new Error('Files required for submission');
     }
+    
+    const processedFiles = await Promise.all(
+      files.map(async file => ({
+        name: file.name,
+        type: file.type,
+        data: await readFileAsBase64(file)
+      }))
+    );
 
-    const payload = {
-      trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
-      nameOnParcel: formData.get('nameOnParcel').trim(),
-      phone: document.getElementById('phone').value,
-      itemDescription: formData.get('itemDescription').trim(),
-      quantity: formData.get('quantity'),
-      price: formData.get('price'),
-      collectionPoint: formData.get('collectionPoint'),
-      itemCategory: itemCategory,
-      files: filesPayload
-    };
+      const payload = {
+        trackingNumber: formData.get('trackingNumber').trim().toUpperCase(),
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        shippingPrice: formData.get('shippingPrice'), // New field
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory'),
+        files: processedFiles,
+        remark: formData.get('remarks')?.trim() || ''
+      };
 
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
@@ -384,6 +338,13 @@ function validatePrice(inputElement) {
   return isValid;
 }
 
+function validateShippingPrice(inputElement) {
+  const value = parseFloat(inputElement?.value || 0);
+  const isValid = !isNaN(value) && value >= 0 && value < 100000;
+  showError(isValid ? '' : 'Valid shipping price (0-100000) required', 'shippingPriceError');
+  return isValid;
+}
+
 function validateCollectionPoint(selectElement) {
   const value = selectElement?.value || '';
   const isValid = value !== '';
@@ -400,26 +361,10 @@ function validateCategory(selectElement) {
 }
 
 function validateInvoiceFiles() {
-  const mandatoryCategories = [
-    '* Books', '* Cosmetics/Skincare/Bodycare',
-    '* Food Beverage/Drinks', '* Gadgets',
-    '* Oil Ointment', '* Supplement', '*Others'
-  ];
-  
-  const category = document.getElementById('itemCategory')?.value || '';
   const files = document.getElementById('invoiceFiles')?.files || [];
-  let isValid = true;
-  let errorMessage = '';
-
-  if(files.length > 3) {
-    errorMessage = 'Maximum 3 files allowed';
-    isValid = false;
-  }
-  else if(mandatoryCategories.includes(category)) {
-    isValid = files.length > 0;
-    errorMessage = isValid ? '' : 'At least 1 invoice required';
-  }
-
+  const isValid = files.length >= 1 && files.length <= 3;
+  const errorMessage = isValid ? '' : 'Requires 1-3 documents';
+  
   showError(errorMessage, 'invoiceFilesError');
   return isValid;
 }
@@ -471,20 +416,11 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
     
-    // Validate against starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
-    }
+    // Validate for all categories
+    if (files.length < 1) throw new Error('At least 1 file required');
+    if (files.length > 3) throw new Error('Max 3 files allowed');
 
-    // Validate individual files
     files.forEach(file => {
       if (file.size > CONFIG.MAX_FILE_SIZE) {
         throw new Error(`${file.name} exceeds 5MB`);
@@ -502,12 +438,19 @@ function handleFileSelection(input) {
 // ================= SUBMISSION HANDLER =================
 async function submitDeclaration(payload) {
   try {
+    // Ensure shippingPrice is included in the payload
+    const fullPayload = {
+      ...payload,
+      shippingPrice: payload.shippingPrice || 0,
+      remark: payload.remark || ''  // Add remark with empty string fallback
+    };
+
     const response = await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
-      body: `payload=${encodeURIComponent(JSON.stringify(payload))}`,
+      body: `payload=${encodeURIComponent(JSON.stringify(fullPayload))}`,
       mode: 'cors',
       redirect: 'follow',
       referrerPolicy: 'no-referrer'
@@ -574,8 +517,8 @@ function checkAllFields() {
     validateDescription(document.getElementById('itemDescription')),
     validateQuantity(document.getElementById('quantity')),
     validatePrice(document.getElementById('price')),
+    validateShippingPrice(document.getElementById('shippingPrice')),
     validateCollectionPoint(document.getElementById('collectionPoint')),
-    validateCategory(document.getElementById('itemCategory')),
     validateInvoiceFiles()
   ];
 
@@ -619,12 +562,18 @@ function initValidationListeners() {
           case 'price':
             validatePrice(input);
             break;
+          case 'shippingPrice':
+            validateShippingPrice(input);
+            break;
           case 'collectionPoint':
             validateCollectionPoint(input);
             break;
           case 'itemCategory':
             validateCategory(input);
             break;
+          case 'remarks':
+          // No validation needed for optional field
+          break;
         }
         updateSubmitButtonState();
       });
@@ -641,6 +590,40 @@ function initValidationListeners() {
 }
 
 // ================= AUTHENTICATION HANDLERS =================
+async function handleLogin() {
+  const phone = document.getElementById('phone').value.trim();
+  const password = document.getElementById('password').value;
+
+  if (!validatePhone(phone)) {
+    showError('Invalid phone number format');
+    return;
+  }
+
+  if (!password) {
+    showError('Please enter your password');
+    return;
+  }
+
+  try {
+    const result = await callAPI('processLogin', { phone, password });
+    
+    if (result.success) {
+      sessionStorage.setItem('userData', JSON.stringify(result));
+      localStorage.setItem('lastActivity', Date.now());
+      
+      if (result.tempPassword) {
+        safeRedirect('password-reset.html');
+      } else {
+        safeRedirect('dashboard.html');
+      }
+    } else {
+      showError(result.message || 'Authentication failed');
+    }
+  } catch (error) {
+    showError('Login failed - please try again');
+  }
+}
+
 async function handleRegistration() {
   if (!validateRegistrationForm()) return;
 
@@ -783,8 +766,7 @@ function safeRedirect(path) {
     const allowedPaths = [
       'login.html', 'register.html', 'dashboard.html',
       'forgot-password.html', 'password-reset.html',
-      'my-info.html', 'parcel-declaration.html', 'track-parcel.html',
-      'billing-info.html', 'invoice.html'
+      'my-info.html', 'parcel-declaration.html', 'track-parcel.html'
     ];
     
     if (!allowedPaths.includes(basePath)) {
@@ -797,7 +779,6 @@ function safeRedirect(path) {
     showError('Navigation failed. Please try again.');
   }
 }
-
 
 function formatTrackingNumber(trackingNumber) {
   return trackingNumber.replace(/[^A-Z0-9-]/g, '').toUpperCase();
@@ -823,13 +804,48 @@ function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('en-MY', options);
 }
 
-// ================= INITIALIZATION =================
+// ================= TRACKING NUMBER HANDLER =================
+function handleTrackingNumberFromURL() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const tracking = urlParams.get('tracking');
+    
+    if (tracking) {
+        // Store for post-login redirect
+        sessionStorage.setItem('pendingTracking', tracking);
+        sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
+    }
+    
+    return tracking;
+}
+
+function processPendingTracking() {
+    const pendingTracking = sessionStorage.getItem('pendingTracking');
+    const pendingRedirect = sessionStorage.getItem('pendingRedirect');
+    
+    if (pendingTracking && pendingRedirect) {
+        sessionStorage.removeItem('pendingTracking');
+        sessionStorage.removeItem('pendingRedirect');
+        
+        if (pendingRedirect === 'parcel-declaration.html') {
+            // Store tracking for parcel declaration page
+            sessionStorage.setItem('prefillTracking', pendingTracking);
+            safeRedirect('parcel-declaration.html');
+            return true;
+        }
+    }
+    return false;
+}
+
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-  // 1. Mark 1 style initialization
   detectViewMode();
-  
-  // 2. Initialize parcel form if exists (Mark 1 approach)
+  initValidationListeners();
+  createLoaderElement();
+
+  // Initialize category requirements on page load
+  checkCategoryRequirements();
+
+  // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
   if (parcelForm) {
     parcelForm.addEventListener('submit', handleParcelSubmission);
@@ -839,34 +855,17 @@ document.addEventListener('DOMContentLoaded', () => {
     if (categorySelect) {
       categorySelect.addEventListener('change', checkCategoryRequirements);
     }
-  }
-  
-  // 3. Create loader element
-  createLoaderElement();
-  
-  // 4. Initialize category requirements
-  checkCategoryRequirements();
-  
-  // 5. Initialize validation listeners
-  initValidationListeners();
-  
-  // 6. Parcel declaration page specific code
-  if (window.location.pathname.includes('parcel-declaration.html')) {
-    const userData = checkSession();
-    if (!userData) {
-      handleLogout();
-      return;
-    }
-    
-    // Phone field handling
+
+    // Phone field setup
     const phoneField = document.getElementById('phone');
     if (phoneField) {
-      phoneField.value = userData.phone || '';
+      const userData = checkSession();
+      phoneField.value = userData?.phone || '';
       phoneField.readOnly = true;
     }
   }
 
-  // 7. Session management - EXACT Mark 1 approach
+  // Session management
   const publicPages = ['login.html', 'register.html', 'forgot-password.html'];
   const isPublicPage = publicPages.some(page => 
     window.location.pathname.includes(page)
@@ -874,245 +873,36 @@ document.addEventListener('DOMContentLoaded', () => {
 
   if (!isPublicPage) {
     const userData = checkSession();
-    if (!userData) {
-      handleLogout();
-      return;
-    }
+    if (!userData) return;
     
-    // Check for temp password - EXACT Mark 1 logic
     if (userData.tempPassword && !window.location.pathname.includes('password-reset.html')) {
       handleLogout();
-      return;
     }
   }
 
-  // 8. Cleanup on page unload - Mark 1 approach
   window.addEventListener('beforeunload', () => {
     const errorElement = document.getElementById('error-message');
     if (errorElement) errorElement.style.display = 'none';
   });
 
-  // 9. Focus management - Mark 1 approach
   const firstInput = document.querySelector('input:not([type="hidden"])');
   if (firstInput) firstInput.focus();
-  
-  // 10. Setup category change listener if exists
-  const categorySelect = document.getElementById('itemCategory');
-  if (categorySelect) {
-    categorySelect.addEventListener('change', checkCategoryRequirements);
-  }
 });
 
 // New functions for category requirements =================
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value || '';
   const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
   
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    fileInput.required = true;
-    fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
-    fileHelp.style.color = '#ff4444';
-  } else {
-    fileInput.required = false;
-    fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
-    fileHelp.style.color = '#888';
-  }
+  // Always show required for files
+  fileInput.required = true;
+  fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
+  fileHelp.style.color = '#ff4444';
 }
 
 function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
-  }
-}
-
-// ================= BILLING SYSTEM HELPERS =================
-async function loadBillingDataWithRetry(phone, maxRetries = 3) {
-  let lastError;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Loading billing data (attempt ${attempt}/${maxRetries})`);
-      
-      // Add exponential backoff
-      if (attempt > 1) {
-        const delay = Math.min(1000 * Math.pow(2, attempt - 1), 10000);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-      
-      const result = await loadBillingDataFromServer(phone);
-      
-      if (result && result.success) {
-        return result;
-      }
-      
-      lastError = new Error(result?.message || 'Billing data load failed');
-      
-    } catch (error) {
-      console.error(`Billing load attempt ${attempt} failed:`, error);
-      lastError = error;
-      
-      // If it's a network error, try again
-      if (attempt < maxRetries) {
-        continue;
-      }
-    }
-  }
-  
-  throw lastError || new Error('Failed to load billing data after all retries');
-}
-
-async function checkPaymentStatusWithRetry(phone, maxRetries = 2) {
-  let lastError;
-  
-  for (let attempt = 1; attempt <= maxRetries; attempt++) {
-    try {
-      console.log(`Checking payment status (attempt ${attempt}/${maxRetries})`);
-      
-      if (attempt > 1) {
-        const delay = Math.min(500 * Math.pow(2, attempt - 1), 5000);
-        await new Promise(resolve => setTimeout(resolve, delay));
-      }
-      
-      const result = await checkPaymentStatusForUser(phone);
-      
-      if (result && (result.success || result.paidOrders)) {
-        return result;
-      }
-      
-      lastError = new Error('Payment status check failed');
-      
-    } catch (error) {
-      console.error(`Payment status attempt ${attempt} failed:`, error);
-      lastError = error;
-      
-      if (attempt < maxRetries) {
-        continue;
-      }
-    }
-  }
-  
-  // Return empty if all retries fail
-  return { success: false, paidOrders: [] };
-}
-
-// ================= IMPROVED LOADING FUNCTION =================
-async function loadBillingData() {
-  try {
-    showLoading(true, "Please wait, loading billing information...");
-    const userData = checkSession();
-    if (!userData?.phone) {
-      handleLogout();
-      return;
-    }
-
-    console.log('Starting to load billing data...');
-    
-    // Load billing data with retry
-    const billingResponse = await loadBillingDataWithRetry(userData.phone);
-    
-    if (!billingResponse.success) {
-      showError(billingResponse.message || 'Failed to load billing information', 'connectionError');
-      return;
-    }
-
-    // Load payment status with retry (non-critical)
-    const paymentStatus = await checkPaymentStatusWithRetry(userData.phone);
-    
-    allBillingData = billingResponse.data || [];
-    paidOrders = paymentStatus.paidOrders || [];
-    
-    console.log(`Loaded ${allBillingData.length} billing records and ${paidOrders.length} paid orders`);
-    
-    // Store in session for offline access
-    try {
-      sessionStorage.setItem('billingCache', JSON.stringify({
-        data: allBillingData,
-        paidOrders: paidOrders,
-        timestamp: Date.now()
-      }));
-    } catch (e) {
-      console.warn('Could not cache billing data:', e);
-    }
-    
-    renderBillingSections(allBillingData);
-
-  } catch (error) {
-    console.error('Billing load error:', error);
-    
-    // Try to use cached data
-    try {
-      const cached = sessionStorage.getItem('billingCache');
-      if (cached) {
-        const cacheData = JSON.parse(cached);
-        const cacheAge = Date.now() - cacheData.timestamp;
-        
-        // Use cache if less than 10 minutes old
-        if (cacheAge < 10 * 60 * 1000) {
-          console.log('Using cached billing data');
-          allBillingData = cacheData.data || [];
-          paidOrders = cacheData.paidOrders || [];
-          renderBillingSections(allBillingData);
-          showError('Using cached data. Some information may be outdated.', 'connectionError');
-          return;
-        }
-      }
-    } catch (cacheError) {
-      console.warn('Cache error:', cacheError);
-    }
-    
-    showError('Connection failed. Please try again.', 'connectionError');
-  } finally {
-    showLoading(false);
-  }
-}
-
-// ================= CONNECTION HEALTH CHECK =================
-async function checkBackendHealth() {
-  try {
-    const healthCheck = await new Promise((resolve, reject) => {
-      const callbackName = `health_${Date.now()}`;
-      const script = document.createElement('script');
-      script.crossOrigin = 'anonymous';
-      script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=processLogin&phone=test&password=test`;
-      
-      const timeoutId = setTimeout(() => {
-        cleanup();
-        reject(new Error('Backend timeout'));
-      }, 5000);
-      
-      function cleanup() {
-        clearTimeout(timeoutId);
-        delete window[callbackName];
-        if (script.parentNode) {
-          document.body.removeChild(script);
-        }
-      }
-      
-      window[callbackName] = (response) => {
-        cleanup();
-        // Even if login fails, backend is responding
-        resolve(true);
-      };
-      
-      script.onerror = () => {
-        cleanup();
-        reject(new Error('Backend unavailable'));
-      };
-      
-      document.body.appendChild(script);
-    });
-    
-    return true;
-  } catch (error) {
-    console.error('Backend health check failed:', error);
-    return false;
   }
 }
