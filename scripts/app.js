@@ -69,12 +69,43 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= SESSION MANAGEMENT =================
+// ================= URL PARAMETER HANDLING =================
+function getTrackingFromURL() {
+  const urlParams = new URLSearchParams(window.location.search);
+  return urlParams.get('tracking');
+}
+
+function storePendingTracking(tracking) {
+  if (tracking) {
+    sessionStorage.setItem('pendingTracking', tracking);
+    sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
+  }
+}
+
+function clearPendingTracking() {
+  sessionStorage.removeItem('pendingTracking');
+  sessionStorage.removeItem('pendingRedirect');
+}
+
+function hasPendingTracking() {
+  return sessionStorage.getItem('pendingTracking') !== null;
+}
+
+function getPendingTracking() {
+  return sessionStorage.getItem('pendingTracking');
+}
+
+// ================= MODIFIED SESSION CHECK =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
   const lastActivity = localStorage.getItem('lastActivity');
 
+  // If no session data, check for pending tracking
   if (!sessionData) {
+    const tracking = getTrackingFromURL();
+    if (tracking) {
+      storePendingTracking(tracking);
+    }
     handleLogout();
     return null;
   }
@@ -590,6 +621,7 @@ function initValidationListeners() {
 }
 
 // ================= AUTHENTICATION HANDLERS =================
+// ================= MODIFIED LOGIN HANDLER =================
 async function handleLogin() {
   const phone = document.getElementById('phone').value.trim();
   const password = document.getElementById('password').value;
@@ -611,9 +643,20 @@ async function handleLogin() {
       sessionStorage.setItem('userData', JSON.stringify(result));
       localStorage.setItem('lastActivity', Date.now());
       
-      if (result.tempPassword) {
+      // Check for pending tracking
+      if (hasPendingTracking()) {
+        const tracking = getPendingTracking();
+        clearPendingTracking();
+        
+        // Store for parcel declaration page
+        sessionStorage.setItem('prefillTracking', tracking);
+        // Bypass modal and go directly to parcel declaration
+        safeRedirect('parcel-declaration.html');
+      } else if (result.tempPassword) {
         safeRedirect('password-reset.html');
       } else {
+        // Normal login flow
+        localStorage.setItem('freshLogin', 'true');
         safeRedirect('dashboard.html');
       }
     } else {
@@ -644,6 +687,27 @@ async function handleRegistration() {
     }
   } catch (error) {
     showError('Registration failed - please try again');
+  }
+}
+
+// ================= DIRECT ACCESS HANDLER =================
+function handleDirectParcelAccess() {
+  // Only run on parcel declaration page
+  if (!window.location.pathname.includes('parcel-declaration.html')) {
+    return;
+  }
+  
+  const userData = checkSession();
+  const urlTracking = getTrackingFromURL();
+  
+  // If user is logged in and URL has tracking parameter
+  if (userData && urlTracking) {
+    // Store for prefilling and clean URL
+    sessionStorage.setItem('prefillTracking', urlTracking);
+    if (window.history.replaceState) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
   }
 }
 
@@ -841,9 +905,7 @@ document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-
-  // Initialize category requirements on page load
-  checkCategoryRequirements();
+  handleDirectParcelAccess();
 
   // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
