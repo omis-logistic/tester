@@ -118,37 +118,65 @@
   <script src="scripts/app.js"></script>
   
   <script>
-// Prefill tracking number if available
+// Enhanced tracking prefill with session persistence
 document.addEventListener('DOMContentLoaded', function() {
-  // Check URL for tracking parameter first (for logged-in users)
+  console.log('Parcel declaration page loaded');
+  
+  // Check session first
+  const userData = checkSession();
+  if (!userData) {
+    // Not logged in - check if we have tracking parameter
+    const urlParams = new URLSearchParams(window.location.search);
+    const urlTracking = urlParams.get('tracking');
+    
+    if (urlTracking) {
+      // Store tracking and redirect to login
+      sessionStorage.setItem('pendingTracking', urlTracking);
+      sessionStorage.setItem('trackingRedirect', 'true');
+      
+      // Redirect to login page with correct path
+      const loginUrl = window.location.origin + '/zarizqlogin/login.html';
+      window.location.href = loginUrl;
+    } else {
+      // No tracking, just redirect to login
+      safeRedirect('login.html');
+    }
+    return;
+  }
+  
+  // We're logged in - handle tracking prefill
+  let trackingToPrefill = null;
+  
+  // Check URL for tracking parameter first
   const urlParams = new URLSearchParams(window.location.search);
   const urlTracking = urlParams.get('tracking');
   
   if (urlTracking) {
-    // Store it and clean URL
-    sessionStorage.setItem('prefillTracking', urlTracking);
+    trackingToPrefill = urlTracking;
+    // Clean URL
     if (window.history.replaceState) {
       const newUrl = window.location.pathname;
       window.history.replaceState({}, document.title, newUrl);
     }
   }
   
-  // Then check sessionStorage for prefill
-  const prefillTracking = sessionStorage.getItem('prefillTracking');
+  // Then check sessionStorage
+  if (!trackingToPrefill) {
+    trackingToPrefill = sessionStorage.getItem('prefillTracking');
+  }
   
-  if (prefillTracking) {
+  if (trackingToPrefill) {
+    console.log('Prefilling tracking:', trackingToPrefill);
     const trackingInput = document.getElementById('trackingNumber');
     if (trackingInput) {
-      trackingInput.value = prefillTracking;
+      trackingInput.value = trackingToPrefill;
       trackingInput.readOnly = true;
       trackingInput.style.backgroundColor = '#2a2a2a';
       trackingInput.style.color = '#888';
       trackingInput.style.cursor = 'not-allowed';
       
       // Clear after use
-      setTimeout(() => {
-        sessionStorage.removeItem('prefillTracking');
-      }, 100);
+      sessionStorage.removeItem('prefillTracking');
     }
   }
 });
