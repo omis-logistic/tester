@@ -179,8 +179,11 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tracking = urlParams.get('tracking');
       
+      console.log('Page loaded with tracking parameter:', tracking);
+      
       if (userData && tracking) {
         // User is already logged in and there's a tracking parameter
+        console.log('User already logged in, redirecting to parcel declaration');
         sessionStorage.setItem('prefillTracking', tracking);
         safeRedirect('parcel-declaration.html');
         return;
@@ -188,9 +191,9 @@
       
       if (tracking) {
         // Store tracking for post-login redirect (bypass modal)
+        console.log('Storing tracking for post-login:', tracking);
         sessionStorage.setItem('pendingTracking', tracking);
         sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
-        console.log('Tracking parameter stored:', tracking);
       }
     });
   
@@ -241,8 +244,12 @@
           const pendingTracking = sessionStorage.getItem('pendingTracking');
           const pendingRedirect = sessionStorage.getItem('pendingRedirect');
           
+          console.log('Pending tracking after login:', pendingTracking);
+          console.log('Pending redirect after login:', pendingRedirect);
+          
           if (response.tempPassword) {
             // Still need to reset password first
+            console.log('Temp password detected, redirecting to password reset');
             window.location.href = 'password-reset.html?force=true';
           } else if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
             // Clear pending tracking and redirect directly to parcel declaration
@@ -250,9 +257,10 @@
             sessionStorage.removeItem('pendingTracking');
             sessionStorage.removeItem('pendingRedirect');
             sessionStorage.setItem('prefillTracking', pendingTracking);
-            window.location.href = pendingRedirect;
+            window.location.href = 'parcel-declaration.html';
           } else {
             // Normal login flow - go to dashboard
+            console.log('Normal login flow, going to dashboard');
             localStorage.setItem('freshLogin', 'true');
             sessionStorage.setItem('modalShown', 'false');
             window.location.href = 'dashboard.html?fresh=1';
