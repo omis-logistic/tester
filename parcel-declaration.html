@@ -338,20 +338,12 @@
           id="fileUpload" 
           name="files"
           multiple
-          accept=".jpg,.jpeg,.png,.pdf"
-          capture="environment"
-          webkitdirectory="false"
-          directory="false"
+          accept="image/*,.pdf"
+          style="display: block; width: 100%; padding: 12px; margin-top: 5px;"
         >
         <small id="fileHelp" class="form-text">
           <span id="fileRequirement">Optional: </span>JPEG, PNG, PDF (Max 5MB each)
         </small>
-        
-        <!-- File Preview Area -->
-        <div id="filePreview" class="file-preview" style="display: none;">
-          <div id="fileList"></div>
-          <small id="totalSize">Total: 0MB</small>
-        </div>
         
         <span id="invoiceFilesError" class="error-message"></span>
       </div>
