@@ -725,6 +725,27 @@ async function handleRegistration() {
   }
 }
 
+// ================= DIRECT ACCESS HANDLER =================
+function handleDirectParcelAccess() {
+  // Only run on parcel declaration page
+  if (!window.location.pathname.includes('parcel-declaration.html')) {
+    return;
+  }
+  
+  const userData = checkSession();
+  const urlTracking = getTrackingFromURL();
+  
+  // If user is logged in and URL has tracking parameter
+  if (userData && urlTracking) {
+    // Store for prefilling and clean URL
+    sessionStorage.setItem('prefillTracking', urlTracking);
+    if (window.history.replaceState) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }
+}
+
 // ================= ENHANCED URL TRACKING HANDLER =================
 function handleTrackingParameter() {
   // Get the full current URL
