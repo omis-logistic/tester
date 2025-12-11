@@ -486,9 +486,9 @@ async function handleParcelSubmission(e) {
       throw new Error('Quantity must be between 1 and 999');
     }
 
-    // Validate price
-    if (payload.data.price < 0 || payload.data.price > 99999) {
-      throw new Error('Price must be between 0 and 99,999');
+    // VALIDATE PRICE - UPDATED TO ALLOW 0
+    if (payload.data.price < 0 || payload.data.price > 100000) { // Changed from > 99999 to > 100000 for consistency
+      throw new Error('Price must be between 0 and 100,000'); // Updated error message
     }
 
     // Handle file uploads
@@ -533,6 +533,39 @@ async function handleParcelSubmission(e) {
         } catch (fileError) {
           console.error('Error reading file:', fileError);
           throw new Error(`Failed to process file "${file.name}"`);
+        }
+      }
+    } else {
+      // For non-starred categories, files are optional
+      // Check if any files were uploaded anyway
+      if (fileInput && fileInput.files && fileInput.files.length > 0) {
+        const files = Array.from(fileInput.files);
+        
+        if (files.length > CONFIG.MAX_FILES) {
+          throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+        }
+
+        for (const file of files) {
+          if (file.size > CONFIG.MAX_FILE_SIZE) {
+            throw new Error(`File "${file.name}" exceeds 5MB limit`);
+          }
+          
+          if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+            throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
+          }
+          
+          try {
+            const base64Data = await readFileAsBase64(file);
+            payload.files.push({
+              name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+              type: file.type,
+              base64: base64Data
+            });
+          } catch (fileError) {
+            console.error('Error reading file:', fileError);
+            // Don't throw error for optional files, just skip
+            console.warn(`Skipping file "${file.name}" due to read error`);
+          }
         }
       }
     }
@@ -722,16 +755,8 @@ function validateQuantity(inputElement) {
 
 function validatePrice(inputElement) {
   const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value >= 0 && value < 100000;
-  
-  if (inputElement.id === 'price') {
-    const errorElement = document.getElementById('priceError');
-    if (errorElement) {
-      errorElement.textContent = isValid ? '' : 'Must be between 0 and 99,999';
-      errorElement.style.color = isValid ? '' : '#ff4444';
-    }
-  }
-  
+  const isValid = !isNaN(value) && value >= 0 && value <= 100000; // Changed > 0 to >= 0
+  showError(isValid ? '' : 'Valid price (0-100000) required', 'priceError');
   return isValid;
 }
 
@@ -1146,7 +1171,7 @@ function validateField(field) {
       
     case 'price':
       const price = parseFloat(value);
-      isValid = !isNaN(price) && price >= 0 && price <= 99999;
+      isValid = !isNaN(price) && price >= 0 && price <= 99999; // Changed > 0 to >= 0
       message = isValid ? '' : 'Must be between 0 and 99,999';
       break;
       
@@ -1179,36 +1204,49 @@ function validateFiles(fileInput) {
     '*Oil Ointment', '*Supplement', '*Others'
   ];
   
+  let isValid = true;
+  let errorMessage = '';
+  
+  // Check if files are required
   if (starredCategories.includes(category)) {
     if (files.length === 0) {
-      showError('Invoice/document upload is required for this category', 'fileUploadError');
-      return false;
+      errorMessage = 'Invoice/document upload is required for this category';
+      isValid = false;
     }
   }
   
-  // Validate each file
-  for (const file of files) {
-    if (file.size > CONFIG.MAX_FILE_SIZE) {
-      showError(`File "${file.name}" exceeds 5MB limit`, 'fileUploadError');
-      fileInput.value = '';
-      return false;
+  // Validate individual files if any are selected
+  if (files.length > 0) {
+    if (files.length > CONFIG.MAX_FILES) {
+      errorMessage = `Maximum ${CONFIG.MAX_FILES} files allowed`;
+      isValid = false;
     }
     
-    if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-      showError(`File "${file.name}" must be JPG, PNG, or PDF`, 'fileUploadError');
-      fileInput.value = '';
-      return false;
+    for (const file of files) {
+      if (file.size > CONFIG.MAX_FILE_SIZE) {
+        errorMessage = `File "${file.name}" exceeds 5MB limit`;
+        isValid = false;
+        break;
+      }
+      
+      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+        errorMessage = `File "${file.name}" must be JPG, PNG, or PDF`;
+        isValid = false;
+        break;
+      }
     }
   }
   
-  // Show file count
-  if (files.length > 0) {
-    showError(`${files.length} file(s) selected`, 'fileUploadError');
+  // Show appropriate message
+  if (errorMessage) {
+    showError(errorMessage, 'invoiceFilesError');
+  } else if (files.length > 0) {
+    showError(`${files.length} file(s) selected`, 'invoiceFilesError success');
   } else {
-    showError('', 'fileUploadError');
+    showError('', 'invoiceFilesError');
   }
   
-  return true;
+  return isValid;
 }
 
 function updateSubmitButton() {
@@ -1259,13 +1297,21 @@ function checkCategoryRequirements() {
   ];
 
   if (starredCategories.includes(category)) {
-    if (fileInput) fileInput.required = true;
+    if (fileInput) {
+      fileInput.required = true;
+      fileInput.disabled = false; // Ensure it's enabled
+      fileInput.style.display = 'block';
+    }
     if (fileHelp) {
       fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
       fileHelp.style.color = '#ff4444';
     }
   } else {
-    if (fileInput) fileInput.required = false;
+    if (fileInput) {
+      fileInput.required = false;
+      fileInput.disabled = false; // Keep enabled for optional uploads
+      fileInput.style.display = 'block';
+    }
     if (fileHelp) {
       fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
       fileHelp.style.color = '#888';
@@ -1276,8 +1322,60 @@ function checkCategoryRequirements() {
 function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
-    categorySelect.addEventListener('change', checkCategoryRequirements);
-    categorySelect.addEventListener('change', updateSubmitButtonState);
+    categorySelect.addEventListener('change', function() {
+      checkCategoryRequirements();
+      updateSubmitButtonState();
+      
+      // Reset file input when category changes to non-starred
+      const fileInput = document.getElementById('fileUpload');
+      const category = this.value;
+      
+      const starredCategories = [
+        '*Books', '*Cosmetics/Skincare/Bodycare',
+        '*Food Beverage/Drinks', '*Gadgets',
+        '*Oil Ointment', '*Supplement', '*Others'
+      ];
+      
+      if (!starredCategories.includes(category) && fileInput) {
+        fileInput.value = ''; // Clear file selection
+        showError('', 'invoiceFilesError'); // Clear error message
+      }
+    });
+  }
+}
+
+// ================= MOBILE FILE INPUT FIX =================
+function setupMobileFileInput() {
+  if (detectViewMode()) { // If mobile device
+    const fileInput = document.getElementById('fileUpload');
+    if (fileInput) {
+      // Remove any existing listeners
+      const newFileInput = fileInput.cloneNode(true);
+      fileInput.parentNode.replaceChild(newFileInput, fileInput);
+      
+      // Add mobile-friendly attributes
+      newFileInput.setAttribute('accept', 'image/*,.pdf');
+      newFileInput.setAttribute('capture', 'environment'); // For mobile camera
+      
+      // Add click handler to debug
+      newFileInput.addEventListener('click', function() {
+        console.log('File input clicked on mobile');
+      });
+      
+      // Add change handler
+      newFileInput.addEventListener('change', function() {
+        console.log('Files selected:', this.files.length);
+        if (this.files.length > 0) {
+          console.log('File details:', {
+            name: this.files[0].name,
+            size: this.files[0].size,
+            type: this.files[0].type
+          });
+        }
+        validateFiles(this);
+        updateSubmitButtonState();
+      });
+    }
   }
 }
 
@@ -1458,6 +1556,11 @@ document.addEventListener('DOMContentLoaded', () => {
       initValidationListeners();
       checkCategoryRequirements();
       updateSubmitButtonState();
+      
+      // Setup mobile file input if on mobile
+      if (isMobile) {
+        setupMobileFileInput();
+      }
       
       // Load saved drafts
       loadDrafts();
