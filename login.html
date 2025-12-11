@@ -179,13 +179,21 @@
       const urlParams = new URLSearchParams(window.location.search);
       const tracking = urlParams.get('tracking');
       
-      console.log('Page loaded with tracking parameter:', tracking);
+      console.log('Page loaded, user logged in:', !!userData, 'tracking:', tracking);
       
       if (userData && tracking) {
         // User is already logged in and there's a tracking parameter
         console.log('User already logged in, redirecting to parcel declaration');
         sessionStorage.setItem('prefillTracking', tracking);
-        safeRedirect('parcel-declaration.html');
+        
+        // Clean the URL and redirect
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+        
+        // Use setTimeout to avoid redirect loop
+        setTimeout(() => {
+          safeRedirect('parcel-declaration.html');
+        }, 100);
         return;
       }
       
@@ -194,6 +202,10 @@
         console.log('Storing tracking for post-login:', tracking);
         sessionStorage.setItem('pendingTracking', tracking);
         sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
+        
+        // Clean the URL immediately
+        const cleanUrl = window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
       }
     });
   
@@ -250,20 +262,26 @@
           if (response.tempPassword) {
             // Still need to reset password first
             console.log('Temp password detected, redirecting to password reset');
-            window.location.href = 'password-reset.html?force=true';
+            setTimeout(() => {
+              window.location.href = 'password-reset.html?force=true';
+            }, 100);
           } else if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
             // Clear pending tracking and redirect directly to parcel declaration
             console.log('Redirecting to parcel declaration with tracking:', pendingTracking);
             sessionStorage.removeItem('pendingTracking');
             sessionStorage.removeItem('pendingRedirect');
             sessionStorage.setItem('prefillTracking', pendingTracking);
-            window.location.href = 'parcel-declaration.html';
+            setTimeout(() => {
+              window.location.href = 'parcel-declaration.html';
+            }, 100);
           } else {
             // Normal login flow - go to dashboard
             console.log('Normal login flow, going to dashboard');
             localStorage.setItem('freshLogin', 'true');
             sessionStorage.setItem('modalShown', 'false');
-            window.location.href = 'dashboard.html?fresh=1';
+            setTimeout(() => {
+              window.location.href = 'dashboard.html?fresh=1';
+            }, 100);
           }
         } else {
           document.getElementById('password').value = '';
@@ -336,7 +354,7 @@
       }
     }
   
-    // EXACT Mark 1 redirect function
+    // EXACT Mark 1 redirect function - Fixed to prevent loops
     function safeRedirect(path) {
       try {
         // Extract base path without query parameters
@@ -353,7 +371,17 @@
           throw new Error('Unauthorized path');
         }
         
-        window.location.href = path;
+        // Prevent redirect loops by checking current path
+        const currentPath = window.location.pathname.split('/').pop();
+        if (currentPath === basePath) {
+          console.log('Already on target page, skipping redirect');
+          return;
+        }
+        
+        // Use timeout to avoid immediate redirect loops
+        setTimeout(() => {
+          window.location.href = path;
+        }, 50);
       } catch (error) {
         console.error('Redirect error:', error);
         showError('Navigation failed. Please try again.');
