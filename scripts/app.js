@@ -296,10 +296,10 @@ async function submitParcelData(payload) {
   return await submitViaDesktop(payload);
 }
 
-// Mobile submission (simpler, more reliable)
+// Mobile submission (simpler, no file support)
 async function submitViaMobile(payload) {
   try {
-    console.log('Using mobile submission method');
+    console.log('Using mobile submission method (no file support)');
     
     // Create simplified payload without files for mobile
     const simplifiedPayload = {
@@ -307,45 +307,31 @@ async function submitViaMobile(payload) {
       data: payload.data
     };
     
-    // Send using XHR with timeout
-    return new Promise((resolve, reject) => {
-      const xhr = new XMLHttpRequest();
-      const url = CONFIG.PROXY_URL;
+    // Send using fetch with timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 30000);
+    
+    try {
+      const response = await fetch(CONFIG.PROXY_URL, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/x-www-form-urlencoded',
+        },
+        body: `payload=${encodeURIComponent(JSON.stringify(simplifiedPayload))}`,
+        signal: controller.signal
+      });
       
-      xhr.open('POST', url, true);
-      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+      clearTimeout(timeoutId);
       
-      xhr.timeout = 30000; // 30 second timeout
+      if (!response.ok) {
+        throw new Error(`HTTP ${response.status}`);
+      }
       
-      xhr.onload = function() {
-        if (xhr.status >= 200 && xhr.status < 300) {
-          try {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
-          } catch (e) {
-            // Even if JSON parse fails, assume success for mobile
-            resolve({ 
-              success: true, 
-              message: 'Submitted successfully' 
-            });
-          }
-        } else {
-          reject(new Error(`HTTP ${xhr.status}`));
-        }
-      };
-      
-      xhr.onerror = function() {
-        reject(new Error('Network error'));
-      };
-      
-      xhr.ontimeout = function() {
-        reject(new Error('Request timeout'));
-      };
-      
-      // Send data
-      const data = `payload=${encodeURIComponent(JSON.stringify(simplifiedPayload))}`;
-      xhr.send(data);
-    });
+      return await response.json();
+    } catch (fetchError) {
+      clearTimeout(timeoutId);
+      throw fetchError;
+    }
     
   } catch (error) {
     console.error('Mobile submission failed:', error);
@@ -360,28 +346,50 @@ async function submitViaDesktop(payload) {
     
     // Use FormData for desktop with files
     const formData = new FormData();
-    formData.append('data', JSON.stringify(payload.data));
     
-    // Add files if they exist
+    // Add the main data
+    formData.append('data', JSON.stringify({
+      action: 'submitParcelDeclaration',
+      data: payload.data
+    }));
+    
+    // Add files directly (not as base64)
     if (payload.files && payload.files.length > 0) {
-      for (let i = 0; i < payload.files.length; i++) {
-        const file = payload.files[i];
-        const blob = base64ToBlob(file.base64, file.type);
-        formData.append(`file${i}`, blob, file.name);
-      }
+      payload.files.forEach((file, index) => {
+        formData.append(`file${index}`, file, file.name);
+      });
     }
+    
+    console.log('Sending FormData with', payload.files.length, 'files');
     
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formData,
-      // No headers for FormData - let browser set them
+      body: formData
+      // Don't set Content-Type header - let browser set it with boundary
     });
     
+    console.log('Response status:', response.status);
+    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}`);
+      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
     }
     
-    return await response.json();
+    const responseText = await response.text();
+    console.log('Raw response:', responseText);
+    
+    try {
+      return JSON.parse(responseText);
+    } catch (parseError) {
+      console.error('Failed to parse response as JSON:', parseError);
+      
+      // Check if it's JSONP
+      if (responseText.startsWith('callback(')) {
+        const jsonStr = responseText.substring(9, responseText.length - 1);
+        return JSON.parse(jsonStr);
+      }
+      
+      throw new Error('Invalid response format from server');
+    }
     
   } catch (error) {
     console.error('Desktop submission failed:', error);
@@ -393,6 +401,7 @@ async function submitViaDesktop(payload) {
     };
     
     try {
+      console.log('Trying fallback to proxy...');
       const fallbackResponse = await fetch(CONFIG.PROXY_URL, {
         method: 'POST',
         headers: {
@@ -405,36 +414,12 @@ async function submitViaDesktop(payload) {
         throw new Error(`Fallback failed: HTTP ${fallbackResponse.status}`);
       }
       
-      return await fallbackResponse.json();
+      const fallbackText = await fallbackResponse.text();
+      return JSON.parse(fallbackText);
       
     } catch (fallbackError) {
       throw new Error(`Both submissions failed: ${error.message}, ${fallbackError.message}`);
     }
-  }
-}
-
-// Convert base64 to Blob
-function base64ToBlob(base64, mimeType) {
-  try {
-    const byteCharacters = atob(base64);
-    const byteArrays = [];
-    
-    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
-      const slice = byteCharacters.slice(offset, offset + 512);
-      const byteNumbers = new Array(slice.length);
-      
-      for (let i = 0; i < slice.length; i++) {
-        byteNumbers[i] = slice.charCodeAt(i);
-      }
-      
-      const byteArray = new Uint8Array(byteNumbers);
-      byteArrays.push(byteArray);
-    }
-    
-    return new Blob(byteArrays, { type: mimeType });
-  } catch (error) {
-    console.error('Error converting base64 to blob:', error);
-    throw new Error('Invalid file data');
   }
 }
 
@@ -487,9 +472,9 @@ async function handleParcelSubmission(e) {
       throw new Error('Quantity must be between 1 and 999');
     }
 
-    // VALIDATE PRICE - UPDATED TO ALLOW 0
-    if (payload.data.price < 0 || payload.data.price > 100000) { // Changed from > 99999 to > 100000 for consistency
-      throw new Error('Price must be between 0 and 100,000'); // Updated error message
+    // VALIDATE PRICE - ALLOW 0
+    if (payload.data.price < 0 || isNaN(payload.data.price)) {
+      throw new Error('Price must be a valid number (0 or higher)');
     }
 
     // Handle file uploads
@@ -501,20 +486,20 @@ async function handleParcelSubmission(e) {
       '*Food Beverage/Drinks', '*Gadgets',
       '*Oil Ointment', '*Supplement', '*Others'
     ];
-
+    
     // Check if files are required and process them
     if (starredCategories.includes(category)) {
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files
+      // Process files - SIMPLIFIED: Use FormData directly
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
         throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
       }
-
+    
       for (const file of files) {
         if (file.size > CONFIG.MAX_FILE_SIZE) {
           throw new Error(`File "${file.name}" exceeds 5MB limit`);
@@ -524,28 +509,18 @@ async function handleParcelSubmission(e) {
           throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
         }
         
-        try {
-          const base64Data = await readFileAsBase64(file);
-          payload.files.push({
-            name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
-            type: file.type,
-            base64: base64Data
-          });
-        } catch (fileError) {
-          console.error('Error reading file:', fileError);
-          throw new Error(`Failed to process file "${file.name}"`);
-        }
+        // Don't convert to base64 - add to files array for FormData
+        payload.files.push(file);
       }
     } else {
       // For non-starred categories, files are optional
-      // Check if any files were uploaded anyway
       if (fileInput && fileInput.files && fileInput.files.length > 0) {
         const files = Array.from(fileInput.files);
         
         if (files.length > CONFIG.MAX_FILES) {
           throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
         }
-
+    
         for (const file of files) {
           if (file.size > CONFIG.MAX_FILE_SIZE) {
             throw new Error(`File "${file.name}" exceeds 5MB limit`);
@@ -555,18 +530,8 @@ async function handleParcelSubmission(e) {
             throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
           }
           
-          try {
-            const base64Data = await readFileAsBase64(file);
-            payload.files.push({
-              name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
-              type: file.type,
-              base64: base64Data
-            });
-          } catch (fileError) {
-            console.error('Error reading file:', fileError);
-            // Don't throw error for optional files, just skip
-            console.warn(`Skipping file "${file.name}" due to read error`);
-          }
+          // Don't convert to base64
+          payload.files.push(file);
         }
       }
     }
@@ -756,8 +721,8 @@ function validateQuantity(inputElement) {
 
 function validatePrice(inputElement) {
   const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value >= 0 && value <= 100000; // Changed > 0 to >= 0
-  showError(isValid ? '' : 'Valid price (0-100000) required', 'priceError');
+  const isValid = !isNaN(value) && value >= 0;
+  showError(isValid ? '' : 'Price must be 0 or higher', 'priceError');
   return isValid;
 }
 
