@@ -172,7 +172,7 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // EXACT Mark 1 login implementation with improved spinner
+    // EXACT Mark 1 login implementation with tracking support
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const spinner = document.getElementById('loginSpinner');
@@ -185,45 +185,67 @@
       // Show spinner and change text
       spinner.style.display = 'inline-block';
       loginText.textContent = 'Processing...';
-
+    
       const phone = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
-
+    
       if (!validatePhone(phone)) {
         showError('Invalid phone number format');
         resetLoginButton(btn, spinner, loginText, originalText);
         return;
       }
-
+    
       const callbackName = `jsonp_${Date.now()}`;
       const script = document.createElement('script');
       
       // EXACTLY like Mark 1 - with crossorigin attribute
       script.crossOrigin = 'anonymous';
       script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
+    
       window[callbackName] = (response) => {
         // Restore button state
         resetLoginButton(btn, spinner, loginText, originalText);
-
+    
         if (response.success) {
           console.log('TempPassword flag:', response.tempPassword);
-          sessionStorage.setItem('userData', JSON.stringify({
+          
+          // Store session data
+          const userData = JSON.stringify({
             phone: response.phone,
             email: response.email,
             tempPassword: response.tempPassword
-          }));
+          });
+          
+          sessionStorage.setItem('userData', userData);
+          localStorage.setItem('userSession', userData);
           localStorage.setItem('lastActivity', Date.now());
           
-          window.location.href = response.tempPassword 
-            ? 'password-reset.html?force=true'
-            : 'dashboard.html?fresh=1';
+          // Check for pending tracking
+          const pendingTracking = sessionStorage.getItem('pendingTracking');
+          const trackingRedirect = sessionStorage.getItem('trackingRedirect');
+          
+          if (pendingTracking && trackingRedirect) {
+            // Bypass modal and go directly to parcel declaration
+            sessionStorage.setItem('prefillTracking', pendingTracking);
+            sessionStorage.setItem('bypassModal', 'true');
+            sessionStorage.removeItem('pendingTracking');
+            sessionStorage.removeItem('trackingRedirect');
+            
+            // Redirect to parcel declaration page
+            const parcelUrl = window.location.origin + '/zarizqlogin/parcel-declaration.html';
+            window.location.href = parcelUrl;
+          } else if (response.tempPassword) {
+            window.location.href = 'password-reset.html?force=true';
+          } else {
+            localStorage.setItem('freshLogin', 'true');
+            window.location.href = 'dashboard.html?fresh=1';
+          }
         } else {
           document.getElementById('password').value = '';
           showError(response.message || 'Authentication failed');
         }
         
-        // Cleanup - EXACTLY like Mark 1
+        // Cleanup
         if (script.parentNode) {
           document.body.removeChild(script);
         }
