@@ -663,6 +663,23 @@
     }
     
     function initDashboard() {
+      // Check if we should bypass dashboard entirely (coming from tracking link)
+      const bypassModal = sessionStorage.getItem('bypassModal');
+      const prefillTracking = sessionStorage.getItem('prefillTracking');
+      
+      if (bypassModal && prefillTracking) {
+        // Bypass dashboard and go directly to parcel declaration
+        sessionStorage.removeItem('bypassModal');
+        const parcelUrl = window.location.origin + '/zarizqlogin/parcel-declaration.html';
+        window.location.href = parcelUrl;
+        return;
+      }
+      
+      // Clear bypass flag if set but no tracking
+      if (bypassModal) {
+        sessionStorage.removeItem('bypassModal');
+      }
+      
       // EXACT Mark 1 session check
       const userData = checkSession();
       if (!userData) {
@@ -675,24 +692,11 @@
         return;
       }
     
-      // Check if we have a pending tracking redirect (should have been handled already)
-      // If somehow we're here with pending tracking, clear it
-      if (hasPendingTracking()) {
-        clearPendingTracking();
-      }
-    
-      // Check if modal should be shown - BYPASS if coming from tracking link
+      // Check if modal should be shown
       const urlParams = new URLSearchParams(window.location.search);
-      const fromTracking = sessionStorage.getItem('fromTracking');
-      
-      // Clear tracking flag if set
-      if (fromTracking) {
-        sessionStorage.removeItem('fromTracking');
-      }
-      
-      const shouldShowModal = !fromTracking && (urlParams.has('fresh') || 
+      const shouldShowModal = urlParams.has('fresh') || 
                              (localStorage.getItem('freshLogin') === 'true' && 
-                              sessionStorage.getItem('modalShown') === 'false'));
+                              sessionStorage.getItem('modalShown') === 'false');
     
       if (shouldShowModal) {
         modalWasShown = true;
