@@ -120,18 +120,37 @@
   <script>
 // Prefill tracking number if available
 document.addEventListener('DOMContentLoaded', function() {
-    const prefillTracking = sessionStorage.getItem('prefillTracking');
-    
-    if (prefillTracking) {
-        const trackingInput = document.getElementById('trackingNumber');
-        if (trackingInput) {
-            trackingInput.value = prefillTracking;
-            trackingInput.readOnly = true;
-            trackingInput.style.backgroundColor = '#2a2a2a';
-            trackingInput.style.color = '#888';
-        }
-        sessionStorage.removeItem('prefillTracking');
+  // Check URL for tracking parameter first (for logged-in users)
+  const urlParams = new URLSearchParams(window.location.search);
+  const urlTracking = urlParams.get('tracking');
+  
+  if (urlTracking) {
+    // Store it and clean URL
+    sessionStorage.setItem('prefillTracking', urlTracking);
+    if (window.history.replaceState) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
     }
+  }
+  
+  // Then check sessionStorage for prefill
+  const prefillTracking = sessionStorage.getItem('prefillTracking');
+  
+  if (prefillTracking) {
+    const trackingInput = document.getElementById('trackingNumber');
+    if (trackingInput) {
+      trackingInput.value = prefillTracking;
+      trackingInput.readOnly = true;
+      trackingInput.style.backgroundColor = '#2a2a2a';
+      trackingInput.style.color = '#888';
+      trackingInput.style.cursor = 'not-allowed';
+      
+      // Clear after use
+      setTimeout(() => {
+        sessionStorage.removeItem('prefillTracking');
+      }, 100);
+    }
+  }
 });
 </script>
 </body>
