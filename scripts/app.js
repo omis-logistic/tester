@@ -9,6 +9,17 @@ const CONFIG = {
   MAX_FILES: 3
 };
 
+// ================= BASE URL CONFIGURATION =================
+const BASE_URL = window.location.origin;
+const APP_PATH = '/tester/'; // Adjust based on your GitHub Pages path
+
+// Helper function for building correct URLs
+function buildUrl(path) {
+  // Remove leading slash if present
+  const cleanPath = path.startsWith('/') ? path.substring(1) : path;
+  return `${BASE_URL}${APP_PATH}${cleanPath}`;
+}
+
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
   const isMobile = (
@@ -95,26 +106,50 @@ function getPendingTracking() {
   return sessionStorage.getItem('pendingTracking');
 }
 
+// ================= ENHANCED SESSION PERSISTENCE =================
+function initializeSession() {
+  // Check if we have a valid session from localStorage
+  const storedSession = localStorage.getItem('userSession');
+  const lastActivity = localStorage.getItem('lastActivity');
+  
+  if (storedSession && lastActivity) {
+    const sessionAge = Date.now() - parseInt(lastActivity);
+    
+    // Check if session is still valid (within timeout)
+    if (sessionAge < CONFIG.SESSION_TIMEOUT * 1000) {
+      // Restore session to sessionStorage
+      sessionStorage.setItem('userData', storedSession);
+      return JSON.parse(storedSession);
+    } else {
+      // Session expired, clear everything
+      localStorage.removeItem('userSession');
+      localStorage.removeItem('lastActivity');
+    }
+  }
+  return null;
+}
+
 // ================= MODIFIED SESSION CHECK =================
 const checkSession = () => {
-  const sessionData = sessionStorage.getItem('userData');
-  const lastActivity = localStorage.getItem('lastActivity');
-
-  // If no session data, check for pending tracking
+  // First try sessionStorage
+  let sessionData = sessionStorage.getItem('userData');
+  
+  // If no session in sessionStorage, try to restore from localStorage
   if (!sessionData) {
-    const tracking = getTrackingFromURL();
-    if (tracking) {
-      storePendingTracking(tracking);
+    const restoredSession = initializeSession();
+    if (restoredSession) {
+      return restoredSession;
     }
-    handleLogout();
     return null;
   }
-
+  
+  const lastActivity = localStorage.getItem('lastActivity');
+  
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
     handleLogout();
     return null;
   }
-
+  
   localStorage.setItem('lastActivity', Date.now());
   const userData = JSON.parse(sessionData);
   
@@ -122,7 +157,7 @@ const checkSession = () => {
     handleLogout();
     return null;
   }
-
+  
   return userData;
 };
 
@@ -690,25 +725,51 @@ async function handleRegistration() {
   }
 }
 
-// ================= DIRECT ACCESS HANDLER =================
-function handleDirectParcelAccess() {
-  // Only run on parcel declaration page
-  if (!window.location.pathname.includes('parcel-declaration.html')) {
-    return;
-  }
+// ================= ENHANCED URL TRACKING HANDLER =================
+function handleTrackingParameter() {
+  // Get the full current URL
+  const currentUrl = window.location.href;
   
-  const userData = checkSession();
-  const urlTracking = getTrackingFromURL();
-  
-  // If user is logged in and URL has tracking parameter
-  if (userData && urlTracking) {
-    // Store for prefilling and clean URL
-    sessionStorage.setItem('prefillTracking', urlTracking);
-    if (window.history.replaceState) {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
+  // Check if this is a tracking link (looking for parcel-declaration.html?tracking=)
+  if (currentUrl.includes('parcel-declaration.html?tracking=')) {
+    const url = new URL(currentUrl);
+    const tracking = url.searchParams.get('tracking');
+    
+    if (tracking) {
+      console.log('Found tracking parameter:', tracking);
+      
+      // Check if user is already logged in
+      const userData = checkSession();
+      
+      if (userData) {
+        // Already logged in - go directly to parcel declaration with prefilled tracking
+        sessionStorage.setItem('prefillTracking', tracking);
+        sessionStorage.setItem('bypassModal', 'true');
+        
+        // Clean URL (remove tracking parameter)
+        const cleanUrl = window.location.origin + window.location.pathname;
+        window.history.replaceState({}, '', cleanUrl);
+        
+        // Refresh to apply changes if already on parcel-declaration.html
+        if (window.location.pathname.includes('parcel-declaration.html')) {
+          window.location.reload();
+        } else {
+          safeRedirect('parcel-declaration.html');
+        }
+      } else {
+        // Not logged in - store tracking and redirect to login
+        sessionStorage.setItem('pendingTracking', tracking);
+        sessionStorage.setItem('trackingRedirect', 'true');
+        
+        // Redirect to login page
+        const loginUrl = window.location.origin + '/zarizqlogin/login.html';
+        window.location.href = loginUrl;
+      }
+      return true;
     }
   }
+  return false;
+}
 }
 
 // ================= PASSWORD MANAGEMENT =================
@@ -830,14 +891,17 @@ function safeRedirect(path) {
     const allowedPaths = [
       'login.html', 'register.html', 'dashboard.html',
       'forgot-password.html', 'password-reset.html',
-      'my-info.html', 'parcel-declaration.html', 'track-parcel.html'
+      'my-info.html', 'parcel-declaration.html', 'track-parcel.html',
+      'billing-info.html', 'invoice.html'
     ];
     
     if (!allowedPaths.includes(basePath)) {
       throw new Error('Unauthorized path');
     }
     
-    window.location.href = path;
+    // Build correct URL with app path
+    const fullUrl = buildUrl(path);
+    window.location.href = fullUrl;
   } catch (error) {
     console.error('Redirect error:', error);
     showError('Navigation failed. Please try again.');
@@ -905,7 +969,7 @@ document.addEventListener('DOMContentLoaded', () => {
   detectViewMode();
   initValidationListeners();
   createLoaderElement();
-  handleDirectParcelAccess();
+  handleTrackingParameter();
 
   // Initialize parcel declaration form
   const parcelForm = document.getElementById('declarationForm');
