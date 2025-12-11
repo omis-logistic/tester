@@ -312,6 +312,24 @@
         showError('Navigation failed. Please try again.');
       }
     }
+
+    // Check for tracking parameter in URL on login page
+document.addEventListener('DOMContentLoaded', function() {
+  const urlParams = new URLSearchParams(window.location.search);
+  const tracking = urlParams.get('tracking');
+  
+  if (tracking) {
+    // Store tracking for after login
+    sessionStorage.setItem('pendingTracking', tracking);
+    sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
+    
+    // Clean URL (optional - removes tracking parameter from address bar)
+    if (window.history.replaceState) {
+      const newUrl = window.location.pathname;
+      window.history.replaceState({}, document.title, newUrl);
+    }
+  }
+});
   </script>
 </body>
 </html>
