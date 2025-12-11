@@ -552,6 +552,16 @@
     function showTrackParcel() {
       safeRedirect('track-parcel.html');
     }
+
+    function showBillingInfo() {
+      safeRedirect('billing-info.html');
+    }
+    
+    function showInvoice() {
+      // Note: invoice.html requires an orderNumber parameter
+      // This is typically called from billing-info.html, not directly from dashboard
+      safeRedirect('invoice.html');
+    }
   
     function handleLogout() {
       sessionStorage.clear();
@@ -792,6 +802,9 @@
             break;
           case '3':
             showTrackParcel();
+            break;
+          case '4':
+            showBillingInfo();  // ADD THIS
             break;
           case 'l':
           case 'L':
