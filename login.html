@@ -172,7 +172,29 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // EXACT Mark 1 login implementation with tracking support
+    // ================= TRACKING PARAMETER HANDLING =================
+    // Check if user is already logged in and handle tracking parameter
+    document.addEventListener('DOMContentLoaded', function() {
+      const userData = checkSession();
+      const urlParams = new URLSearchParams(window.location.search);
+      const tracking = urlParams.get('tracking');
+      
+      if (userData && tracking) {
+        // User is already logged in and there's a tracking parameter
+        sessionStorage.setItem('prefillTracking', tracking);
+        safeRedirect('parcel-declaration.html');
+        return;
+      }
+      
+      if (tracking) {
+        // Store tracking for post-login redirect (bypass modal)
+        sessionStorage.setItem('pendingTracking', tracking);
+        sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
+        console.log('Tracking parameter stored:', tracking);
+      }
+    });
+  
+    // ================= EXACT Mark 1 login implementation =================
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const spinner = document.getElementById('loginSpinner');
@@ -185,59 +207,54 @@
       // Show spinner and change text
       spinner.style.display = 'inline-block';
       loginText.textContent = 'Processing...';
-    
+  
       const phone = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
-    
+  
       if (!validatePhone(phone)) {
         showError('Invalid phone number format');
         resetLoginButton(btn, spinner, loginText, originalText);
         return;
       }
-    
+  
       const callbackName = `jsonp_${Date.now()}`;
       const script = document.createElement('script');
       
       // EXACTLY like Mark 1 - with crossorigin attribute
       script.crossOrigin = 'anonymous';
       script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-    
+  
       window[callbackName] = (response) => {
         // Restore button state
         resetLoginButton(btn, spinner, loginText, originalText);
-    
+  
         if (response.success) {
-          console.log('TempPassword flag:', response.tempPassword);
-          
-          // Store session data
-          const userData = JSON.stringify({
+          console.log('Login successful, TempPassword flag:', response.tempPassword);
+          sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
             tempPassword: response.tempPassword
-          });
-          
-          sessionStorage.setItem('userData', userData);
-          localStorage.setItem('userSession', userData);
+          }));
           localStorage.setItem('lastActivity', Date.now());
           
-          // Check for pending tracking
+          // Check for pending tracking redirect
           const pendingTracking = sessionStorage.getItem('pendingTracking');
-          const trackingRedirect = sessionStorage.getItem('trackingRedirect');
+          const pendingRedirect = sessionStorage.getItem('pendingRedirect');
           
-          if (pendingTracking && trackingRedirect) {
-            // Bypass modal and go directly to parcel declaration
-            sessionStorage.setItem('prefillTracking', pendingTracking);
-            sessionStorage.setItem('bypassModal', 'true');
-            sessionStorage.removeItem('pendingTracking');
-            sessionStorage.removeItem('trackingRedirect');
-            
-            // Redirect to parcel declaration page
-            const parcelUrl = window.location.origin + '/zarizqlogin/parcel-declaration.html';
-            window.location.href = parcelUrl;
-          } else if (response.tempPassword) {
+          if (response.tempPassword) {
+            // Still need to reset password first
             window.location.href = 'password-reset.html?force=true';
+          } else if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
+            // Clear pending tracking and redirect directly to parcel declaration
+            console.log('Redirecting to parcel declaration with tracking:', pendingTracking);
+            sessionStorage.removeItem('pendingTracking');
+            sessionStorage.removeItem('pendingRedirect');
+            sessionStorage.setItem('prefillTracking', pendingTracking);
+            window.location.href = pendingRedirect;
           } else {
+            // Normal login flow - go to dashboard
             localStorage.setItem('freshLogin', 'true');
+            sessionStorage.setItem('modalShown', 'false');
             window.location.href = 'dashboard.html?fresh=1';
           }
         } else {
@@ -245,7 +262,7 @@
           showError(response.message || 'Authentication failed');
         }
         
-        // Cleanup
+        // Cleanup - EXACTLY like Mark 1
         if (script.parentNode) {
           document.body.removeChild(script);
         }
@@ -264,21 +281,21 @@
       
       document.body.appendChild(script);
     }
-
-    // Helper function to reset login button state
+  
+    // ================= HELPER FUNCTIONS =================
     function resetLoginButton(btn, spinner, textElement, originalText) {
       btn.disabled = false;
       spinner.style.display = 'none';
       textElement.textContent = originalText;
     }
-
+  
     // ======== EXACT Mark 1 ENTER KEY HANDLING ========
     document.getElementById('password').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         handleLogin();
       }
     });
-
+  
     document.getElementById('phone').addEventListener('keypress', function(e) {
       if (e.key === 'Enter') {
         document.getElementById('password').focus();
@@ -288,17 +305,17 @@
     function showRegistration() {
       safeRedirect('register.html');
     }
-
+  
     function showForgotPassword() {
       safeRedirect('forgot-password.html');
     }
-
+  
     // EXACT Mark 1 validation function
     function validatePhone(phone) {
       const regex = /^(673\d{7,}|60\d{9,})$/;
       return regex.test(phone);
     }
-
+  
     // EXACT Mark 1 error display
     function showError(message) {
       const errorDiv = document.getElementById('error-message');
@@ -310,7 +327,7 @@
         }, 5000);
       }
     }
-
+  
     // EXACT Mark 1 redirect function
     function safeRedirect(path) {
       try {
@@ -334,24 +351,6 @@
         showError('Navigation failed. Please try again.');
       }
     }
-
-    // Check for tracking parameter in URL on login page
-document.addEventListener('DOMContentLoaded', function() {
-  const urlParams = new URLSearchParams(window.location.search);
-  const tracking = urlParams.get('tracking');
-  
-  if (tracking) {
-    // Store tracking for after login
-    sessionStorage.setItem('pendingTracking', tracking);
-    sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
-    
-    // Clean URL (optional - removes tracking parameter from address bar)
-    if (window.history.replaceState) {
-      const newUrl = window.location.pathname;
-      window.history.replaceState({}, document.title, newUrl);
-    }
-  }
-});
   </script>
 </body>
 </html>
