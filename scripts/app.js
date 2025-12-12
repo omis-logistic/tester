@@ -634,7 +634,28 @@ async function handleParcelSubmission(e) {
     // Validate required fields
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
-      if (!payload.data[field]) {
+      const value = payload.data[field];
+      
+      // Special handling for price field (0 is valid)
+      if (field === 'price') {
+        if (value === undefined || value === null || isNaN(value)) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for quantity field
+      else if (field === 'quantity') {
+        if (!value || isNaN(value) || value < 1) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for item description
+      else if (field === 'itemDescription') {
+        if (!value || value.trim().length < 3) {
+          throw new Error('Item description must be at least 3 characters');
+        }
+      }
+      // For other fields, check if they're not empty
+      else if (!value) {
         throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
       }
     }
