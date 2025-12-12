@@ -708,32 +708,27 @@ async function handleParcelSubmission(e) {
       throw new Error(result.message || 'Submission failed');
     }
 
-    } catch (error) {
-      console.error('Submission error:', error);
-      
-      // Show user-friendly error message
-      if (error.message.includes('Price must be')) {
-        showError('⚠️ Price must be 0 or greater. 0 is allowed for items with no declared value.');
-      } else if (error.message.includes('Item description must be')) {
-        showError('❌ Item description must be at least 3 characters.');
-      } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
-        showError('⚠️ Network connection issue. Please check your internet and try again.');
-      } else if (error.message.includes('timeout')) {
-        showError('⚠️ Submission timeout. The request took too long. Please try again.');
-      } else {
-        showError(`❌ ${error.message}`);
-      }
-      
-      // Only offer to save as draft for network/timeout errors
-      if (error.message.includes('Network') || error.message.includes('timeout')) {
-        if (confirm('Would you like to save this form as a draft?')) {
-          saveFormAsDraft();
-        }
-      }
-      
-    } finally {
-      showLoading(false);
+  } catch (error) {
+    console.error('Submission error:', error);
+    
+    // Show user-friendly error message
+    if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      showError('⚠️ Network connection issue. Please check your internet and try again.');
+    } else if (error.message.includes('timeout')) {
+      showError('⚠️ Submission timeout. The request took too long. Please try again.');
+    } else {
+      showError(`❌ ${error.message}`);
     }
+    
+    // Offer to save as draft
+    if (confirm('Would you like to save this form as a draft?')) {
+      saveFormAsDraft();
+    }
+    
+  } finally {
+    showLoading(false);
+  }
+}
 
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
