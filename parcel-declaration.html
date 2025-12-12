@@ -55,48 +55,6 @@
       animation: safari-spin 1s linear infinite;
     }
     
-    /* File upload preview for Safari */
-    .file-preview {
-      margin-top: 10px;
-      padding: 10px;
-      background: #2a2a2a;
-      border-radius: 5px;
-      border: 1px solid #444;
-    }
-    
-    .file-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 8px;
-      margin: 5px 0;
-      background: #333;
-      border-radius: 3px;
-    }
-    
-    .file-item .file-name {
-      flex: 1;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      white-space: nowrap;
-    }
-    
-    .file-item .file-size {
-      color: #888;
-      font-size: 0.9em;
-      margin-left: 10px;
-    }
-    
-    .file-item .remove-file {
-      background: #ff4444;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      padding: 3px 8px;
-      cursor: pointer;
-      margin-left: 10px;
-    }
-    
     /* Required field indicator */
     .required::after {
       content: " *";
@@ -132,33 +90,33 @@
       display: block;
     }
 
-    /* Global spinner styles */
-    #globalSpinner {
+    /* Global spinner overlay */
+    #globalSpinnerOverlay {
       position: fixed;
       top: 0;
       left: 0;
       width: 100%;
       height: 100%;
-      background: rgba(0, 0, 0, 0.9);
+      background: rgba(0,0,0,0.85);
       display: none;
       justify-content: center;
       align-items: center;
       z-index: 9999;
       flex-direction: column;
+      gap: 1rem;
     }
 
-    .spinner {
+    .global-spinner {
       width: 50px;
       height: 50px;
-      border: 5px solid rgba(212, 175, 55, 0.3);
-      border-top: 5px solid var(--gold);
+      border: 4px solid rgba(212, 175, 55, 0.3);
+      border-top: 4px solid var(--gold);
       border-radius: 50%;
       animation: spin 1s linear infinite;
     }
 
-    .spinner-text {
+    .global-loading-text {
       color: var(--gold);
-      margin-top: 20px;
       font-size: 1.2rem;
       text-align: center;
     }
@@ -167,13 +125,45 @@
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
     }
+
+    /* Page header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+      padding-bottom: 1rem;
+      border-bottom: 2px solid var(--gold);
+    }
+
+    .page-header h1 {
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+
+    .page-header .subtitle {
+      color: #aaa;
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body class="safari-fix">
+  <!-- Global Spinner Overlay -->
+  <div id="globalSpinnerOverlay">
+    <div class="global-spinner"></div>
+    <div class="global-loading-text">Processing Submission...</div>
+  </div>
+
   <div class="container">
-    <!-- Removed Header with user info -->
-    <h1 style="text-align: center; margin-bottom: 1rem;">📦 Parcel Declaration</h1>
-    <p class="subtitle" style="text-align: center; margin-bottom: 2rem;">Submit your parcel information for customs declaration</p>
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>📦 Parcel Declaration</h1>
+      <p class="subtitle">Submit your parcel information for customs declaration</p>
+    </div>
+
+    <!-- Network Status Indicator -->
+    <div id="networkStatus" class="network-status" style="display: none;">
+      <span class="status-icon">🔴</span>
+      <span class="status-text">Offline - Form will be saved locally</span>
+    </div>
 
     <!-- Success/Error Messages -->
     <div id="statusMessage" class="message" style="display: none;"></div>
@@ -238,7 +228,7 @@
           id="itemDescription" 
           name="itemDescription"
           rows="3"
-          minlength="3"  <!-- Changed from 5 to 3 -->
+          minlength="3"
           maxlength="500"
           placeholder="Describe the item(s) in detail (brand, model, color, etc.)"
           required
@@ -381,6 +371,7 @@
           disabled
         >
           <span id="submitText">Submit Declaration</span>
+          <span id="submitSpinner" style="display: none;">⏳ Processing...</span>
         </button>
         
         <button 
@@ -389,6 +380,15 @@
           onclick="safeRedirect('dashboard.html')"
         >
           ← Back to Dashboard
+        </button>
+        
+        <button 
+          type="button" 
+          class="secondary-button"
+          onclick="saveDraft()"
+          id="saveDraftBtn"
+        >
+          💾 Save as Draft
         </button>
       </div>
     </form>
@@ -403,12 +403,14 @@
         <li>Submit once per parcel/shipment</li>
       </ul>
     </div>
-  </div>
 
-  <!-- Global Spinner -->
-  <div id="globalSpinner">
-    <div class="spinner"></div>
-    <div class="spinner-text" id="spinnerText">Submitting...</div>
+    <!-- Drafts Section (Collapsible) -->
+    <div class="drafts-section">
+      <button onclick="toggleDrafts()" class="drafts-toggle">
+        📁 Saved Drafts (<span id="draftCount">0</span>)
+      </button>
+      <div id="draftsList" class="drafts-list" style="display: none;"></div>
+    </div>
   </div>
 
   <!-- Safari-specific script initialization -->
@@ -443,221 +445,36 @@
       }
     }
 
-    // Global spinner functions
-    function showGlobalSpinner(message = 'Submitting...') {
-      const spinner = document.getElementById('globalSpinner');
-      const spinnerText = document.getElementById('spinnerText');
-      if (spinner && spinnerText) {
-        spinnerText.textContent = message;
-        spinner.style.display = 'flex';
-      }
-    }
-
-    function hideGlobalSpinner() {
-      const spinner = document.getElementById('globalSpinner');
-      if (spinner) {
-        spinner.style.display = 'none';
-      }
-    }
-
-    // Handle form submission with global spinner
-    function handleFormSubmit(e) {
-      e.preventDefault();
+    // Network detection
+    function updateNetworkStatus() {
+      const statusEl = document.getElementById('networkStatus');
+      if (!statusEl) return;
       
-      // Show global spinner
-      showGlobalSpinner('Submitting declaration...');
-      
-      // Get form data
-      const formData = new FormData(e.target);
-      const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
-      
-      if (!userData?.phone) {
-        hideGlobalSpinner();
-        showError('Session expired. Please login again.');
-        return;
-      }
-
-      // Build payload
-      const payload = {
-        action: 'submitParcelDeclaration',
-        data: {
-          trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || '',
-          nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
-          phoneNumber: userData.phone,
-          itemDescription: formData.get('itemDescription')?.trim() || '',
-          quantity: Number(formData.get('quantity')) || 1,
-          price: Number(formData.get('price')) || 0,
-          collectionPoint: formData.get('collectionPoint') || '',
-          itemCategory: formData.get('itemCategory') || ''
-        },
-        files: []
-      };
-
-      // Validate required fields - FIXED: Allow price = 0
-      const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'collectionPoint', 'itemCategory'];
-      for (const field of requiredFields) {
-        if (!payload.data[field]) {
-          hideGlobalSpinner();
-          showError(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-          return;
-        }
-      }
-
-      // Validate price - FIXED: Allow 0
-      const price = parseFloat(formData.get('price') || 0);
-      if (isNaN(price) || price < 0 || price > 99999) {
-        hideGlobalSpinner();
-        showError('Price must be between 0 and 99,999');
-        return;
-      }
-
-      // Validate item description length - FIXED: Minimum 3 characters
-      const description = formData.get('itemDescription')?.trim() || '';
-      if (description.length < 3) {
-        hideGlobalSpinner();
-        showError('Item description must be at least 3 characters');
-        return;
-      }
-
-      // Handle file uploads
-      const fileInput = document.getElementById('fileUpload');
-      const category = payload.data.itemCategory;
-      
-      const starredCategories = [
-        '*Books', '*Cosmetics/Skincare/Bodycare',
-        '*Food Beverage/Drinks', '*Gadgets',
-        '*Oil Ointment', '*Supplement', '*Others'
-      ];
-
-      if (starredCategories.includes(category)) {
-        if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-          hideGlobalSpinner();
-          showError('Invoice/document upload is required for this category');
-          return;
-        }
-        
-        const files = Array.from(fileInput.files);
-        if (files.length > 3) {
-          hideGlobalSpinner();
-          showError(`Maximum 3 files allowed`);
-          return;
-        }
-
-        for (const file of files) {
-          if (file.size > 5 * 1024 * 1024) {
-            hideGlobalSpinner();
-            showError(`File "${file.name}" exceeds 5MB limit`);
-            return;
-          }
-          
-          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-          if (!allowedTypes.includes(file.type)) {
-            hideGlobalSpinner();
-            showError(`File "${file.name}" must be JPG, PNG, or PDF`);
-            return;
-          }
-        }
-      }
-
-      // Submit via proxy (same as before)
-      submitToProxy(payload, fileInput.files);
-    }
-
-    async function submitToProxy(payload, files) {
-      try {
-        // Process files if needed
-        if (files && files.length > 0) {
-          payload.files = [];
-          for (const file of files) {
-            const base64 = await readFileAsBase64(file);
-            payload.files.push({
-              name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
-              type: file.type,
-              base64: base64
-            });
-          }
-        }
-
-        const response = await fetch(CONFIG.PROXY_URL, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
-          },
-          body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
-        });
-
-        const result = await response.json();
-        
-        hideGlobalSpinner();
-        
-        if (result.success) {
-          showSuccessMessage('✓ Submission Successful!');
-          resetForm();
-          
-          // Redirect to dashboard after 2 seconds
-          setTimeout(() => {
-            safeRedirect('dashboard.html');
-          }, 2000);
-        } else {
-          showError(result.message || 'Submission failed');
-        }
-        
-      } catch (error) {
-        hideGlobalSpinner();
-        console.error('Submission error:', error);
-        showError('Submission failed. Please try again.');
-        // DO NOT show save draft prompt when price is 0
-      }
-    }
-
-    function readFileAsBase64(file) {
-      return new Promise((resolve) => {
-        const reader = new FileReader();
-        reader.onload = () => resolve(reader.result.split(',')[1]);
-        reader.readAsDataURL(file);
-      });
-    }
-
-    function showSuccessMessage(message) {
-      const statusEl = document.getElementById('statusMessage');
-      if (statusEl) {
-        statusEl.textContent = message;
-        statusEl.className = 'message success';
+      if (navigator.onLine) {
+        statusEl.style.display = 'none';
+      } else {
         statusEl.style.display = 'block';
-        
-        setTimeout(() => {
-          statusEl.style.display = 'none';
-        }, 3000);
+        statusEl.querySelector('.status-icon').textContent = '🔴';
+        statusEl.querySelector('.status-text').textContent = 'Offline - Form will be saved locally';
       }
     }
 
-    function showError(message) {
-      const errorEl = document.getElementById('errorMessage');
-      if (errorEl) {
-        errorEl.textContent = message;
-        errorEl.style.display = 'block';
-        
-        setTimeout(() => {
-          errorEl.style.display = 'none';
-        }, 5000);
-      }
-    }
+    // Initialize network status
+    window.addEventListener('online', updateNetworkStatus);
+    window.addEventListener('offline', updateNetworkStatus);
+    updateNetworkStatus();
 
-    function resetForm() {
-      const form = document.getElementById('declarationForm');
-      if (!form) return;
+    // Global spinner functions
+    function showGlobalSpinner(show = true, message = 'Processing Submission...') {
+      const spinner = document.getElementById('globalSpinnerOverlay');
+      if (!spinner) return;
 
-      form.reset();
-      
-      // Preserve phone number
-      const phoneField = document.getElementById('phone');
-      if (phoneField) {
-        phoneField.value = JSON.parse(sessionStorage.getItem('userData') || '{}').phone || '';
+      const textElement = spinner.querySelector('.global-loading-text');
+      if (textElement) {
+        textElement.textContent = message;
       }
-      
-      // Reset category requirement display
-      checkCategoryRequirements();
-      updateSubmitButton();
+
+      spinner.style.display = show ? 'flex' : 'none';
     }
   </script>
 
@@ -665,7 +482,7 @@
   <script>
     // Form-specific initialization
     document.addEventListener('DOMContentLoaded', function() {
-      // Check session and set user info
+      // Check session and set phone field
       const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
       if (userData.phone) {
         document.getElementById('phone').value = userData.phone;
@@ -673,6 +490,15 @@
         // Redirect to login if no session
         window.location.href = 'login.html';
         return;
+      }
+
+      // Load saved drafts
+      loadDrafts();
+
+      // Initialize file upload preview
+      const fileInput = document.getElementById('fileUpload');
+      if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelection);
       }
 
       // Category change handler
@@ -684,10 +510,6 @@
       // Real-time validation
       const form = document.getElementById('declarationForm');
       if (form) {
-        // Remove any existing submit listeners and add our own
-        form.removeEventListener('submit', handleFormSubmit);
-        form.addEventListener('submit', handleFormSubmit);
-        
         form.addEventListener('input', function(e) {
           validateField(e.target);
           updateSubmitButton();
@@ -703,7 +525,7 @@
       checkCategoryRequirements();
     });
 
-    // Field validation function - FIXED: Allow price = 0 and min 3 chars for description
+    // Field validation function
     function validateField(field) {
       const value = field.value.trim();
       const errorEl = document.getElementById(field.id + 'Error');
@@ -725,8 +547,8 @@
           break;
           
         case 'itemDescription':
-          isValid = value.length >= 3 && value.length <= 500; // Changed from 5 to 3
-          errorMessage = isValid ? '' : '3-500 characters required';
+          isValid = value.length >= 3 && value.length <= 500;
+          errorMessage = isValid ? '' : 'Minimum 3 characters required';
           break;
           
         case 'quantity':
@@ -737,7 +559,7 @@
           
         case 'price':
           const price = parseFloat(value);
-          isValid = !isNaN(price) && price >= 0 && price <= 99999; // Changed to >= 0
+          isValid = !isNaN(price) && price >= 0 && price <= 99999;
           errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
           break;
           
@@ -812,13 +634,239 @@
       if (starredCategories.includes(category)) {
         fileRequirement.textContent = 'Required: ';
         fileHelp.style.color = '#ff4444';
+        document.getElementById('fileUpload').required = true;
       } else {
         fileRequirement.textContent = 'Optional: ';
         fileHelp.style.color = '#888';
+        document.getElementById('fileUpload').required = false;
       }
       
       updateSubmitButton();
     }
+
+    // Handle file selection
+    function handleFileSelection(input) {
+      const files = Array.from(input.files);
+      const errorEl = document.getElementById('invoiceFilesError');
+      
+      if (files.length === 0) {
+        errorEl.textContent = '';
+        updateSubmitButton();
+        return;
+      }
+      
+      // Validate files
+      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+      let hasError = false;
+      
+      files.forEach(file => {
+        // Check file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+        const fileType = file.type.toLowerCase();
+        
+        let isValidType = false;
+        for (const allowedType of allowedTypes) {
+          if (fileType.includes(allowedType.replace('image/', '')) || fileType === allowedType) {
+            isValidType = true;
+            break;
+          }
+        }
+        
+        if (!isValidType) {
+          errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+          hasError = true;
+          return;
+        }
+        
+        // Check file size
+        if (file.size > MAX_SIZE) {
+          errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
+          hasError = true;
+          return;
+        }
+      });
+      
+      if (hasError) {
+        input.value = '';
+        updateSubmitButton();
+        return;
+      }
+      
+      // Show file count
+      errorEl.textContent = `${files.length} file(s) selected`;
+      errorEl.className = 'success-message';
+      
+      updateSubmitButton();
+    }
+
+    // Save form as draft
+    function saveDraft() {
+      const form = document.getElementById('declarationForm');
+      const formData = new FormData(form);
+      const draft = {};
+      
+      // Convert FormData to object
+      for (let [key, value] of formData.entries()) {
+        if (key !== 'files') {
+          draft[key] = value;
+        }
+      }
+      
+      // Get files info
+      const files = document.getElementById('fileUpload')?.files || [];
+      if (files.length > 0) {
+        draft.filesCount = files.length;
+        draft.filesInfo = Array.from(files).map(file => ({
+          name: file.name,
+          size: file.size,
+          type: file.type
+        }));
+      }
+      
+      // Add timestamp
+      draft.timestamp = new Date().toISOString();
+      draft.id = 'draft_' + Date.now();
+      
+      // Save to localStorage
+      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+      drafts.push(draft);
+      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+      
+      // Show success message
+      showMessage('Draft saved successfully!', 'success');
+      loadDrafts();
+    }
+
+    // Load saved drafts
+    function loadDrafts() {
+      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+      const draftCount = document.getElementById('draftCount');
+      const draftsList = document.getElementById('draftsList');
+      
+      if (draftCount) draftCount.textContent = drafts.length;
+      
+      if (draftsList) {
+        if (drafts.length === 0) {
+          draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
+          return;
+        }
+        
+        let html = '<div class="drafts-container">';
+        drafts.forEach((draft, index) => {
+          html += `
+            <div class="draft-item">
+              <div class="draft-info">
+                <strong>${draft.trackingNumber || 'Untitled'}</strong>
+                <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
+              </div>
+              <div class="draft-actions">
+                <button onclick="loadDraft(${index})" class="small-btn">Load</button>
+                <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
+              </div>
+            </div>
+          `;
+        });
+        html += '</div>';
+        draftsList.innerHTML = html;
+      }
+    }
+
+    // Load draft into form
+    function loadDraft(index) {
+      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+      const draft = drafts[index];
+      
+      if (!draft) return;
+      
+      // Populate form fields
+      Object.keys(draft).forEach(key => {
+        if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
+          const field = document.getElementById(key);
+          if (field) field.value = draft[key];
+        }
+      });
+      
+      // Update UI
+      checkCategoryRequirements();
+      updateSubmitButton();
+      
+      showMessage('Draft loaded!', 'success');
+    }
+
+    // Delete draft
+    function deleteDraft(index) {
+      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+      drafts.splice(index, 1);
+      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+      loadDrafts();
+      showMessage('Draft deleted', 'info');
+    }
+
+    // Toggle drafts visibility
+    function toggleDrafts() {
+      const draftsList = document.getElementById('draftsList');
+      if (draftsList.style.display === 'none') {
+        draftsList.style.display = 'block';
+      } else {
+        draftsList.style.display = 'none';
+      }
+    }
+
+    // Show message
+    function showMessage(text, type = 'info') {
+      const messageEl = document.getElementById('statusMessage');
+      if (!messageEl) return;
+      
+      messageEl.textContent = text;
+      messageEl.className = 'message ' + type;
+      messageEl.style.display = 'block';
+      
+      setTimeout(() => {
+        messageEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Show error
+    function showError(text) {
+      const errorEl = document.getElementById('errorMessage');
+      if (!errorEl) return;
+      
+      errorEl.textContent = text;
+      errorEl.style.display = 'block';
+      
+      setTimeout(() => {
+        errorEl.style.display = 'none';
+      }, 5000);
+    }
+
+    // Override form submission to use global spinner
+    document.addEventListener('DOMContentLoaded', function() {
+      const form = document.getElementById('declarationForm');
+      if (form) {
+        // Remove any existing submit handlers
+        form.onsubmit = null;
+        
+        // Add new submit handler with global spinner
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Show global spinner
+          showGlobalSpinner(true, 'Submitting parcel declaration...');
+          
+          // Call the existing handleParcelSubmission from app.js
+          if (typeof handleParcelSubmission === 'function') {
+            handleParcelSubmission(e).finally(() => {
+              // Hide global spinner after submission completes
+              showGlobalSpinner(false);
+            });
+          } else {
+            // Fallback if handleParcelSubmission is not defined
+            console.error('handleParcelSubmission function not found');
+            showGlobalSpinner(false);
+          }
+        });
+      }
+    });
   </script>
 </body>
 </html>
