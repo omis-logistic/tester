@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxHxWlzPqifKLEzcEgNt9OEPB-oz-wPBaHEf4dKRSzcXAgJOudQHEhFJAuf4gEDdSN0/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mx0wkMfoWapxqFWx_gsW9Yu4HI0RGM9Xgi3Or6BzF9jYBLNIuuawFb7RiAyJD149/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9mBpctKXOUc6CvbcGNimcyyejc6PMRLwUfToiTRPyCk2WRCbFtHuxwCM/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -639,6 +639,11 @@ async function handleParcelSubmission(e) {
       }
     }
 
+    // Validate item description length (minimum 3 characters)
+    if (payload.data.itemDescription.trim().length < 3) {
+      throw new Error('Item description must be at least 3 characters');
+    }
+
     // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
@@ -683,7 +688,8 @@ async function handleParcelSubmission(e) {
     // Submit the data
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
-      filesCount: payload.files.length 
+      filesCount: payload.files.length,
+      price: payload.data.price
     });
     
     const result = await submitParcelData(payload);
@@ -708,33 +714,43 @@ async function handleParcelSubmission(e) {
       throw new Error(result.message || 'Submission failed');
     }
 
-    } catch (error) {
-      console.error('Submission error:', error);
-      
-      // Show user-friendly error message
-      if (error.message.includes('Price must be')) {
-        showError('⚠️ Price must be 0 or greater. 0 is allowed for items with no declared value.');
-      } else if (error.message.includes('Item description must be')) {
-        showError('❌ Item description must be at least 3 characters.');
-      } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
-        showError('⚠️ Network connection issue. Please check your internet and try again.');
-      } else if (error.message.includes('timeout')) {
-        showError('⚠️ Submission timeout. The request took too long. Please try again.');
-      } else {
-        showError(`❌ ${error.message}`);
-      }
-      
-      // Only offer to save as draft for network/timeout errors
-      if (error.message.includes('Network') || error.message.includes('timeout')) {
-        if (confirm('Would you like to save this form as a draft?')) {
-          saveFormAsDraft();
-        }
-      }
-      
-    } finally {
-      showLoading(false);
+  } catch (error) {
+    console.error('Submission error:', error);
+    
+    // Show user-friendly error message
+    if (error.message.includes('Price must be')) {
+      showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
+    } else if (error.message.includes('Item description must be')) {
+      showError('❌ Item description must be at least 3 characters.');
+    } else if (error.message.includes('Invoice/document upload')) {
+      showError('❌ Invoice/document upload is required for starred categories.');
+    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      showError('⚠️ Network connection issue. Please check your internet and try again.');
+    } else if (error.message.includes('timeout')) {
+      showError('⚠️ Submission timeout. The request took too long. Please try again.');
+    } else if (error.message.includes('Session expired')) {
+      showError('❌ Session expired. Please login again.');
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
+    } else {
+      showError(`❌ ${error.message}`);
     }
-
+    
+    // Only offer to save as draft for network/timeout errors, not validation errors
+    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
+        !error.message.includes('Price must be') && 
+        !error.message.includes('Item description must be') &&
+        !error.message.includes('Invoice/document upload')) {
+      if (confirm('Would you like to save this form as a draft?')) {
+        saveFormAsDraft();
+      }
+    }
+    
+  } finally {
+    showLoading(false);
+  }
+}
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
