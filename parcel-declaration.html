@@ -45,7 +45,42 @@
       }
     }
     
-    /* Safari loading animation fix */
+    /* Global loading overlay */
+    #globalLoadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .global-spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--gold);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    
+    .global-loading-text {
+      color: var(--gold);
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     @keyframes safari-spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -131,16 +166,35 @@
       margin-top: 5px;
       display: block;
     }
+    
+    /* Header styles */
+    .page-header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+    
+    .page-header h1 {
+      font-size: 2rem;
+      color: var(--gold);
+      margin-bottom: 0.5rem;
+    }
+    
+    .page-header .subtitle {
+      color: #aaa;
+      font-size: 1rem;
+    }
   </style>
 </head>
 <body class="safari-fix">
+  <!-- Global Loading Overlay -->
+  <div id="globalLoadingOverlay">
+    <div class="global-spinner"></div>
+    <div class="global-loading-text">Processing...</div>
+  </div>
+
   <div class="container">
-    <!-- Header with user info -->
-    <div class="header-bar">
-      <div class="user-info">
-        <span id="userPhone">Loading...</span>
-        <button onclick="handleLogout()" class="logout-btn">Logout</button>
-      </div>
+    <!-- Page Header -->
+    <div class="page-header">
       <h1>📦 Parcel Declaration</h1>
       <p class="subtitle">Submit your parcel information for customs declaration</p>
     </div>
@@ -367,15 +421,6 @@
         >
           ← Back to Dashboard
         </button>
-        
-        <button 
-          type="button" 
-          class="secondary-button"
-          onclick="saveDraft()"
-          id="saveDraftBtn"
-        >
-          💾 Save as Draft
-        </button>
       </div>
     </form>
 
@@ -385,22 +430,13 @@
       <ul>
         <li>Ensure tracking number matches your shipment exactly</li>
         <li>For starred (*) categories, invoice upload is mandatory</li>
-        <li>Double-check phone number and collection point</li>
         <li>You can save as draft and return later</li>
         <li>Submit once per parcel/shipment</li>
       </ul>
     </div>
-
-    <!-- Drafts Section (Collapsible) -->
-    <div class="drafts-section">
-      <button onclick="toggleDrafts()" class="drafts-toggle">
-        📁 Saved Drafts (<span id="draftCount">0</span>)
-      </button>
-      <div id="draftsList" class="drafts-list" style="display: none;"></div>
-    </div>
   </div>
 
-  <!-- Loading Overlay -->
+  <!-- Loading Overlay (legacy - kept for compatibility) -->
   <div id="loadingOverlay" style="display: none;">
     <div class="loading-spinner"></div>
     <div class="loading-text">Processing...</div>
@@ -461,21 +497,32 @@
 
   <script src="scripts/app.js"></script>
   <script>
+    // Global spinner functions
+    function showGlobalLoading(message = 'Processing...') {
+      const overlay = document.getElementById('globalLoadingOverlay');
+      const text = overlay.querySelector('.global-loading-text');
+      if (text) {
+        text.textContent = message;
+      }
+      overlay.style.display = 'flex';
+    }
+    
+    function hideGlobalLoading() {
+      const overlay = document.getElementById('globalLoadingOverlay');
+      overlay.style.display = 'none';
+    }
+
     // Form-specific initialization
     document.addEventListener('DOMContentLoaded', function() {
       // Check session and set user info
       const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
       if (userData.phone) {
-        document.getElementById('userPhone').textContent = userData.phone;
         document.getElementById('phone').value = userData.phone;
       } else {
         // Redirect to login if no session
         window.location.href = 'login.html';
         return;
       }
-
-      // Load saved drafts
-      loadDrafts();
 
       // Initialize file upload preview
       const fileInput = document.getElementById('fileUpload');
@@ -492,14 +539,30 @@
       // Real-time validation
       const form = document.getElementById('declarationForm');
       if (form) {
+        // Fix: Allow price to be 0
         form.addEventListener('input', function(e) {
-          validateField(e.target);
+          if (e.target.id === 'price') {
+            // Allow 0 as valid price
+            validatePriceField(e.target);
+          } else {
+            validateField(e.target);
+          }
           updateSubmitButton();
         });
         
         form.addEventListener('change', function(e) {
-          validateField(e.target);
+          if (e.target.id === 'price') {
+            validatePriceField(e.target);
+          } else {
+            validateField(e.target);
+          }
           updateSubmitButton();
+        });
+        
+        // Override form submission to use global spinner
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          handleFormSubmission();
         });
       }
 
@@ -539,18 +602,37 @@
           errorMessage = isValid ? '' : 'Must be between 1 and 999';
           break;
           
-        case 'price':
-          const price = parseFloat(value);
-          isValid = !isNaN(price) && price >= 0 && price <= 99999;
-          errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
-          break;
-          
         case 'collectionPoint':
         case 'itemCategory':
           isValid = value !== '';
           errorMessage = isValid ? '' : 'This field is required';
           break;
       }
+      
+      // Update UI
+      if (isValid) {
+        field.parentElement.classList.remove('error');
+        field.parentElement.classList.add('success');
+        errorEl.textContent = '';
+      } else {
+        field.parentElement.classList.remove('success');
+        field.parentElement.classList.add('error');
+        errorEl.textContent = errorMessage;
+      }
+      
+      return isValid;
+    }
+
+    // Special validation for price field that allows 0
+    function validatePriceField(field) {
+      const value = field.value.trim();
+      const errorEl = document.getElementById(field.id + 'Error');
+      
+      if (!errorEl) return true;
+      
+      const price = parseFloat(value);
+      const isValid = !isNaN(price) && price >= 0 && price <= 99999;
+      const errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
       
       // Update UI
       if (isValid) {
@@ -580,8 +662,16 @@
       
       requiredFields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
-        if (field && !validateField(field)) {
-          allValid = false;
+        if (field) {
+          if (fieldId === 'price') {
+            if (!validatePriceField(field)) {
+              allValid = false;
+            }
+          } else {
+            if (!validateField(field)) {
+              allValid = false;
+            }
+          }
         }
       });
       
@@ -615,27 +705,28 @@
       
       if (starredCategories.includes(category)) {
         fileRequirement.textContent = 'Required: ';
-        fileHelp.style.color = '#ff4444';
-        document.getElementById('fileUpload').required = true;
+        if (fileHelp) fileHelp.style.color = '#ff4444';
+        const fileUpload = document.getElementById('fileUpload');
+        if (fileUpload) fileUpload.required = true;
       } else {
         fileRequirement.textContent = 'Optional: ';
-        fileHelp.style.color = '#888';
-        document.getElementById('fileUpload').required = false;
+        if (fileHelp) fileHelp.style.color = '#888';
+        const fileUpload = document.getElementById('fileUpload');
+        if (fileUpload) fileUpload.required = false;
       }
       
       updateSubmitButton();
     }
 
     // Handle file selection
-    function handleFileSelection(input) {
-      const files = Array.from(input.files);
-      const preview = document.getElementById('filePreview');
-      const fileList = document.getElementById('fileList');
-      const totalSizeEl = document.getElementById('totalSize');
+    function handleFileSelection(event) {
+      const fileInput = event.target;
+      const files = fileInput.files;
       const errorEl = document.getElementById('invoiceFilesError');
       
+      if (!errorEl) return;
+      
       if (files.length === 0) {
-        preview.style.display = 'none';
         errorEl.textContent = '';
         updateSubmitButton();
         return;
@@ -643,186 +734,76 @@
       
       // Validate files
       const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-      let totalSize = 0;
       let hasError = false;
+      let fileList = '';
       
-      fileList.innerHTML = '';
-      
-      files.forEach((file, index) => {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
         // Check file type
         const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         if (!allowedTypes.includes(file.type)) {
           errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
           hasError = true;
-          return;
+          break;
         }
         
         // Check file size
         if (file.size > MAX_SIZE) {
           errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
           hasError = true;
-          return;
+          break;
         }
         
-        totalSize += file.size;
-        
-        // Create file item in preview
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-        fileItem.innerHTML = `
-          <span class="file-name">${file.name}</span>
-          <span class="file-size">${(file.size / 1024 / 1024).toFixed(2)}MB</span>
-          <button type="button" class="remove-file" onclick="removeFile(${index})">✕</button>
-        `;
-        fileList.appendChild(fileItem);
-      });
+        fileList += `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB), `;
+      }
       
       if (hasError) {
-        input.value = '';
-        preview.style.display = 'none';
+        fileInput.value = '';
+        errorEl.style.color = '#ff4444';
         updateSubmitButton();
-        return;
-      }
-      
-      // Update total size
-      totalSizeEl.textContent = `Total: ${(totalSize / 1024 / 1024).toFixed(2)}MB`;
-      
-      // Show preview
-      preview.style.display = 'block';
-      errorEl.textContent = '';
-      
-      updateSubmitButton();
-    }
-
-    // Remove file from selection
-    function removeFile(index) {
-      const input = document.getElementById('fileUpload');
-      const files = Array.from(input.files);
-      
-      // Create new FileList without the removed file
-      const newFiles = files.filter((_, i) => i !== index);
-      
-      // Create new DataTransfer to hold files
-      const dt = new DataTransfer();
-      newFiles.forEach(file => dt.items.add(file));
-      
-      // Update input files
-      input.files = dt.files;
-      
-      // Update preview
-      handleFileSelection(input);
-    }
-
-    // Save form as draft
-    function saveDraft() {
-      const form = document.getElementById('declarationForm');
-      const formData = new FormData(form);
-      const draft = {};
-      
-      // Convert FormData to object
-      for (let [key, value] of formData.entries()) {
-        if (key !== 'files') {
-          draft[key] = value;
-        }
-      }
-      
-      // Get files info
-      const files = document.getElementById('fileUpload')?.files || [];
-      if (files.length > 0) {
-        draft.filesCount = files.length;
-        draft.filesInfo = Array.from(files).map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type
-        }));
-      }
-      
-      // Add timestamp
-      draft.timestamp = new Date().toISOString();
-      draft.id = 'draft_' + Date.now();
-      
-      // Save to localStorage
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.push(draft);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      
-      // Show success message
-      showMessage('Draft saved successfully!', 'success');
-      loadDrafts();
-    }
-
-    // Load saved drafts
-    function loadDrafts() {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draftCount = document.getElementById('draftCount');
-      const draftsList = document.getElementById('draftsList');
-      
-      if (draftCount) draftCount.textContent = drafts.length;
-      
-      if (draftsList) {
-        if (drafts.length === 0) {
-          draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
-          return;
-        }
-        
-        let html = '<div class="drafts-container">';
-        drafts.forEach((draft, index) => {
-          html += `
-            <div class="draft-item">
-              <div class="draft-info">
-                <strong>${draft.trackingNumber || 'Untitled'}</strong>
-                <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
-              </div>
-              <div class="draft-actions">
-                <button onclick="loadDraft(${index})" class="small-btn">Load</button>
-                <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
-              </div>
-            </div>
-          `;
-        });
-        html += '</div>';
-        draftsList.innerHTML = html;
-      }
-    }
-
-    // Load draft into form
-    function loadDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draft = drafts[index];
-      
-      if (!draft) return;
-      
-      // Populate form fields
-      Object.keys(draft).forEach(key => {
-        if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
-          const field = document.getElementById(key);
-          if (field) field.value = draft[key];
-        }
-      });
-      
-      // Update UI
-      checkCategoryRequirements();
-      updateSubmitButton();
-      
-      showMessage('Draft loaded!', 'success');
-    }
-
-    // Delete draft
-    function deleteDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.splice(index, 1);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      loadDrafts();
-      showMessage('Draft deleted', 'info');
-    }
-
-    // Toggle drafts visibility
-    function toggleDrafts() {
-      const draftsList = document.getElementById('draftsList');
-      if (draftsList.style.display === 'none') {
-        draftsList.style.display = 'block';
+      } else if (files.length > 0) {
+        errorEl.textContent = `${files.length} file(s) selected: ${fileList.slice(0, -2)}`;
+        errorEl.style.color = '#00C851';
+        updateSubmitButton();
       } else {
-        draftsList.style.display = 'none';
+        errorEl.textContent = '';
+        updateSubmitButton();
+      }
+    }
+
+    // Handle form submission with global spinner
+    async function handleFormSubmission() {
+      const form = document.getElementById('declarationForm');
+      if (!form) return;
+      
+      // Show global spinner
+      showGlobalLoading('Submitting parcel declaration...');
+      
+      // Disable submit button
+      const submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        const submitText = submitBtn.querySelector('#submitText');
+        if (submitText) {
+          submitText.textContent = 'Processing...';
+        }
+      }
+      
+      try {
+        // Trigger the existing submission handler from app.js
+        // This will use the handleParcelSubmission function from app.js
+        // We need to create a submit event to trigger it
+        const submitEvent = new Event('submit', { cancelable: true });
+        form.dispatchEvent(submitEvent);
+        
+      } catch (error) {
+        console.error('Submission error:', error);
+        showError(error.message || 'Submission failed');
+      } finally {
+        // Note: The spinner will be hidden by the handleParcelSubmission function
+        // when it calls showLoading(false)
+        // We need to override the showLoading function to use our global spinner
       }
     }
 
@@ -853,48 +834,32 @@
       }, 5000);
     }
 
-    // Handle file selection and update UI
-function handleFileSelection(event) {
-  const fileInput = event.target;
-  const files = fileInput.files;
-  const filePreview = document.getElementById('filePreview');
-  
-  if (!filePreview) {
-    // Create preview element if it doesn't exist
-    const previewDiv = document.createElement('div');
-    previewDiv.id = 'filePreview';
-    previewDiv.className = 'file-preview';
-    fileInput.parentNode.appendChild(previewDiv);
-  }
-  
-  const previewElement = document.getElementById('filePreview');
-  
-  if (files.length === 0) {
-    previewElement.innerHTML = '';
-    previewElement.style.display = 'none';
-    return;
-  }
-  
-  let html = '<div class="file-list"><strong>Selected files:</strong><ul>';
-  
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    html += `<li>${file.name} (${sizeMB} MB)</li>`;
-  }
-  
-  html += '</ul></div>';
-  previewElement.innerHTML = html;
-  previewElement.style.display = 'block';
-}
-
-// Add event listener to file input
-document.addEventListener('DOMContentLoaded', function() {
-  const fileInput = document.getElementById('fileUpload');
-  if (fileInput) {
-    fileInput.addEventListener('change', handleFileSelection);
-  }
-});
+    // Override the showLoading function from app.js to use global spinner
+    // This is called by the handleParcelSubmission function in app.js
+    if (typeof showLoading === 'function') {
+      // Save the original function
+      const originalShowLoading = showLoading;
+      
+      // Override it
+      window.showLoading = function(show = true, message = 'Processing...') {
+        if (show) {
+          showGlobalLoading(message);
+        } else {
+          hideGlobalLoading();
+          // Re-enable submit button
+          const submitBtn = document.getElementById('submitBtn');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            const submitText = submitBtn.querySelector('#submitText');
+            if (submitText) {
+              submitText.textContent = 'Submit Declaration';
+            }
+          }
+        }
+        // Also call original for compatibility
+        originalShowLoading(show, message);
+      };
+    }
   </script>
 </body>
 </html>
