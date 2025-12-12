@@ -2076,3 +2076,22 @@ window.showForgotPassword = () => safeRedirect('forgot-password.html');
 window.isSafariBrowser = isSafariBrowser;
 window.safariFileReaderPolyfill = safariFileReaderPolyfill;
 window.safariFetchEnhancement = safariFetchEnhancement;
+
+// Debug function to check validation
+function debugValidation() {
+  const priceField = document.getElementById('price');
+  const itemDescriptionField = document.getElementById('itemDescription');
+  
+  console.log('Price field value:', priceField.value);
+  console.log('Price field type:', typeof priceField.value);
+  console.log('Price parsed:', parseFloat(priceField.value));
+  console.log('Is price 0 valid?', parseFloat(priceField.value) >= 0);
+  
+  console.log('Item description value:', itemDescriptionField.value);
+  console.log('Item description length:', itemDescriptionField.value.length);
+  console.log('Is description >= 3?', itemDescriptionField.value.length >= 3);
+  
+  // Call updateSubmitButton and see what it returns
+  const submitBtn = document.getElementById('submitBtn');
+  console.log('Submit button disabled?', submitBtn.disabled);
+}
