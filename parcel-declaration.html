@@ -416,494 +416,491 @@
     </div>
   </div>
 
-  <!-- Safari-specific script initialization -->
-  <script>
-    // Detect Safari browser
-    function isSafari() {
-      const ua = navigator.userAgent;
-      const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-      const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
-      return isSafari || isIOS;
-    }
+<!-- Safari-specific script initialization -->
+<script>
+  // Detect Safari browser
+  function isSafari() {
+    const ua = navigator.userAgent;
+    const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+    const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+    return isSafari || isIOS;
+  }
 
-    // Apply Safari-specific fixes
-    if (isSafari()) {
-      console.log('Safari browser detected - applying compatibility fixes');
-      
-      // Add Safari class to body
-      document.body.classList.add('safari-browser');
-      
-      // Disable autocorrect for form fields
-      document.querySelectorAll('input[type="text"], textarea').forEach(el => {
-        el.setAttribute('autocorrect', 'off');
-        el.setAttribute('spellcheck', 'false');
-      });
-      
-      // Fix for file input styling
-      const fileInput = document.getElementById('fileUpload');
-      if (fileInput) {
-        fileInput.style.opacity = '1';
-        fileInput.style.position = 'relative';
-        fileInput.style.zIndex = '1';
-      }
-    }
-
-    // Network detection
-    function updateNetworkStatus() {
-      const statusEl = document.getElementById('networkStatus');
-      if (!statusEl) return;
-      
-      if (navigator.onLine) {
-        statusEl.style.display = 'none';
-      } else {
-        statusEl.style.display = 'block';
-        statusEl.querySelector('.status-icon').textContent = '🔴';
-        statusEl.querySelector('.status-text').textContent = 'Offline - Form will be saved locally';
-      }
-    }
-
-    // Initialize network status
-    window.addEventListener('online', updateNetworkStatus);
-    window.addEventListener('offline', updateNetworkStatus);
-    updateNetworkStatus();
-  </script>
-
-  <script src="scripts/app.js"></script>
-  <script>
-    // Form-specific initialization
-    document.addEventListener('DOMContentLoaded', function() {
-      // Check session and set user info
-      const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
-      if (userData.phone) {
-        document.getElementById('userPhone').textContent = userData.phone;
-        document.getElementById('phone').value = userData.phone;
-      } else {
-        // Redirect to login if no session
-        window.location.href = 'login.html';
-        return;
-      }
-
-      // Load saved drafts
-      loadDrafts();
-
-      // Initialize file upload preview
-      const fileInput = document.getElementById('fileUpload');
-      if (fileInput) {
-        fileInput.addEventListener('change', handleFileSelection);
-      }
-
-      // Category change handler
-      const categorySelect = document.getElementById('itemCategory');
-      if (categorySelect) {
-        categorySelect.addEventListener('change', checkCategoryRequirements);
-      }
-
-      // Real-time validation
-      const form = document.getElementById('declarationForm');
-      if (form) {
-        form.addEventListener('input', function(e) {
-          validateField(e.target);
-          updateSubmitButton();
-        });
-        
-        form.addEventListener('change', function(e) {
-          validateField(e.target);
-          updateSubmitButton();
-        });
-      }
-
-      // Check category requirements on load
-      checkCategoryRequirements();
+  // Apply Safari-specific fixes
+  if (isSafari()) {
+    console.log('Safari browser detected - applying compatibility fixes');
+    
+    // Add Safari class to body
+    document.body.classList.add('safari-browser');
+    
+    // Disable autocorrect for form fields
+    document.querySelectorAll('input[type="text"], textarea').forEach(el => {
+      el.setAttribute('autocorrect', 'off');
+      el.setAttribute('spellcheck', 'false');
     });
-
-    // Field validation function
-    function validateField(field) {
-      const value = field.value.trim();
-      const errorEl = document.getElementById(field.id + 'Error');
-      
-      if (!errorEl) return true;
-      
-      let isValid = true;
-      let errorMessage = '';
-      
-      switch(field.id) {
-        case 'trackingNumber':
-          isValid = /^[A-Za-z0-9\-]{5,}$/.test(value);
-          errorMessage = isValid ? '' : 'Minimum 5 chars, letters/numbers/hyphens only';
-          break;
-          
-        case 'nameOnParcel':
-          isValid = value.length >= 2 && value.length <= 100;
-          errorMessage = isValid ? '' : '2-100 characters required';
-          break;
-          
-        case 'itemDescription':
-          isValid = value.length >= 5 && value.length <= 500;
-          errorMessage = isValid ? '' : '5-500 characters required';
-          break;
-          
-        case 'quantity':
-          const qty = parseInt(value);
-          isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
-          errorMessage = isValid ? '' : 'Must be between 1 and 999';
-          break;
-          
-        case 'price':
-          const price = parseFloat(value);
-          isValid = !isNaN(price) && price >= 0 && price <= 99999;
-          errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
-          break;
-          
-        case 'collectionPoint':
-        case 'itemCategory':
-          isValid = value !== '';
-          errorMessage = isValid ? '' : 'This field is required';
-          break;
-      }
-      
-      // Update UI
-      if (isValid) {
-        field.parentElement.classList.remove('error');
-        field.parentElement.classList.add('success');
-        errorEl.textContent = '';
-      } else {
-        field.parentElement.classList.remove('success');
-        field.parentElement.classList.add('error');
-        errorEl.textContent = errorMessage;
-      }
-      
-      return isValid;
+    
+    // Fix for file input styling
+    const fileInput = document.getElementById('fileUpload');
+    if (fileInput) {
+      fileInput.style.opacity = '1';
+      fileInput.style.position = 'relative';
+      fileInput.style.zIndex = '1';
     }
+  }
 
-    // Update submit button state
-    function updateSubmitButton() {
-      const submitBtn = document.getElementById('submitBtn');
-      if (!submitBtn) return;
-      
-      const requiredFields = [
-        'trackingNumber', 'nameOnParcel', 'itemDescription',
-        'quantity', 'price', 'collectionPoint', 'itemCategory'
-      ];
-      
-      let allValid = true;
-      
-      requiredFields.forEach(fieldId => {
-        const field = document.getElementById(fieldId);
-        if (field && !validateField(field)) {
-          allValid = false;
-        }
-      });
-      
-      // Check file requirements for starred categories
-      const category = document.getElementById('itemCategory')?.value || '';
-      const starredCategories = [
-        '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-        '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-      ];
-      
-      if (starredCategories.includes(category)) {
-        const files = document.getElementById('fileUpload')?.files || [];
-        if (files.length === 0) {
-          allValid = false;
-        }
-      }
-      
-      submitBtn.disabled = !allValid;
+  // Network detection
+  function updateNetworkStatus() {
+    const statusEl = document.getElementById('networkStatus');
+    if (!statusEl) return;
+    
+    if (navigator.onLine) {
+      statusEl.style.display = 'none';
+    } else {
+      statusEl.style.display = 'block';
+      statusEl.querySelector('.status-icon').textContent = '🔴';
+      statusEl.querySelector('.status-text').textContent = 'Offline - Form will be saved locally';
     }
+  }
 
-    // Check category requirements
-    function checkCategoryRequirements() {
-      const category = document.getElementById('itemCategory')?.value || '';
-      const fileHelp = document.getElementById('fileHelp');
-      const fileRequirement = document.getElementById('fileRequirement');
-      
-      const starredCategories = [
-        '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-        '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-      ];
-      
-      if (starredCategories.includes(category)) {
-        fileRequirement.textContent = 'Required: ';
-        fileHelp.style.color = '#ff4444';
-        document.getElementById('fileUpload').required = true;
-      } else {
-        fileRequirement.textContent = 'Optional: ';
-        fileHelp.style.color = '#888';
-        document.getElementById('fileUpload').required = false;
-      }
-      
-      updateSubmitButton();
-    }
+  // Initialize network status
+  window.addEventListener('online', updateNetworkStatus);
+  window.addEventListener('offline', updateNetworkStatus);
+  updateNetworkStatus();
+</script>
 
-    // Handle file selection
-    function handleFileSelection(input) {
-      const files = Array.from(input.files);
-      const preview = document.getElementById('filePreview');
-      const fileList = document.getElementById('fileList');
-      const totalSizeEl = document.getElementById('totalSize');
-      const errorEl = document.getElementById('invoiceFilesError');
-      
-      if (files.length === 0) {
-        preview.style.display = 'none';
-        errorEl.textContent = '';
-        updateSubmitButton();
-        return;
-      }
-      
-      // Validate files
-      const MAX_SIZE = 5 * 1024 * 1024; // 5MB
-      let totalSize = 0;
-      let hasError = false;
-      
-      fileList.innerHTML = '';
-      
-      files.forEach((file, index) => {
-        // Check file type
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        if (!allowedTypes.includes(file.type)) {
-          errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-          hasError = true;
-          return;
-        }
-        
-        // Check file size
-        if (file.size > MAX_SIZE) {
-          errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
-          hasError = true;
-          return;
-        }
-        
-        totalSize += file.size;
-        
-        // Create file item in preview
-        const fileItem = document.createElement('div');
-        fileItem.className = 'file-item';
-        fileItem.innerHTML = `
-          <span class="file-name">${file.name}</span>
-          <span class="file-size">${(file.size / 1024 / 1024).toFixed(2)}MB</span>
-          <button type="button" class="remove-file" onclick="removeFile(${index})">✕</button>
-        `;
-        fileList.appendChild(fileItem);
-      });
-      
-      if (hasError) {
-        input.value = '';
-        preview.style.display = 'none';
-        updateSubmitButton();
-        return;
-      }
-      
-      // Update total size
-      totalSizeEl.textContent = `Total: ${(totalSize / 1024 / 1024).toFixed(2)}MB`;
-      
-      // Show preview
-      preview.style.display = 'block';
-      errorEl.textContent = '';
-      
-      updateSubmitButton();
-    }
-
-    // Remove file from selection
-    function removeFile(index) {
-      const input = document.getElementById('fileUpload');
-      const files = Array.from(input.files);
-      
-      // Create new FileList without the removed file
-      const newFiles = files.filter((_, i) => i !== index);
-      
-      // Create new DataTransfer to hold files
-      const dt = new DataTransfer();
-      newFiles.forEach(file => dt.items.add(file));
-      
-      // Update input files
-      input.files = dt.files;
-      
-      // Update preview
-      handleFileSelection(input);
-    }
-
-    // Save form as draft
-    function saveDraft() {
-      const form = document.getElementById('declarationForm');
-      const formData = new FormData(form);
-      const draft = {};
-      
-      // Convert FormData to object
-      for (let [key, value] of formData.entries()) {
-        if (key !== 'files') {
-          draft[key] = value;
-        }
-      }
-      
-      // Get files info
-      const files = document.getElementById('fileUpload')?.files || [];
-      if (files.length > 0) {
-        draft.filesCount = files.length;
-        draft.filesInfo = Array.from(files).map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type
-        }));
-      }
-      
-      // Add timestamp
-      draft.timestamp = new Date().toISOString();
-      draft.id = 'draft_' + Date.now();
-      
-      // Save to localStorage
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.push(draft);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      
-      // Show success message
-      showMessage('Draft saved successfully!', 'success');
-      loadDrafts();
+<script src="scripts/app.js"></script>
+<script>
+  // Form-specific initialization
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check session and set user info
+    const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+    if (userData.phone) {
+      document.getElementById('userPhone').textContent = userData.phone;
+      document.getElementById('phone').value = userData.phone;
+    } else {
+      // Redirect to login if no session
+      window.location.href = 'login.html';
+      return;
     }
 
     // Load saved drafts
-    function loadDrafts() {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draftCount = document.getElementById('draftCount');
-      const draftsList = document.getElementById('draftsList');
-      
-      if (draftCount) draftCount.textContent = drafts.length;
-      
-      if (draftsList) {
-        if (drafts.length === 0) {
-          draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
-          return;
-        }
-        
-        let html = '<div class="drafts-container">';
-        drafts.forEach((draft, index) => {
-          html += `
-            <div class="draft-item">
-              <div class="draft-info">
-                <strong>${draft.trackingNumber || 'Untitled'}</strong>
-                <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
-              </div>
-              <div class="draft-actions">
-                <button onclick="loadDraft(${index})" class="small-btn">Load</button>
-                <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
-              </div>
-            </div>
-          `;
-        });
-        html += '</div>';
-        draftsList.innerHTML = html;
-      }
+    loadDrafts();
+
+    // Initialize file upload preview
+    const fileInput = document.getElementById('fileUpload');
+    if (fileInput) {
+      fileInput.addEventListener('change', handleFileSelection);
     }
 
-    // Load draft into form
-    function loadDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draft = drafts[index];
+    // Category change handler
+    const categorySelect = document.getElementById('itemCategory');
+    if (categorySelect) {
+      categorySelect.addEventListener('change', checkCategoryRequirements);
+    }
+
+    // Real-time validation with proper event delegation
+    const form = document.getElementById('declarationForm');
+    if (form) {
+      // Remove any existing event listeners by cloning the form
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
       
-      if (!draft) return;
+      // Get the new form reference
+      const updatedForm = document.getElementById('declarationForm');
       
-      // Populate form fields
-      Object.keys(draft).forEach(key => {
-        if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
-          const field = document.getElementById(key);
-          if (field) field.value = draft[key];
+      // Add input event listener for real-time validation
+      updatedForm.addEventListener('input', function(e) {
+        if (e.target && e.target.tagName) {
+          validateField(e.target);
+          updateSubmitButton();
         }
       });
       
-      // Update UI
-      checkCategoryRequirements();
-      updateSubmitButton();
+      // Add change event listener for dropdowns
+      updatedForm.addEventListener('change', function(e) {
+        if (e.target && (e.target.tagName === 'SELECT' || e.target.type === 'file')) {
+          validateField(e.target);
+          updateSubmitButton();
+        }
+      });
       
-      showMessage('Draft loaded!', 'success');
+      // Handle form submission
+      updatedForm.addEventListener('submit', handleParcelSubmission);
     }
 
-    // Delete draft
-    function deleteDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.splice(index, 1);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      loadDrafts();
-      showMessage('Draft deleted', 'info');
-    }
+    // Check category requirements on load
+    checkCategoryRequirements();
+  });
 
-    // Toggle drafts visibility
-    function toggleDrafts() {
-      const draftsList = document.getElementById('draftsList');
-      if (draftsList.style.display === 'none') {
-        draftsList.style.display = 'block';
+  // Field validation function
+  function validateField(field) {
+    const value = field.value.trim();
+    const errorEl = document.getElementById(field.id + 'Error');
+    
+    if (!errorEl) return true;
+    
+    let isValid = true;
+    let errorMessage = '';
+    
+    switch(field.id) {
+      case 'trackingNumber':
+        isValid = /^[A-Za-z0-9\-]{5,}$/.test(value);
+        errorMessage = isValid ? '' : 'Minimum 5 chars, letters/numbers/hyphens only';
+        break;
+        
+      case 'nameOnParcel':
+        isValid = value.length >= 2 && value.length <= 100;
+        errorMessage = isValid ? '' : '2-100 characters required';
+        break;
+        
+      case 'itemDescription':
+        // FIXED: Changed from 5 to 3 characters minimum
+        isValid = value.length >= 3 && value.length <= 500;
+        errorMessage = isValid ? '' : '3-500 characters required';
+        break;
+        
+      case 'quantity':
+        const qty = parseInt(value);
+        isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
+        errorMessage = isValid ? '' : 'Must be between 1 and 999';
+        break;
+        
+      case 'price':
+        const price = parseFloat(value);
+        // FIXED: Allow 0 by checking >= 0 instead of > 0
+        isValid = !isNaN(price) && price >= 0 && price <= 99999;
+        errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
+        break;
+        
+      case 'collectionPoint':
+      case 'itemCategory':
+        isValid = value !== '';
+        errorMessage = isValid ? '' : 'This field is required';
+        break;
+    }
+    
+    // Update UI
+    if (isValid) {
+      if (field.parentElement) {
+        field.parentElement.classList.remove('error');
+        field.parentElement.classList.add('success');
+      }
+      errorEl.textContent = '';
+    } else {
+      if (field.parentElement) {
+        field.parentElement.classList.remove('success');
+        field.parentElement.classList.add('error');
+      }
+      errorEl.textContent = errorMessage;
+    }
+    
+    return isValid;
+  }
+
+  // Update submit button state
+  function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    if (!submitBtn) return;
+    
+    const requiredFields = [
+      'trackingNumber', 'nameOnParcel', 'itemDescription',
+      'quantity', 'price', 'collectionPoint', 'itemCategory'
+    ];
+    
+    let allValid = true;
+    
+    requiredFields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        // Validate each field
+        if (!validateField(field)) {
+          allValid = false;
+        }
       } else {
-        draftsList.style.display = 'none';
+        allValid = false;
+      }
+    });
+    
+    // Check file requirements for starred categories
+    const category = document.getElementById('itemCategory')?.value || '';
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      const files = document.getElementById('fileUpload')?.files || [];
+      if (files.length === 0) {
+        allValid = false;
       }
     }
+    
+    submitBtn.disabled = !allValid;
+  }
 
-    // Show message
-    function showMessage(text, type = 'info') {
-      const messageEl = document.getElementById('statusMessage');
-      if (!messageEl) return;
-      
-      messageEl.textContent = text;
-      messageEl.className = 'message ' + type;
-      messageEl.style.display = 'block';
-      
-      setTimeout(() => {
-        messageEl.style.display = 'none';
-      }, 5000);
+  // Check category requirements
+  function checkCategoryRequirements() {
+    const category = document.getElementById('itemCategory')?.value || '';
+    const fileHelp = document.getElementById('fileHelp');
+    const fileRequirement = document.getElementById('fileRequirement');
+    
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      fileRequirement.textContent = 'Required: ';
+      fileHelp.style.color = '#ff4444';
+      const fileInput = document.getElementById('fileUpload');
+      if (fileInput) fileInput.required = true;
+    } else {
+      fileRequirement.textContent = 'Optional: ';
+      fileHelp.style.color = '#888';
+      const fileInput = document.getElementById('fileUpload');
+      if (fileInput) fileInput.required = false;
     }
+    
+    updateSubmitButton();
+  }
 
-    // Show error
-    function showError(text) {
-      const errorEl = document.getElementById('errorMessage');
-      if (!errorEl) return;
-      
-      errorEl.textContent = text;
-      errorEl.style.display = 'block';
-      
-      setTimeout(() => {
-        errorEl.style.display = 'none';
-      }, 5000);
+  // Handle file selection
+  function handleFileSelection(event) {
+    const fileInput = event.target;
+    const files = fileInput.files;
+    const errorEl = document.getElementById('invoiceFilesError');
+    
+    // Reset error message
+    if (errorEl) errorEl.textContent = '';
+    
+    if (files.length === 0) {
+      updateSubmitButton();
+      return;
     }
+    
+    // Validate files
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    let hasError = false;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+        hasError = true;
+        break;
+      }
+      
+      // Check file size
+      if (file.size > MAX_SIZE) {
+        errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
+        hasError = true;
+        break;
+      }
+    }
+    
+    if (hasError) {
+      fileInput.value = '';
+      updateSubmitButton();
+      return;
+    }
+    
+    // Update submit button
+    updateSubmitButton();
+  }
 
-    // Handle file selection and update UI
-function handleFileSelection(event) {
-  const fileInput = event.target;
-  const files = fileInput.files;
-  const filePreview = document.getElementById('filePreview');
-  
-  if (!filePreview) {
-    // Create preview element if it doesn't exist
-    const previewDiv = document.createElement('div');
-    previewDiv.id = 'filePreview';
-    previewDiv.className = 'file-preview';
-    fileInput.parentNode.appendChild(previewDiv);
+  // Save form as draft
+  function saveDraft() {
+    const form = document.getElementById('declarationForm');
+    const formData = new FormData(form);
+    const draft = {};
+    
+    // Convert FormData to object
+    for (let [key, value] of formData.entries()) {
+      if (key !== 'files') {
+        draft[key] = value;
+      }
+    }
+    
+    // Get files info
+    const files = document.getElementById('fileUpload')?.files || [];
+    if (files.length > 0) {
+      draft.filesCount = files.length;
+      draft.filesInfo = Array.from(files).map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
+    }
+    
+    // Add timestamp
+    draft.timestamp = new Date().toISOString();
+    draft.id = 'draft_' + Date.now();
+    
+    // Save to localStorage
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.push(draft);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    
+    // Show success message
+    showMessage('Draft saved successfully!', 'success');
+    loadDrafts();
   }
-  
-  const previewElement = document.getElementById('filePreview');
-  
-  if (files.length === 0) {
-    previewElement.innerHTML = '';
-    previewElement.style.display = 'none';
-    return;
-  }
-  
-  let html = '<div class="file-list"><strong>Selected files:</strong><ul>';
-  
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
-    html += `<li>${file.name} (${sizeMB} MB)</li>`;
-  }
-  
-  html += '</ul></div>';
-  previewElement.innerHTML = html;
-  previewElement.style.display = 'block';
-}
 
-// Add event listener to file input
-document.addEventListener('DOMContentLoaded', function() {
-  const fileInput = document.getElementById('fileUpload');
-  if (fileInput) {
-    fileInput.addEventListener('change', handleFileSelection);
+  // Load saved drafts
+  function loadDrafts() {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draftCount = document.getElementById('draftCount');
+    const draftsList = document.getElementById('draftsList');
+    
+    if (draftCount) draftCount.textContent = drafts.length;
+    
+    if (draftsList) {
+      if (drafts.length === 0) {
+        draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
+        return;
+      }
+      
+      let html = '<div class="drafts-container">';
+      drafts.forEach((draft, index) => {
+        html += `
+          <div class="draft-item">
+            <div class="draft-info">
+              <strong>${draft.trackingNumber || 'Untitled'}</strong>
+              <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
+            </div>
+            <div class="draft-actions">
+              <button onclick="loadDraft(${index})" class="small-btn">Load</button>
+              <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      draftsList.innerHTML = html;
+    }
   }
-});
-  </script>
+
+  // Load draft into form
+  function loadDraft(index) {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draft = drafts[index];
+    
+    if (!draft) return;
+    
+    // Populate form fields
+    Object.keys(draft).forEach(key => {
+      if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
+        const field = document.getElementById(key);
+        if (field) field.value = draft[key];
+      }
+    });
+    
+    // Update UI
+    checkCategoryRequirements();
+    updateSubmitButton();
+    
+    showMessage('Draft loaded!', 'success');
+  }
+
+  // Delete draft
+  function deleteDraft(index) {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.splice(index, 1);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    loadDrafts();
+    showMessage('Draft deleted', 'info');
+  }
+
+  // Toggle drafts visibility
+  function toggleDrafts() {
+    const draftsList = document.getElementById('draftsList');
+    if (draftsList.style.display === 'none') {
+      draftsList.style.display = 'block';
+    } else {
+      draftsList.style.display = 'none';
+    }
+  }
+
+  // Show message
+  function showMessage(text, type = 'info') {
+    const messageEl = document.getElementById('statusMessage');
+    const errorEl = document.getElementById('errorMessage');
+    
+    // Clear any existing error messages
+    if (errorEl) {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+    
+    if (!messageEl) return;
+    
+    messageEl.textContent = text;
+    messageEl.className = 'message ' + type;
+    messageEl.style.display = 'block';
+    
+    setTimeout(() => {
+      messageEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // Show error
+  function showError(text) {
+    const messageEl = document.getElementById('statusMessage');
+    const errorEl = document.getElementById('errorMessage');
+    
+    // Clear any existing success messages
+    if (messageEl) {
+      messageEl.style.display = 'none';
+      messageEl.textContent = '';
+    }
+    
+    if (!errorEl) return;
+    
+    errorEl.textContent = text;
+    errorEl.style.display = 'block';
+    
+    setTimeout(() => {
+      errorEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // Handle file selection and update UI
+  function handleFileSelection(event) {
+    const fileInput = event.target;
+    const files = fileInput.files;
+    const filePreview = document.getElementById('filePreview');
+    
+    if (!filePreview) {
+      // Create preview element if it doesn't exist
+      const previewDiv = document.createElement('div');
+      previewDiv.id = 'filePreview';
+      previewDiv.className = 'file-preview';
+      fileInput.parentNode.appendChild(previewDiv);
+    }
+    
+    const previewElement = document.getElementById('filePreview');
+    
+    if (files.length === 0) {
+      previewElement.innerHTML = '';
+      previewElement.style.display = 'none';
+      return;
+    }
+    
+    let html = '<div class="file-list"><strong>Selected files:</strong><ul>';
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const sizeMB = (file.size / (1024 * 1024)).toFixed(2);
+      html += `<li>${file.name} (${sizeMB} MB)</li>`;
+    }
+    
+    html += '</ul></div>';
+    previewElement.innerHTML = html;
+    previewElement.style.display = 'block';
+  }
+</script>
 </body>
 </html>
