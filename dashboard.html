@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Dashboard - ZA RIZQ Enterprise</title>
+  <title>Dashboard - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Dashboard-specific styles */
@@ -446,62 +446,58 @@
       <strong class="gold-text">MAKLUMAN PENTING. SILA BACA</strong>
       
       <div class="modal-section">
-        <p><strong class="gold-text">Tolong isikan keterangan parcel order biskita seawalnya jika sudah menerima nombor tracking bagi yang mengunakan shipping address kami di limbang. Tidak perlu menunggu peringatan dari pihak kami.</strong></p>
+        <p><strong class="gold-text">Tolong submit tracking details biskita seawalnya jika biskita ada mengunakan shipping address alamat kami di limbang. Tidak perlu menunggu kiriman dari pihak kami lagi.</strong></p>
         
-        <p>Sila pastikan tracking kita dengan betul, jika bukan kita punya, pastikan kita tidak mengisikannya. Sebarang pertanyaan sila rujuk kembali kepada admin.</p>
+        <p>Sila check sea shipping, jika parcel sudah sampai Malaysia, perubahan tracking akan berlaku, sila update/submit tracking terkini yang telah sampai di Limbang.</p>
         
-        <p><strong class="gold-text">Peringatan bagi tracking parcel yang tidak ada keterangan akan ditinggalkan di Limbang warehouse. </strong></p>
-    
+        <p><strong class="gold-text">Please do not key in any Tracking details that is not yours and if you're not sure about it please do ask admin to ensure about it.</strong></p>
+        <p><strong class="gold-text">Parcel Items not key-in will be left at storage. Parcel staying at storage can have high chance of lost. If it is lost, it is not our responsibility anymore.</strong></p>
       </div>
 
       <div class="modal-section">
         <ul class="guidelines">
-          <li>Pastikan keterangan adalah betul.</li>
-          <li>Isikan keterangan nama yang mudah difahami dan tidak perlu panjang.</li>
-          <li>Nombor telefon hendaklah penerima di Brunei yang pihak kami akan hubungi.</li>
+          <li>Pastikan Details adalah betul.</li>
+          <li>Buat details nama yg mudah difahami sahaja, tidak perlu panjang.</li>
+          <li>Nombor telefon penerima di Brunei, pihak kami akan hubungi.</li>
           <li>Jika parcel dalam satu tracking mempunyai banyak keterangan item, sila senaraikan "breakdown" satu persatu termasuk harga & kuantiti.</li>
           <li>Harga termasuk postage.</li>
-          <li>Item yang memerlukan permit (under control), sila sediakan document yang diperlukan.</li>
+          <li>Item yang memerlukan permit(under control), sila sediakan semua document yg diperlukan.</li>
         </ul>
       </div>
 
       <div class="modal-section">
-        <strong class="gold-text">Cosmetics, Supplements, Foods or Drinks permit (pengunaan sendiri)</strong>
+        <strong class="gold-text">Untuk Cosmetics, Supplements, Foods or Drinks:</strong>
         <ul class="guidelines">
-          <li>Invoice penuh adalah diperlukan.</li>
+          <li>Screenshot invoice adalah dimestikan.</li>
           <li>Pastikan butiran nama penerima dan summary shipping dapat dilihat dengan jelas.</li>
-          <strong class="gold-text">*Jika barang biskita untuk jualan, pastikan biskita menyediakan DPS/FSQ permit dibawah syarikat sendiri.</strong></li>
+          <li>Gambar IC depan & belakang atau kirimkan nombor IC dan alamat kepada admin.</li>
+          <li>Untuk bungkusan cosmetic, pastikan barangan bukan untuk dijual, hanya personal use kegunaan sendiri sahaja, limit harga tidak boleh melebihi $200, berat maksimum 2KG kebawah <strong class="gold-text">*kecuali biskita ada DPS permit dibawah syarikat sendiri.</strong></li>
         </ul>
       </div>
 
       <div class="modal-section">
-        <strong class="gold-text">AITI permit </strong>
+        <strong class="gold-text">Untuk AITI:</strong>
         <ul class="guidelines">
-          <li>Bluetooth devices </li>
-          <li>Wireless devices</li>
-          <strong class="gold-text">*Sila dapat kan permit AITI terlebih dahulu jika pesanan tidak melebihi 5 unit.</strong></li>
+          <li>Kesemua barangan yang mempunyai Bluetooth atau Wireless RC car yg mempunyai "remote control", Handphone & laptop hendak lah memohon permit di AITI dahulu, kuantiti tidak boleh melebihi 5 unit.</li>
+          <li>Invoice</li>
+          <li>Gambar IC depan belakang.</li>
+          <li>Copy link dari Shopee atau Lazada.</li>
         </ul>
       </div>
 
       <div class="modal-section">
-        <strong class="gold-text">Pihak kami tidak akan membawa masuk senarai dibawah:</strong>
+        <strong class="gold-text">Untuk buku:</strong>
         <ul class="guidelines">
-          <li>Vape dan accessories</li>
-          <li>Juice Vape</li>
-          <li>Rokok</li>
-          <li>Dadah</li>
-          <li>Tumbuh-tumbahan dan binatang hidup</li>
-          <li>Senjata merbahaya</li>
-          <li>Gel blaster gun</li>
-          <strong class="gold-text">*Untuk keterangan lanjut sila layari laman web JKED.</strong></li>
+          <li>Sediakan invoice.</li>
+          <li>Gambar IC.</li>
         </ul>
       </div>
 
       <div class="modal-section warning">
         <p><strong class="gold-text">● SILA SEMAK SEBELUM SUBMIT.</strong></p>
         <p><strong class="gold-text">● PASTIKAN SEMUA KETERANGAN ADALAH BETUL.</strong></p>
-        <p>Nota: Jika keterangan pengisytiharan tidak lengkap atau tidak betul, maka kesalahan adalah tanggungjawab pemilik sendiri.</p>
-        
+        <p>Note: In completing this declaration, units and items for making an untrue or incorrect declaration will be taken risk by own consignee.</p>
+        <p>Undeclared parcel will be hold in Limbang for anyone that did not provide their detail on time. Kindly please cooperate, Thank you.😊</p>
       </div>
 
       <div class="modal-footer">
@@ -512,24 +508,21 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // ================= GLOBAL VARIABLES =================
-    let modalWasShown = false;
-    
-    // ================= GLOBAL FUNCTIONS =================
-    // Move these functions outside initDashboard so they're available globally
-    
+    // Global loading functions
     function showGlobalLoading(message = 'Loading...') {
       const loader = document.getElementById('globalLoading');
       const text = loader.querySelector('.loading-text');
       text.textContent = message;
       loader.style.display = 'flex';
     }
-  
+
     function hideGlobalLoading() {
       const loader = document.getElementById('globalLoading');
       loader.style.display = 'none';
     }
-  
+
+    let modalWasShown = false;
+
     function closeWelcomeModal() {
       const modal = document.getElementById('welcomeModal');
       modal.style.display = 'none';
@@ -540,37 +533,8 @@
         checkUncollectedParcels();
       }
     }
-  
-    function showMyInfo() {
-      safeRedirect('my-info.html');
-    }
-  
-    function showParcelDeclaration() {
-      safeRedirect('parcel-declaration.html');
-    }
-  
-    function showTrackParcel() {
-      safeRedirect('track-parcel.html');
-    }
 
-    function showBillingInfo() {
-      safeRedirect('billing-info.html');
-    }
-    
-    function showInvoice() {
-      // Note: invoice.html requires an orderNumber parameter
-      // This is typically called from billing-info.html, not directly from dashboard
-      safeRedirect('invoice.html');
-    }
-  
-    function handleLogout() {
-      sessionStorage.clear();
-      localStorage.removeItem('lastActivity');
-      localStorage.removeItem('freshLogin');
-      safeRedirect('login.html');
-    }
-  
-    // ================= EXACT Mark 1 JSONP approach =================
+    // EXACT Mark 1 JSONP approach for uncollected count
     async function checkUncollectedParcels() {
       try {
         showGlobalLoading('Checking for pending payments...');
@@ -579,7 +543,7 @@
           handleLogout();
           return;
         }
-  
+
         const count = await getUncollectedCountWithRetry(userData.phone);
         
         const popout = document.getElementById('popoutMessage');
@@ -627,7 +591,7 @@
         hideGlobalLoading();
       }
     }
-  
+
     // Mark 1 JSONP approach with retry logic
     async function getUncollectedCountWithRetry(phone, maxRetries = 2) {
       let lastError;
@@ -662,7 +626,7 @@
       
       throw lastError || new Error('Failed to get uncollected count');
     }
-  
+
     function getUncollectedCountFromServer(phone) {
       return new Promise((resolve, reject) => {
         const callbackName = `uncollectedCallback_${Date.now()}`;
@@ -683,13 +647,6 @@
         const script = document.createElement('script');
         script.id = callbackName;
         
-        // Use the CONFIG from app.js - make sure it's loaded
-        if (typeof CONFIG === 'undefined') {
-          console.error('CONFIG not loaded from app.js');
-          reject(new Error('Configuration not loaded'));
-          return;
-        }
-        
         // EXACT Mark 1 approach with crossorigin attribute
         script.crossOrigin = 'anonymous';
         script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getUncollectedCount&phone=${encodeURIComponent(phone)}`;
@@ -708,7 +665,6 @@
       });
     }
     
-    // ================= DASHBOARD INITIALIZATION =================
     function initDashboard() {
       // EXACT Mark 1 session check
       const userData = checkSession();
@@ -721,26 +677,13 @@
         safeRedirect('password-reset.html');
         return;
       }
-  
-      // Check if we have a pending tracking redirect (should bypass modal)
-      const pendingTracking = sessionStorage.getItem('pendingTracking');
-      const pendingRedirect = sessionStorage.getItem('pendingRedirect');
-      
-      if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
-        // Bypass dashboard and modal - redirect directly to parcel declaration
-        sessionStorage.removeItem('pendingTracking');
-        sessionStorage.removeItem('pendingRedirect');
-        sessionStorage.setItem('prefillTracking', pendingTracking);
-        safeRedirect('parcel-declaration.html');
-        return;
-      }
-  
-      // Original modal display logic (only if no tracking pending)
+
+      // Check if modal should be shown
       const urlParams = new URLSearchParams(window.location.search);
       const shouldShowModal = urlParams.has('fresh') || 
                              (localStorage.getItem('freshLogin') === 'true' && 
                               sessionStorage.getItem('modalShown') === 'false');
-  
+
       if (shouldShowModal) {
         modalWasShown = true;
         // Show modal and clean URL
@@ -755,33 +698,38 @@
         // If no modal is shown, check uncollected parcels immediately
         checkUncollectedParcels();
       }
-  
+
       const modal = document.getElementById('welcomeModal');
-  
+
       window.onclick = (event) => {
         if(event.target === document.getElementById('welcomeModal')) {
           closeWelcomeModal();
         }
       }
+
+      window.showBillingInfo = () => {
+        showGlobalLoading('Loading billing information...');
+        safeRedirect('billing-info.html');
+      };
+      window.showMyInfo = () => safeRedirect('my-info.html');
+      window.showParcelDeclaration = () => safeRedirect('parcel-declaration.html');
+      window.showTrackParcel = () => safeRedirect('track-parcel.html');
+      
+      // EXACT Mark 1 logout approach
+      window.handleLogout = () => {
+        sessionStorage.clear();
+        localStorage.removeItem('lastActivity');
+        localStorage.removeItem('freshLogin');
+        safeRedirect('login.html');
+      }
     }
-  
-    // ================= EVENT LISTENERS =================
+
     // Initialize on DOMContentLoaded
     document.addEventListener('DOMContentLoaded', () => {
-      // Call detectViewMode from app.js
-      if (typeof detectViewMode === 'function') {
-        detectViewMode();
-      }
-      
-      // Also ensure the functions from app.js are available
-      if (typeof checkSession === 'function' && typeof safeRedirect === 'function') {
-        initDashboard();
-      } else {
-        console.error('Required functions from app.js not loaded');
-        showError('System error. Please refresh the page.');
-      }
+      detectViewMode();
+      initDashboard();
     });
-  
+
     // Add keyboard navigation
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
@@ -804,7 +752,7 @@
             showTrackParcel();
             break;
           case '4':
-            showBillingInfo();  // ADD THIS
+            showBillingInfo();
             break;
           case 'l':
           case 'L':
@@ -813,38 +761,6 @@
         }
       }
     });
-  
-    // ================= ERROR HANDLING =================
-    function showError(message) {
-      // Use the showError function from app.js if available
-      if (typeof showError === 'function' && typeof window.showError !== 'function') {
-        // We're shadowing the global showError, so use window.showError if it exists
-        if (window.showError) {
-          window.showError(message);
-          return;
-        }
-      }
-      
-      // Fallback error display
-      const errorDiv = document.createElement('div');
-      errorDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 15px;
-        background: #ff4444dd;
-        color: white;
-        border-radius: 5px;
-        z-index: 1000;
-      `;
-      errorDiv.textContent = message;
-      document.body.appendChild(errorDiv);
-      
-      setTimeout(() => {
-        errorDiv.remove();
-      }, 5000);
-    }
   </script>
 </body>
 </html>
