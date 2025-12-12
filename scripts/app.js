@@ -730,6 +730,7 @@ async function handleParcelSubmission(e) {
           saveFormAsDraft();
         }
       }
+    }
       
     } finally {
       showLoading(false);
