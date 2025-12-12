@@ -1,4 +1,3 @@
-//scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxF6HepFTI8tTFdlIrxKav8Iy2wCEy3MLvkIyTga-lqSeZc6HCIvIeeu4kt7kOi0Ge9/exec',
@@ -296,10 +295,10 @@ async function submitParcelData(payload) {
   return await submitViaDesktop(payload);
 }
 
-// Mobile submission (simpler, no file support)
+// Mobile submission (simpler, more reliable)
 async function submitViaMobile(payload) {
   try {
-    console.log('Using mobile submission method (no file support)');
+    console.log('Using mobile submission method');
     
     // Create simplified payload without files for mobile
     const simplifiedPayload = {
@@ -307,31 +306,45 @@ async function submitViaMobile(payload) {
       data: payload.data
     };
     
-    // Send using fetch with timeout
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), 30000);
-    
-    try {
-      const response = await fetch(CONFIG.PROXY_URL, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/x-www-form-urlencoded',
-        },
-        body: `payload=${encodeURIComponent(JSON.stringify(simplifiedPayload))}`,
-        signal: controller.signal
-      });
+    // Send using XHR with timeout
+    return new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest();
+      const url = CONFIG.PROXY_URL;
       
-      clearTimeout(timeoutId);
+      xhr.open('POST', url, true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
       
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
+      xhr.timeout = 30000; // 30 second timeout
       
-      return await response.json();
-    } catch (fetchError) {
-      clearTimeout(timeoutId);
-      throw fetchError;
-    }
+      xhr.onload = function() {
+        if (xhr.status >= 200 && xhr.status < 300) {
+          try {
+            const response = JSON.parse(xhr.responseText);
+            resolve(response);
+          } catch (e) {
+            // Even if JSON parse fails, assume success for mobile
+            resolve({ 
+              success: true, 
+              message: 'Submitted successfully' 
+            });
+          }
+        } else {
+          reject(new Error(`HTTP ${xhr.status}`));
+        }
+      };
+      
+      xhr.onerror = function() {
+        reject(new Error('Network error'));
+      };
+      
+      xhr.ontimeout = function() {
+        reject(new Error('Request timeout'));
+      };
+      
+      // Send data
+      const data = `payload=${encodeURIComponent(JSON.stringify(simplifiedPayload))}`;
+      xhr.send(data);
+    });
     
   } catch (error) {
     console.error('Mobile submission failed:', error);
@@ -346,50 +359,28 @@ async function submitViaDesktop(payload) {
     
     // Use FormData for desktop with files
     const formData = new FormData();
+    formData.append('data', JSON.stringify(payload.data));
     
-    // Add the main data
-    formData.append('data', JSON.stringify({
-      action: 'submitParcelDeclaration',
-      data: payload.data
-    }));
-    
-    // Add files directly (not as base64)
+    // Add files if they exist
     if (payload.files && payload.files.length > 0) {
-      payload.files.forEach((file, index) => {
-        formData.append(`file${index}`, file, file.name);
-      });
+      for (let i = 0; i < payload.files.length; i++) {
+        const file = payload.files[i];
+        const blob = base64ToBlob(file.base64, file.type);
+        formData.append(`file${i}`, blob, file.name);
+      }
     }
-    
-    console.log('Sending FormData with', payload.files.length, 'files');
     
     const response = await fetch(CONFIG.GAS_URL, {
       method: 'POST',
-      body: formData
-      // Don't set Content-Type header - let browser set it with boundary
+      body: formData,
+      // No headers for FormData - let browser set them
     });
     
-    console.log('Response status:', response.status);
-    
     if (!response.ok) {
-      throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+      throw new Error(`HTTP ${response.status}`);
     }
     
-    const responseText = await response.text();
-    console.log('Raw response:', responseText);
-    
-    try {
-      return JSON.parse(responseText);
-    } catch (parseError) {
-      console.error('Failed to parse response as JSON:', parseError);
-      
-      // Check if it's JSONP
-      if (responseText.startsWith('callback(')) {
-        const jsonStr = responseText.substring(9, responseText.length - 1);
-        return JSON.parse(jsonStr);
-      }
-      
-      throw new Error('Invalid response format from server');
-    }
+    return await response.json();
     
   } catch (error) {
     console.error('Desktop submission failed:', error);
@@ -401,7 +392,6 @@ async function submitViaDesktop(payload) {
     };
     
     try {
-      console.log('Trying fallback to proxy...');
       const fallbackResponse = await fetch(CONFIG.PROXY_URL, {
         method: 'POST',
         headers: {
@@ -414,12 +404,36 @@ async function submitViaDesktop(payload) {
         throw new Error(`Fallback failed: HTTP ${fallbackResponse.status}`);
       }
       
-      const fallbackText = await fallbackResponse.text();
-      return JSON.parse(fallbackText);
+      return await fallbackResponse.json();
       
     } catch (fallbackError) {
       throw new Error(`Both submissions failed: ${error.message}, ${fallbackError.message}`);
     }
+  }
+}
+
+// Convert base64 to Blob
+function base64ToBlob(base64, mimeType) {
+  try {
+    const byteCharacters = atob(base64);
+    const byteArrays = [];
+    
+    for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+      const slice = byteCharacters.slice(offset, offset + 512);
+      const byteNumbers = new Array(slice.length);
+      
+      for (let i = 0; i < slice.length; i++) {
+        byteNumbers[i] = slice.charCodeAt(i);
+      }
+      
+      const byteArray = new Uint8Array(byteNumbers);
+      byteArrays.push(byteArray);
+    }
+    
+    return new Blob(byteArrays, { type: mimeType });
+  } catch (error) {
+    console.error('Error converting base64 to blob:', error);
+    throw new Error('Invalid file data');
   }
 }
 
@@ -472,9 +486,9 @@ async function handleParcelSubmission(e) {
       throw new Error('Quantity must be between 1 and 999');
     }
 
-    // VALIDATE PRICE - ALLOW 0
-    if (payload.data.price < 0 || isNaN(payload.data.price)) {
-      throw new Error('Price must be a valid number (0 or higher)');
+    // Validate price
+    if (payload.data.price < 0 || payload.data.price > 99999) {
+      throw new Error('Price must be between 0 and 99,999');
     }
 
     // Handle file uploads
@@ -486,20 +500,20 @@ async function handleParcelSubmission(e) {
       '*Food Beverage/Drinks', '*Gadgets',
       '*Oil Ointment', '*Supplement', '*Others'
     ];
-    
+
     // Check if files are required and process them
     if (starredCategories.includes(category)) {
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files - SIMPLIFIED: Use FormData directly
+      // Process files
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
         throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
       }
-    
+
       for (const file of files) {
         if (file.size > CONFIG.MAX_FILE_SIZE) {
           throw new Error(`File "${file.name}" exceeds 5MB limit`);
@@ -509,29 +523,16 @@ async function handleParcelSubmission(e) {
           throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
         }
         
-        // Don't convert to base64 - add to files array for FormData
-        payload.files.push(file);
-      }
-    } else {
-      // For non-starred categories, files are optional
-      if (fileInput && fileInput.files && fileInput.files.length > 0) {
-        const files = Array.from(fileInput.files);
-        
-        if (files.length > CONFIG.MAX_FILES) {
-          throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
-        }
-    
-        for (const file of files) {
-          if (file.size > CONFIG.MAX_FILE_SIZE) {
-            throw new Error(`File "${file.name}" exceeds 5MB limit`);
-          }
-          
-          if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-            throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
-          }
-          
-          // Don't convert to base64
-          payload.files.push(file);
+        try {
+          const base64Data = await readFileAsBase64(file);
+          payload.files.push({
+            name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+            type: file.type,
+            base64: base64Data
+          });
+        } catch (fileError) {
+          console.error('Error reading file:', fileError);
+          throw new Error(`Failed to process file "${file.name}"`);
         }
       }
     }
@@ -721,8 +722,16 @@ function validateQuantity(inputElement) {
 
 function validatePrice(inputElement) {
   const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value >= 0;
-  showError(isValid ? '' : 'Price must be 0 or higher', 'priceError');
+  const isValid = !isNaN(value) && value >= 0 && value < 100000;
+  
+  if (inputElement.id === 'price') {
+    const errorElement = document.getElementById('priceError');
+    if (errorElement) {
+      errorElement.textContent = isValid ? '' : 'Must be between 0 and 99,999';
+      errorElement.style.color = isValid ? '' : '#ff4444';
+    }
+  }
+  
   return isValid;
 }
 
@@ -1137,7 +1146,7 @@ function validateField(field) {
       
     case 'price':
       const price = parseFloat(value);
-      isValid = !isNaN(price) && price >= 0 && price <= 99999; // Changed > 0 to >= 0
+      isValid = !isNaN(price) && price >= 0 && price <= 99999;
       message = isValid ? '' : 'Must be between 0 and 99,999';
       break;
       
@@ -1170,49 +1179,36 @@ function validateFiles(fileInput) {
     '*Oil Ointment', '*Supplement', '*Others'
   ];
   
-  let isValid = true;
-  let errorMessage = '';
-  
-  // Check if files are required
   if (starredCategories.includes(category)) {
     if (files.length === 0) {
-      errorMessage = 'Invoice/document upload is required for this category';
-      isValid = false;
+      showError('Invoice/document upload is required for this category', 'fileUploadError');
+      return false;
     }
   }
   
-  // Validate individual files if any are selected
-  if (files.length > 0) {
-    if (files.length > CONFIG.MAX_FILES) {
-      errorMessage = `Maximum ${CONFIG.MAX_FILES} files allowed`;
-      isValid = false;
+  // Validate each file
+  for (const file of files) {
+    if (file.size > CONFIG.MAX_FILE_SIZE) {
+      showError(`File "${file.name}" exceeds 5MB limit`, 'fileUploadError');
+      fileInput.value = '';
+      return false;
     }
     
-    for (const file of files) {
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        errorMessage = `File "${file.name}" exceeds 5MB limit`;
-        isValid = false;
-        break;
-      }
-      
-      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-        errorMessage = `File "${file.name}" must be JPG, PNG, or PDF`;
-        isValid = false;
-        break;
-      }
+    if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+      showError(`File "${file.name}" must be JPG, PNG, or PDF`, 'fileUploadError');
+      fileInput.value = '';
+      return false;
     }
   }
   
-  // Show appropriate message
-  if (errorMessage) {
-    showError(errorMessage, 'invoiceFilesError');
-  } else if (files.length > 0) {
-    showError(`${files.length} file(s) selected`, 'invoiceFilesError success');
+  // Show file count
+  if (files.length > 0) {
+    showError(`${files.length} file(s) selected`, 'fileUploadError');
   } else {
-    showError('', 'invoiceFilesError');
+    showError('', 'fileUploadError');
   }
   
-  return isValid;
+  return true;
 }
 
 function updateSubmitButton() {
@@ -1263,21 +1259,13 @@ function checkCategoryRequirements() {
   ];
 
   if (starredCategories.includes(category)) {
-    if (fileInput) {
-      fileInput.required = true;
-      fileInput.disabled = false; // Ensure it's enabled
-      fileInput.style.display = 'block';
-    }
+    if (fileInput) fileInput.required = true;
     if (fileHelp) {
       fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
       fileHelp.style.color = '#ff4444';
     }
   } else {
-    if (fileInput) {
-      fileInput.required = false;
-      fileInput.disabled = false; // Keep enabled for optional uploads
-      fileInput.style.display = 'block';
-    }
+    if (fileInput) fileInput.required = false;
     if (fileHelp) {
       fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
       fileHelp.style.color = '#888';
@@ -1288,60 +1276,8 @@ function checkCategoryRequirements() {
 function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
-    categorySelect.addEventListener('change', function() {
-      checkCategoryRequirements();
-      updateSubmitButtonState();
-      
-      // Reset file input when category changes to non-starred
-      const fileInput = document.getElementById('fileUpload');
-      const category = this.value;
-      
-      const starredCategories = [
-        '*Books', '*Cosmetics/Skincare/Bodycare',
-        '*Food Beverage/Drinks', '*Gadgets',
-        '*Oil Ointment', '*Supplement', '*Others'
-      ];
-      
-      if (!starredCategories.includes(category) && fileInput) {
-        fileInput.value = ''; // Clear file selection
-        showError('', 'invoiceFilesError'); // Clear error message
-      }
-    });
-  }
-}
-
-// ================= MOBILE FILE INPUT FIX =================
-function setupMobileFileInput() {
-  if (detectViewMode()) { // If mobile device
-    const fileInput = document.getElementById('fileUpload');
-    if (fileInput) {
-      // Remove any existing listeners
-      const newFileInput = fileInput.cloneNode(true);
-      fileInput.parentNode.replaceChild(newFileInput, fileInput);
-      
-      // Add mobile-friendly attributes
-      newFileInput.setAttribute('accept', 'image/*,.pdf');
-      newFileInput.setAttribute('capture', 'environment'); // For mobile camera
-      
-      // Add click handler to debug
-      newFileInput.addEventListener('click', function() {
-        console.log('File input clicked on mobile');
-      });
-      
-      // Add change handler
-      newFileInput.addEventListener('change', function() {
-        console.log('Files selected:', this.files.length);
-        if (this.files.length > 0) {
-          console.log('File details:', {
-            name: this.files[0].name,
-            size: this.files[0].size,
-            type: this.files[0].type
-          });
-        }
-        validateFiles(this);
-        updateSubmitButtonState();
-      });
-    }
+    categorySelect.addEventListener('change', checkCategoryRequirements);
+    categorySelect.addEventListener('change', updateSubmitButtonState);
   }
 }
 
@@ -1522,11 +1458,6 @@ document.addEventListener('DOMContentLoaded', () => {
       initValidationListeners();
       checkCategoryRequirements();
       updateSubmitButtonState();
-      
-      // Setup mobile file input if on mobile
-      if (isMobile) {
-        setupMobileFileInput();
-      }
       
       // Load saved drafts
       loadDrafts();
