@@ -624,14 +624,14 @@ async function handleParcelSubmission(e) {
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,
+        price: Number(formData.get('price')) || 0,  // This allows 0
         collectionPoint: formData.get('collectionPoint') || '',
         itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
-
-    // Validate required fields
+    
+    // Validate required fields - FIXED VERSION
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
       const value = payload.data[field];
@@ -644,7 +644,7 @@ async function handleParcelSubmission(e) {
       }
       // Special handling for quantity field
       else if (field === 'quantity') {
-        if (!value || isNaN(value) || value < 1) {
+        if (isNaN(value) || value < 1) {
           throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
         }
       }
