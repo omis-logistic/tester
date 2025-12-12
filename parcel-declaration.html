@@ -612,9 +612,36 @@
     requiredFields.forEach(fieldId => {
       const field = document.getElementById(fieldId);
       if (field) {
-        // Validate each field
-        if (!validateField(field)) {
-          allValid = false;
+        const value = field.value.trim();
+        
+        switch(fieldId) {
+          case 'price':
+            // Price can be 0, so we need to check if it's a valid number
+            const priceValue = parseFloat(value);
+            if (isNaN(priceValue) || priceValue < 0) {
+              allValid = false;
+            }
+            break;
+            
+          case 'quantity':
+            const quantityValue = parseInt(value);
+            if (isNaN(quantityValue) || quantityValue < 1) {
+              allValid = false;
+            }
+            break;
+            
+          case 'itemDescription':
+            if (value.length < 3) {
+              allValid = false;
+            }
+            break;
+            
+          default:
+            // For other fields, just check if they're not empty
+            if (!value) {
+              allValid = false;
+            }
+            break;
         }
       } else {
         allValid = false;
