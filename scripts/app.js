@@ -784,7 +784,7 @@ function showSubmissionSuccess(trackingNumber) {
       <p>Tracking Number: <strong>${trackingNumber}</strong></p>
       <p style="font-size: 0.9em; color: #888;">
         Your parcel declaration has been submitted.<br>
-        You will receive confirmation shortly.
+        Check your submission at Track Parcel page.
       </p>
     </div>
   `;
