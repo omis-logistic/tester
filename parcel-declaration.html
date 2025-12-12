@@ -45,7 +45,42 @@
       }
     }
     
-    /* Safari loading animation fix */
+    /* Global loading overlay */
+    #globalLoadingOverlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 99999;
+      flex-direction: column;
+      gap: 1rem;
+    }
+    
+    .global-spinner {
+      border: 6px solid #f3f3f3;
+      border-top: 6px solid var(--gold);
+      border-radius: 50%;
+      width: 60px;
+      height: 60px;
+      animation: spin 1s linear infinite;
+    }
+    
+    .global-loading-text {
+      color: var(--gold);
+      font-size: 1.2rem;
+      font-weight: bold;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
     @keyframes safari-spin {
       0% { transform: rotate(0deg); }
       100% { transform: rotate(360deg); }
@@ -53,6 +88,48 @@
     
     .loading-spinner {
       animation: safari-spin 1s linear infinite;
+    }
+    
+    /* File upload preview for Safari */
+    .file-preview {
+      margin-top: 10px;
+      padding: 10px;
+      background: #2a2a2a;
+      border-radius: 5px;
+      border: 1px solid #444;
+    }
+    
+    .file-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px;
+      margin: 5px 0;
+      background: #333;
+      border-radius: 3px;
+    }
+    
+    .file-item .file-name {
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+    
+    .file-item .file-size {
+      color: #888;
+      font-size: 0.9em;
+      margin-left: 10px;
+    }
+    
+    .file-item .remove-file {
+      background: #ff4444;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      padding: 3px 8px;
+      cursor: pointer;
+      margin-left: 10px;
     }
     
     /* Required field indicator */
@@ -89,56 +166,19 @@
       margin-top: 5px;
       display: block;
     }
-
-    /* Global spinner overlay */
-    #globalSpinnerOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .global-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(212, 175, 55, 0.3);
-      border-top: 4px solid var(--gold);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .global-loading-text {
-      color: var(--gold);
-      font-size: 1.2rem;
-      text-align: center;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Page header */
+    
+    /* Header styles */
     .page-header {
       text-align: center;
       margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid var(--gold);
     }
-
+    
     .page-header h1 {
+      font-size: 2rem;
       color: var(--gold);
       margin-bottom: 0.5rem;
     }
-
+    
     .page-header .subtitle {
       color: #aaa;
       font-size: 1rem;
@@ -146,10 +186,10 @@
   </style>
 </head>
 <body class="safari-fix">
-  <!-- Global Spinner Overlay -->
-  <div id="globalSpinnerOverlay">
+  <!-- Global Loading Overlay -->
+  <div id="globalLoadingOverlay">
     <div class="global-spinner"></div>
-    <div class="global-loading-text">Processing Submission...</div>
+    <div class="global-loading-text">Processing...</div>
   </div>
 
   <div class="container">
@@ -228,7 +268,7 @@
           id="itemDescription" 
           name="itemDescription"
           rows="3"
-          minlength="3"
+          minlength="5"
           maxlength="500"
           placeholder="Describe the item(s) in detail (brand, model, color, etc.)"
           required
@@ -381,15 +421,6 @@
         >
           ← Back to Dashboard
         </button>
-        
-        <button 
-          type="button" 
-          class="secondary-button"
-          onclick="saveDraft()"
-          id="saveDraftBtn"
-        >
-          💾 Save as Draft
-        </button>
       </div>
     </form>
 
@@ -403,14 +434,13 @@
         <li>Submit once per parcel/shipment</li>
       </ul>
     </div>
+  </div>
 
-    <!-- Drafts Section (Collapsible) -->
-    <div class="drafts-section">
-      <button onclick="toggleDrafts()" class="drafts-toggle">
-        📁 Saved Drafts (<span id="draftCount">0</span>)
-      </button>
-      <div id="draftsList" class="drafts-list" style="display: none;"></div>
-    </div>
+  <!-- Loading Overlay (legacy - kept for compatibility) -->
+  <div id="loadingOverlay" style="display: none;">
+    <div class="loading-spinner"></div>
+    <div class="loading-text">Processing...</div>
+    <div class="loading-subtext" id="loadingSubtext"></div>
   </div>
 
   <!-- Safari-specific script initialization -->
@@ -463,26 +493,28 @@
     window.addEventListener('online', updateNetworkStatus);
     window.addEventListener('offline', updateNetworkStatus);
     updateNetworkStatus();
-
-    // Global spinner functions
-    function showGlobalSpinner(show = true, message = 'Processing Submission...') {
-      const spinner = document.getElementById('globalSpinnerOverlay');
-      if (!spinner) return;
-
-      const textElement = spinner.querySelector('.global-loading-text');
-      if (textElement) {
-        textElement.textContent = message;
-      }
-
-      spinner.style.display = show ? 'flex' : 'none';
-    }
   </script>
 
   <script src="scripts/app.js"></script>
   <script>
+    // Global spinner functions
+    function showGlobalLoading(message = 'Processing...') {
+      const overlay = document.getElementById('globalLoadingOverlay');
+      const text = overlay.querySelector('.global-loading-text');
+      if (text) {
+        text.textContent = message;
+      }
+      overlay.style.display = 'flex';
+    }
+    
+    function hideGlobalLoading() {
+      const overlay = document.getElementById('globalLoadingOverlay');
+      overlay.style.display = 'none';
+    }
+
     // Form-specific initialization
     document.addEventListener('DOMContentLoaded', function() {
-      // Check session and set phone field
+      // Check session and set user info
       const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
       if (userData.phone) {
         document.getElementById('phone').value = userData.phone;
@@ -491,9 +523,6 @@
         window.location.href = 'login.html';
         return;
       }
-
-      // Load saved drafts
-      loadDrafts();
 
       // Initialize file upload preview
       const fileInput = document.getElementById('fileUpload');
@@ -510,14 +539,30 @@
       // Real-time validation
       const form = document.getElementById('declarationForm');
       if (form) {
+        // Fix: Allow price to be 0
         form.addEventListener('input', function(e) {
-          validateField(e.target);
+          if (e.target.id === 'price') {
+            // Allow 0 as valid price
+            validatePriceField(e.target);
+          } else {
+            validateField(e.target);
+          }
           updateSubmitButton();
         });
         
         form.addEventListener('change', function(e) {
-          validateField(e.target);
+          if (e.target.id === 'price') {
+            validatePriceField(e.target);
+          } else {
+            validateField(e.target);
+          }
           updateSubmitButton();
+        });
+        
+        // Override form submission to use global spinner
+        form.addEventListener('submit', function(e) {
+          e.preventDefault();
+          handleFormSubmission();
         });
       }
 
@@ -547,8 +592,8 @@
           break;
           
         case 'itemDescription':
-          isValid = value.length >= 3 && value.length <= 500;
-          errorMessage = isValid ? '' : 'Minimum 3 characters required';
+          isValid = value.length >= 5 && value.length <= 500;
+          errorMessage = isValid ? '' : '5-500 characters required';
           break;
           
         case 'quantity':
@@ -557,18 +602,37 @@
           errorMessage = isValid ? '' : 'Must be between 1 and 999';
           break;
           
-        case 'price':
-          const price = parseFloat(value);
-          isValid = !isNaN(price) && price >= 0 && price <= 99999;
-          errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
-          break;
-          
         case 'collectionPoint':
         case 'itemCategory':
           isValid = value !== '';
           errorMessage = isValid ? '' : 'This field is required';
           break;
       }
+      
+      // Update UI
+      if (isValid) {
+        field.parentElement.classList.remove('error');
+        field.parentElement.classList.add('success');
+        errorEl.textContent = '';
+      } else {
+        field.parentElement.classList.remove('success');
+        field.parentElement.classList.add('error');
+        errorEl.textContent = errorMessage;
+      }
+      
+      return isValid;
+    }
+
+    // Special validation for price field that allows 0
+    function validatePriceField(field) {
+      const value = field.value.trim();
+      const errorEl = document.getElementById(field.id + 'Error');
+      
+      if (!errorEl) return true;
+      
+      const price = parseFloat(value);
+      const isValid = !isNaN(price) && price >= 0 && price <= 99999;
+      const errorMessage = isValid ? '' : 'Must be between 0 and 99,999';
       
       // Update UI
       if (isValid) {
@@ -598,8 +662,16 @@
       
       requiredFields.forEach(fieldId => {
         const field = document.getElementById(fieldId);
-        if (field && !validateField(field)) {
-          allValid = false;
+        if (field) {
+          if (fieldId === 'price') {
+            if (!validatePriceField(field)) {
+              allValid = false;
+            }
+          } else {
+            if (!validateField(field)) {
+              allValid = false;
+            }
+          }
         }
       });
       
@@ -633,21 +705,26 @@
       
       if (starredCategories.includes(category)) {
         fileRequirement.textContent = 'Required: ';
-        fileHelp.style.color = '#ff4444';
-        document.getElementById('fileUpload').required = true;
+        if (fileHelp) fileHelp.style.color = '#ff4444';
+        const fileUpload = document.getElementById('fileUpload');
+        if (fileUpload) fileUpload.required = true;
       } else {
         fileRequirement.textContent = 'Optional: ';
-        fileHelp.style.color = '#888';
-        document.getElementById('fileUpload').required = false;
+        if (fileHelp) fileHelp.style.color = '#888';
+        const fileUpload = document.getElementById('fileUpload');
+        if (fileUpload) fileUpload.required = false;
       }
       
       updateSubmitButton();
     }
 
     // Handle file selection
-    function handleFileSelection(input) {
-      const files = Array.from(input.files);
+    function handleFileSelection(event) {
+      const fileInput = event.target;
+      const files = fileInput.files;
       const errorEl = document.getElementById('invoiceFilesError');
+      
+      if (!errorEl) return;
       
       if (files.length === 0) {
         errorEl.textContent = '';
@@ -658,157 +735,75 @@
       // Validate files
       const MAX_SIZE = 5 * 1024 * 1024; // 5MB
       let hasError = false;
+      let fileList = '';
       
-      files.forEach(file => {
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
         // Check file type
         const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        const fileType = file.type.toLowerCase();
-        
-        let isValidType = false;
-        for (const allowedType of allowedTypes) {
-          if (fileType.includes(allowedType.replace('image/', '')) || fileType === allowedType) {
-            isValidType = true;
-            break;
-          }
-        }
-        
-        if (!isValidType) {
+        if (!allowedTypes.includes(file.type)) {
           errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
           hasError = true;
-          return;
+          break;
         }
         
         // Check file size
         if (file.size > MAX_SIZE) {
           errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
           hasError = true;
-          return;
-        }
-      });
-      
-      if (hasError) {
-        input.value = '';
-        updateSubmitButton();
-        return;
-      }
-      
-      // Show file count
-      errorEl.textContent = `${files.length} file(s) selected`;
-      errorEl.className = 'success-message';
-      
-      updateSubmitButton();
-    }
-
-    // Save form as draft
-    function saveDraft() {
-      const form = document.getElementById('declarationForm');
-      const formData = new FormData(form);
-      const draft = {};
-      
-      // Convert FormData to object
-      for (let [key, value] of formData.entries()) {
-        if (key !== 'files') {
-          draft[key] = value;
-        }
-      }
-      
-      // Get files info
-      const files = document.getElementById('fileUpload')?.files || [];
-      if (files.length > 0) {
-        draft.filesCount = files.length;
-        draft.filesInfo = Array.from(files).map(file => ({
-          name: file.name,
-          size: file.size,
-          type: file.type
-        }));
-      }
-      
-      // Add timestamp
-      draft.timestamp = new Date().toISOString();
-      draft.id = 'draft_' + Date.now();
-      
-      // Save to localStorage
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.push(draft);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      
-      // Show success message
-      showMessage('Draft saved successfully!', 'success');
-      loadDrafts();
-    }
-
-    // Load saved drafts
-    function loadDrafts() {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draftCount = document.getElementById('draftCount');
-      const draftsList = document.getElementById('draftsList');
-      
-      if (draftCount) draftCount.textContent = drafts.length;
-      
-      if (draftsList) {
-        if (drafts.length === 0) {
-          draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
-          return;
+          break;
         }
         
-        let html = '<div class="drafts-container">';
-        drafts.forEach((draft, index) => {
-          html += `
-            <div class="draft-item">
-              <div class="draft-info">
-                <strong>${draft.trackingNumber || 'Untitled'}</strong>
-                <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
-              </div>
-              <div class="draft-actions">
-                <button onclick="loadDraft(${index})" class="small-btn">Load</button>
-                <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
-              </div>
-            </div>
-          `;
-        });
-        html += '</div>';
-        draftsList.innerHTML = html;
+        fileList += `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} MB), `;
+      }
+      
+      if (hasError) {
+        fileInput.value = '';
+        errorEl.style.color = '#ff4444';
+        updateSubmitButton();
+      } else if (files.length > 0) {
+        errorEl.textContent = `${files.length} file(s) selected: ${fileList.slice(0, -2)}`;
+        errorEl.style.color = '#00C851';
+        updateSubmitButton();
+      } else {
+        errorEl.textContent = '';
+        updateSubmitButton();
       }
     }
 
-    // Load draft into form
-    function loadDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      const draft = drafts[index];
+    // Handle form submission with global spinner
+    async function handleFormSubmission() {
+      const form = document.getElementById('declarationForm');
+      if (!form) return;
       
-      if (!draft) return;
+      // Show global spinner
+      showGlobalLoading('Submitting parcel declaration...');
       
-      // Populate form fields
-      Object.keys(draft).forEach(key => {
-        if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
-          const field = document.getElementById(key);
-          if (field) field.value = draft[key];
+      // Disable submit button
+      const submitBtn = document.getElementById('submitBtn');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        const submitText = submitBtn.querySelector('#submitText');
+        if (submitText) {
+          submitText.textContent = 'Processing...';
         }
-      });
+      }
       
-      // Update UI
-      checkCategoryRequirements();
-      updateSubmitButton();
-      
-      showMessage('Draft loaded!', 'success');
-    }
-
-    // Delete draft
-    function deleteDraft(index) {
-      const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-      drafts.splice(index, 1);
-      localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-      loadDrafts();
-      showMessage('Draft deleted', 'info');
-    }
-
-    // Toggle drafts visibility
-    function toggleDrafts() {
-      const draftsList = document.getElementById('draftsList');
-      if (draftsList.style.display === 'none') {
-        draftsList.style.display = 'block';
-      } else {
-        draftsList.style.display = 'none';
+      try {
+        // Trigger the existing submission handler from app.js
+        // This will use the handleParcelSubmission function from app.js
+        // We need to create a submit event to trigger it
+        const submitEvent = new Event('submit', { cancelable: true });
+        form.dispatchEvent(submitEvent);
+        
+      } catch (error) {
+        console.error('Submission error:', error);
+        showError(error.message || 'Submission failed');
+      } finally {
+        // Note: The spinner will be hidden by the handleParcelSubmission function
+        // when it calls showLoading(false)
+        // We need to override the showLoading function to use our global spinner
       }
     }
 
@@ -839,34 +834,32 @@
       }, 5000);
     }
 
-    // Override form submission to use global spinner
-    document.addEventListener('DOMContentLoaded', function() {
-      const form = document.getElementById('declarationForm');
-      if (form) {
-        // Remove any existing submit handlers
-        form.onsubmit = null;
-        
-        // Add new submit handler with global spinner
-        form.addEventListener('submit', function(e) {
-          e.preventDefault();
-          
-          // Show global spinner
-          showGlobalSpinner(true, 'Submitting parcel declaration...');
-          
-          // Call the existing handleParcelSubmission from app.js
-          if (typeof handleParcelSubmission === 'function') {
-            handleParcelSubmission(e).finally(() => {
-              // Hide global spinner after submission completes
-              showGlobalSpinner(false);
-            });
-          } else {
-            // Fallback if handleParcelSubmission is not defined
-            console.error('handleParcelSubmission function not found');
-            showGlobalSpinner(false);
+    // Override the showLoading function from app.js to use global spinner
+    // This is called by the handleParcelSubmission function in app.js
+    if (typeof showLoading === 'function') {
+      // Save the original function
+      const originalShowLoading = showLoading;
+      
+      // Override it
+      window.showLoading = function(show = true, message = 'Processing...') {
+        if (show) {
+          showGlobalLoading(message);
+        } else {
+          hideGlobalLoading();
+          // Re-enable submit button
+          const submitBtn = document.getElementById('submitBtn');
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            const submitText = submitBtn.querySelector('#submitText');
+            if (submitText) {
+              submitText.textContent = 'Submit Declaration';
+            }
           }
-        });
-      }
-    });
+        }
+        // Also call original for compatibility
+        originalShowLoading(show, message);
+      };
+    }
   </script>
 </body>
 </html>
