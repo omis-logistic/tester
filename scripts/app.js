@@ -1459,8 +1459,8 @@ function validateField(field) {
       break;
       
     case 'itemDescription':
-      isValid = value.length >= 5 && value.length <= 500;
-      message = isValid ? '' : '5-500 characters required';
+      isValid = value.length >= 3 && value.length <= 500;
+      message = isValid ? '' : '3-500 characters required';
       break;
       
     case 'quantity':
