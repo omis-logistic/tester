@@ -1,3 +1,4 @@
+//scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
   GAS_URL: 'https://script.google.com/macros/s/AKfycbxF6HepFTI8tTFdlIrxKav8Iy2wCEy3MLvkIyTga-lqSeZc6HCIvIeeu4kt7kOi0Ge9/exec',
@@ -975,8 +976,8 @@ function validateName(inputElement) {
 
 function validateDescription(inputElement) {
   const value = inputElement?.value?.trim() || '';
-  const isValid = value.length >= 5;
-  showError(isValid ? '' : 'Minimum 5 characters required', 'itemDescriptionError');
+  const isValid = value.length >= 3;
+  showError(isValid ? '' : 'Minimum 3 characters required', 'itemDescriptionError');
   return isValid;
 }
 
@@ -989,7 +990,7 @@ function validateQuantity(inputElement) {
 
 function validatePrice(inputElement) {
   const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value > 0 && value < 100000;
+  const isValid = !isNaN(value) && value >= 0 && value < 100000; 
   showError(isValid ? '' : 'Valid price (0-100000) required', 'priceError');
   return isValid;
 }
