@@ -604,7 +604,7 @@ function base64ToBlob(base64, mimeType) {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  showLoading(true, "Submitting parcel declaration...");
+  showLoading(true, "Validating form...");
 
   try {
     // Get form data
@@ -624,79 +624,130 @@ async function handleParcelSubmission(e) {
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,  // This allows 0
+        price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
         itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
     
-    // Validate required fields - FIXED VERSION
-    const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
-    for (const field of requiredFields) {
-      const value = payload.data[field];
-      
-      // Special handling for price field (0 is valid)
-      if (field === 'price') {
-        if (value === undefined || value === null || isNaN(value)) {
-          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-        }
-      }
-      // Special handling for quantity field
-      else if (field === 'quantity') {
-        if (isNaN(value) || value < 1) {
-          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-        }
-      }
-      // Special handling for item description
-      else if (field === 'itemDescription') {
-        if (!value || value.trim().length < 3) {
-          throw new Error('Item description must be at least 3 characters');
-        }
-      }
-      // For other fields, check if they're not empty
-      else if (!value) {
-        throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
-      }
-    }
-
-    // Validate item description length (minimum 3 characters)
-    if (payload.data.itemDescription.trim().length < 3) {
-      throw new Error('Item description must be at least 3 characters');
-    }
-
-    // Handle file uploads
-    const fileInput = document.getElementById('fileUpload');
-    const category = payload.data.itemCategory;
+    // Collect validation errors
+    const validationErrors = [];
     
+    // Validate required fields
+    if (!payload.data.trackingNumber || !/^[A-Za-z0-9\-]{5,}$/.test(payload.data.trackingNumber)) {
+      validationErrors.push({
+        message: 'Tracking number must be at least 5 characters (letters, numbers, hyphens)',
+        fieldId: 'trackingNumber'
+      });
+    }
+    
+    if (!payload.data.nameOnParcel || payload.data.nameOnParcel.length < 2) {
+      validationErrors.push({
+        message: 'Name on parcel must be at least 2 characters',
+        fieldId: 'nameOnParcel'
+      });
+    }
+    
+    if (!payload.data.itemDescription || payload.data.itemDescription.trim().length < 3) {
+      validationErrors.push({
+        message: 'Item description must be at least 3 characters',
+        fieldId: 'itemDescription'
+      });
+    }
+    
+    if (isNaN(payload.data.quantity) || payload.data.quantity < 1 || payload.data.quantity > 999) {
+      validationErrors.push({
+        message: 'Quantity must be between 1 and 999',
+        fieldId: 'quantity'
+      });
+    }
+    
+    if (isNaN(payload.data.price) || payload.data.price < 0) {
+      validationErrors.push({
+        message: 'Price must be 0 or greater',
+        fieldId: 'price'
+      });
+    }
+    
+    if (!payload.data.collectionPoint) {
+      validationErrors.push({
+        message: 'Please select a collection point',
+        fieldId: 'collectionPoint'
+      });
+    }
+    
+    if (!payload.data.itemCategory) {
+      validationErrors.push({
+        message: 'Please select an item category',
+        fieldId: 'itemCategory'
+      });
+    }
+    
+    // Validate file requirements for starred categories
+    const category = payload.data.itemCategory;
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
       '*Oil Ointment', '*Supplement', '*Others'
     ];
 
-    // Validate file requirements
+    const fileInput = document.getElementById('fileUpload');
+    const files = fileInput?.files || [];
+    
     if (starredCategories.includes(category)) {
-      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        throw new Error('Invoice/document upload is required for this category');
+      if (files.length === 0) {
+        validationErrors.push({
+          message: 'Invoice/document upload is required for this category',
+          fieldId: 'fileUpload'
+        });
+      } else {
+        // Validate each file
+        for (const file of files) {
+          if (file.size > CONFIG.MAX_FILE_SIZE) {
+            validationErrors.push({
+              message: `File "${file.name}" exceeds 5MB limit`,
+              fieldId: 'fileUpload'
+            });
+            break;
+          }
+          
+          if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+            validationErrors.push({
+              message: `File "${file.name}" must be JPG, PNG, or PDF`,
+              fieldId: 'fileUpload'
+            });
+            break;
+          }
+        }
+        
+        if (files.length > CONFIG.MAX_FILES) {
+          validationErrors.push({
+            message: `Maximum ${CONFIG.MAX_FILES} files allowed`,
+            fieldId: 'fileUpload'
+          });
+        }
       }
+    }
+    
+    // If there are validation errors, show modal and stop submission
+    if (validationErrors.length > 0) {
+      showLoading(false);
       
-      // Process files
-      const files = Array.from(fileInput.files);
+      // Small delay to ensure loading is hidden
+      setTimeout(() => {
+        showValidationModal(validationErrors);
+        
+        // Log errors for debugging
+        console.log('Validation errors:', validationErrors);
+      }, 100);
       
-      if (files.length > CONFIG.MAX_FILES) {
-        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
-      }
+      return;
+    }
 
+    // Process files if validation passed
+    if (files.length > 0) {
       for (const file of files) {
-        if (file.size > CONFIG.MAX_FILE_SIZE) {
-          throw new Error(`File "${file.name}" exceeds 5MB limit`);
-        }
-        
-        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-          throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
-        }
-        
         const base64Data = await readFileAsBase64(file);
         payload.files.push({
           name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
@@ -739,33 +790,13 @@ async function handleParcelSubmission(e) {
     console.error('Submission error:', error);
     
     // Show user-friendly error message
-    if (error.message.includes('Price must be')) {
-      showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
-    } else if (error.message.includes('Item description must be')) {
-      showError('❌ Item description must be at least 3 characters.');
-    } else if (error.message.includes('Invoice/document upload')) {
-      showError('❌ Invoice/document upload is required for starred categories.');
-    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
-      showError('⚠️ Network connection issue. Please check your internet and try again.');
-    } else if (error.message.includes('timeout')) {
-      showError('⚠️ Submission timeout. The request took too long. Please try again.');
-    } else if (error.message.includes('Session expired')) {
+    if (error.message.includes('Session expired')) {
       showError('❌ Session expired. Please login again.');
       setTimeout(() => {
         handleLogout();
       }, 2000);
     } else {
       showError(`❌ ${error.message}`);
-    }
-    
-    // Only offer to save as draft for network/timeout errors, not validation errors
-    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
-        !error.message.includes('Price must be') && 
-        !error.message.includes('Item description must be') &&
-        !error.message.includes('Invoice/document upload')) {
-      if (confirm('Would you like to save this form as a draft?')) {
-        saveFormAsDraft();
-      }
     }
     
   } finally {
@@ -1719,6 +1750,168 @@ function deleteDraft(index) {
   } catch (error) {
     console.error('Failed to delete draft:', error);
     showError('Failed to delete draft');
+  }
+}
+
+// ================= VALIDATION MODAL =================
+function showValidationModal(errors) {
+  console.log('Showing validation modal with errors:', errors);
+  
+  // Get or create modal elements
+  let modal = document.getElementById('validationModal');
+  let errorList = document.getElementById('errorList');
+  let okButton = document.getElementById('modalOkButton');
+  
+  if (!modal) {
+    // Create modal if it doesn't exist
+    modal = document.createElement('div');
+    modal.id = 'validationModal';
+    modal.className = 'modal';
+    modal.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10001;
+    `;
+    
+    modal.innerHTML = `
+      <div style="background: rgba(0, 0, 0, 0.95); border: 2px solid #ff4444; border-radius: 10px; padding: 25px; max-width: 500px; width: 90%; color: white; box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);">
+        <div style="display: flex; align-items: center; margin-bottom: 20px;">
+          <div style="background: #ff4444; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 20px;">
+            ⚠️
+          </div>
+          <h2 style="margin: 0; color: #ff4444;">Validation Error</h2>
+        </div>
+        
+        <div style="margin-bottom: 25px;">
+          <p style="margin-bottom: 15px; color: #ffcc00;">Please correct the following errors:</p>
+          <ul id="errorList" style="list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; border: 1px solid #444; border-radius: 5px; padding: 10px;">
+          </ul>
+        </div>
+        
+        <div style="text-align: right;">
+          <button id="modalOkButton" style="background: #ff4444; color: white; border: none; padding: 10px 25px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
+            OK - I'll Fix Them
+          </button>
+        </div>
+      </div>
+    `;
+    
+    document.body.appendChild(modal);
+    errorList = document.getElementById('errorList');
+    okButton = document.getElementById('modalOkButton');
+  }
+  
+  // Clear previous errors
+  if (errorList) {
+    errorList.innerHTML = '';
+    
+    // Add each error to the list
+    errors.forEach((error, index) => {
+      const li = document.createElement('li');
+      
+      // Create error message
+      const errorText = document.createElement('span');
+      errorText.textContent = error.message;
+      errorText.style.flex = '1';
+      
+      // Create "Go to field" link if fieldId exists
+      if (error.fieldId) {
+        const gotoLink = document.createElement('a');
+        gotoLink.textContent = 'Go to field →';
+        gotoLink.href = '#';
+        gotoLink.style.marginLeft = '10px';
+        gotoLink.style.fontSize = '14px';
+        
+        gotoLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          closeValidationModal();
+          scrollToAndFocusField(error.fieldId);
+        });
+        
+        li.appendChild(errorText);
+        li.appendChild(gotoLink);
+      } else {
+        li.textContent = error.message;
+      }
+      
+      li.style.cssText = `
+        padding: 10px;
+        margin: 5px 0;
+        background: rgba(255, 68, 68, 0.1);
+        border-left: 3px solid #ff4444;
+        border-radius: 3px;
+        display: flex;
+        align-items: center;
+      `;
+      
+      li.insertBefore(document.createTextNode('❌ '), li.firstChild);
+      errorList.appendChild(li);
+    });
+  }
+  
+  // Setup OK button
+  if (okButton) {
+    okButton.onclick = closeValidationModal;
+  }
+  
+  // Show the modal
+  modal.style.display = 'flex';
+  
+  // Add escape key handler
+  const escapeHandler = (e) => {
+    if (e.key === 'Escape') {
+      closeValidationModal();
+      document.removeEventListener('keydown', escapeHandler);
+    }
+  };
+  
+  document.addEventListener('keydown', escapeHandler);
+  
+  // Add click outside to close
+  modal.onclick = (e) => {
+    if (e.target === modal) {
+      closeValidationModal();
+    }
+  };
+}
+
+function closeValidationModal() {
+  const modal = document.getElementById('validationModal');
+  if (modal) {
+    modal.style.display = 'none';
+  }
+  
+  // Re-enable scrolling
+  document.body.style.overflow = 'auto';
+}
+
+function scrollToAndFocusField(fieldId) {
+  const field = document.getElementById(fieldId);
+  if (field) {
+    // Scroll to the field
+    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    
+    // Highlight the field
+    field.style.border = '2px solid #ff4444';
+    field.style.boxShadow = '0 0 10px rgba(255, 68, 68, 0.5)';
+    field.style.backgroundColor = 'rgba(255, 68, 68, 0.1)';
+    
+    // Focus on the field
+    field.focus();
+    
+    // Remove highlighting after 3 seconds
+    setTimeout(() => {
+      field.style.border = '';
+      field.style.boxShadow = '';
+      field.style.backgroundColor = '';
+    }, 3000);
   }
 }
 
