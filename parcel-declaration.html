@@ -251,7 +251,7 @@
             min="1"
             max="999"
             step="1"
-            placeholder="1"
+            placeholder="Total parcel quantity"
             required
           >
           <span id="quantityError" class="error-message"></span>
@@ -472,7 +472,6 @@
 <script>
   // Form-specific initialization
   document.addEventListener('DOMContentLoaded', function() {
-    setupRealTimeValidation();
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
@@ -956,135 +955,40 @@
     }, 5000);
   }
 
-  // Real-time field validation with visual feedback
-function setupRealTimeValidation() {
-  const form = document.getElementById('declarationForm');
-  if (!form) return;
-  
-  // Field mapping for validation rules
-  const fieldRules = {
-    trackingNumber: {
-      validate: (value) => /^[A-Za-z0-9\-]{5,}$/.test(value),
-      message: 'Minimum 5 characters (letters, numbers, hyphens)'
-    },
-    nameOnParcel: {
-      validate: (value) => value && value.length >= 2,
-      message: 'Minimum 2 characters required'
-    },
-    itemDescription: {
-      validate: (value) => value && value.trim().length >= 3,
-      message: 'Minimum 3 characters required'
-    },
-    quantity: {
-      validate: (value) => {
-        const num = parseInt(value);
-        return !isNaN(num) && num >= 1 && num <= 999;
-      },
-      message: 'Must be 1-999'
-    },
-    price: {
-      validate: (value) => {
-        const num = parseFloat(value);
-        return !isNaN(num) && num >= 0;
-      },
-      message: 'Must be 0 or greater'
-    }
-  };
-  
-  // Add input event listeners
-  Object.keys(fieldRules).forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (field) {
-      const errorElement = document.getElementById(`${fieldId}Error`) || createErrorElementForField(fieldId);
-      
-      field.addEventListener('blur', () => {
-        const rule = fieldRules[fieldId];
-        const isValid = rule.validate(field.value);
-        
-        if (field.value && !isValid) {
-          field.style.borderColor = '#ff4444';
-          field.style.boxShadow = '0 0 5px rgba(255, 68, 68, 0.5)';
-          errorElement.textContent = rule.message;
-          errorElement.style.display = 'block';
-        } else {
-          field.style.borderColor = '#00C851';
-          errorElement.style.display = 'none';
-        }
-      });
-      
-      field.addEventListener('input', () => {
-        errorElement.style.display = 'none';
-        field.style.borderColor = '';
-        field.style.boxShadow = '';
-      });
-    }
-  });
-  
-  // For dropdowns
-  ['collectionPoint', 'itemCategory'].forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (field) {
-      const errorElement = document.getElementById(`${fieldId}Error`) || createErrorElementForField(fieldId);
-      
-      field.addEventListener('change', () => {
-        if (!field.value) {
-          field.style.borderColor = '#ff4444';
-          errorElement.textContent = 'This field is required';
-          errorElement.style.display = 'block';
-        } else {
-          field.style.borderColor = '#00C851';
-          errorElement.style.display = 'none';
-        }
-      });
-    }
-  });
+// Add to the existing inline script
+function showValidationModal(errors) {
+  // This function is now in app.js, but we expose it globally
+  if (window.showValidationModal) {
+    window.showValidationModal(errors);
+  }
 }
 
-function createErrorElementForField(fieldId) {
-  const field = document.getElementById(fieldId);
-  if (!field) return null;
-  
-  let errorElement = document.getElementById(`${fieldId}Error`);
-  if (!errorElement) {
-    errorElement = document.createElement('div');
-    errorElement.id = `${fieldId}Error`;
-    errorElement.className = 'field-error';
-    errorElement.style.cssText = `
-      color: #ff4444;
-      font-size: 0.85em;
-      margin-top: 5px;
-      display: none;
-    `;
-    
-    // Insert after the field
-    field.parentNode.insertBefore(errorElement, field.nextSibling);
+function closeValidationModal() {
+  if (window.closeValidationModal) {
+    window.closeValidationModal();
   }
-  
-  return errorElement;
 }
+
+// Make functions globally available
+window.showValidationModal = showValidationModal;
+window.closeValidationModal = closeValidationModal;
+  
 </script>
 
 <!-- Validation Error Modal -->
 <div id="validationModal" class="modal" style="display: none;">
-  <div class="modal-content" style="background: rgba(0, 0, 0, 0.95); border: 2px solid #ff4444; border-radius: 10px; padding: 25px; max-width: 500px; width: 90%; margin: 10% auto; color: white; box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);">
-    <div style="display: flex; align-items: center; margin-bottom: 20px;">
-      <div style="background: #ff4444; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 20px;">
-        ⚠️
-      </div>
-      <h2 style="margin: 0; color: #ff4444;">Validation Error</h2>
+  <div class="modal-overlay"></div>
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>❌ Missing/Incorrect Information</h3>
+      <button type="button" class="modal-close" onclick="closeValidationModal()">×</button>
     </div>
-    
-    <div style="margin-bottom: 25px;">
-      <p style="margin-bottom: 15px; color: #ffcc00;">Please correct the following errors:</p>
-      <ul id="errorList" style="list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; border: 1px solid #444; border-radius: 5px; padding: 10px;">
-        <!-- Error items will be inserted here -->
-      </ul>
+    <div class="modal-body">
+      <p>Please correct the following fields:</p>
+      <ul id="errorList" class="error-list"></ul>
     </div>
-    
-    <div style="text-align: right;">
-      <button id="modalOkButton" style="background: #ff4444; color: white; border: none; padding: 10px 25px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
-        OK - I'll Fix Them
-      </button>
+    <div class="modal-footer">
+      <button type="button" class="gold-button" onclick="closeValidationModal()">OK</button>
     </div>
   </div>
 </div>
@@ -1097,77 +1001,128 @@ function createErrorElementForField(fieldId) {
     left: 0;
     width: 100%;
     height: 100%;
-    background: rgba(0, 0, 0, 0.85);
-    display: flex;
-    justify-content: center;
-    align-items: flex-start;
     z-index: 10001;
-    padding-top: 50px;
-    overflow-y: auto;
   }
-  
+
+  .modal-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+  }
+
   .modal-content {
-    animation: modalSlideIn 0.3s ease-out;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    background: #1e1e1e;
+    border: 2px solid #ff4444;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
   }
-  
-  @keyframes modalSlideIn {
-    from {
-      opacity: 0;
-      transform: translateY(-30px);
-    }
-    to {
-      opacity: 1;
-      transform: translateY(0);
-    }
+
+  .modal-header {
+    padding: 20px;
+    border-bottom: 1px solid #333;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: #2a1a1a;
   }
-  
-  #errorList li {
-    padding: 10px;
-    margin: 5px 0;
+
+  .modal-header h3 {
+    color: #ff4444;
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .modal-close {
+    background: none;
+    border: none;
+    color: #aaa;
+    font-size: 2rem;
+    cursor: pointer;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .modal-close:hover {
+    color: white;
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-body p {
+    color: #ddd;
+    margin-bottom: 15px;
+  }
+
+  .error-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  .error-list li {
+    padding: 10px 15px;
+    margin-bottom: 8px;
     background: rgba(255, 68, 68, 0.1);
-    border-left: 3px solid #ff4444;
-    border-radius: 3px;
+    border-left: 4px solid #ff4444;
+    border-radius: 4px;
+    color: #ff9999;
     display: flex;
     align-items: center;
   }
-  
-  #errorList li:before {
-    content: "❌";
-    margin-right: 10px;
-    font-size: 14px;
-  }
-  
-  #errorList li a {
-    color: #ffcc00;
-    text-decoration: underline;
-    cursor: pointer;
-    margin-left: auto;
-    font-size: 14px;
-  }
-  
-  #errorList li a:hover {
+
+  .error-list li:before {
+    content: "•";
     color: #ff4444;
+    font-weight: bold;
+    margin-right: 10px;
+    font-size: 1.5rem;
   }
-  
-  #modalOkButton:hover {
-    background: #ff3333;
-    transform: translateY(-2px);
-    box-shadow: 0 5px 15px rgba(255, 68, 68, 0.4);
-    transition: all 0.3s ease;
+
+  .modal-footer {
+    padding: 15px 20px;
+    border-top: 1px solid #333;
+    text-align: right;
+    background: #2a2a2a;
   }
-  
-  #errorList::-webkit-scrollbar {
-    width: 8px;
+
+  .modal-footer button {
+    min-width: 100px;
   }
-  
-  #errorList::-webkit-scrollbar-track {
-    background: rgba(255, 255, 255, 0.1);
-    border-radius: 4px;
+
+  /* Highlight invalid fields */
+  .field-error {
+    border-color: #ff4444 !important;
+    background: rgba(255, 68, 68, 0.1) !important;
+    animation: shake 0.5s ease-in-out;
   }
-  
-  #errorList::-webkit-scrollbar-thumb {
-    background: #ff4444;
-    border-radius: 4px;
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+  }
+
+  /* Disable background scrolling when modal is open */
+  body.modal-open {
+    overflow: hidden;
   }
 </style>
   
