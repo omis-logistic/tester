@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mx0wkMfoWapxqFWx_gsW9Yu4HI0RGM9Xgi3Or6BzF9jYBLNIuuawFb7RiAyJD149/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9mBpctKXOUc6CvbcGNimcyyejc6PMRLwUfToiTRPyCk2WRCbFtHuxwCM/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbympMQBvVvPBpmkJUF97dS4yt01D4SCFH6akprgCDOgHUQ5Z4rY1kWFulVnF4uzOx3t/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzZZxyeXddesKkpI-4NXcs_teemitbJl4MpeLGfBiH-SCENHVllX-ZhRB0wgHc1cFJAMw/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -602,9 +602,7 @@ function base64ToBlob(base64, mimeType) {
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
 async function handleParcelSubmission(e) {
-  // Note: Validation is now handled in the HTML file via validateAndSubmitForm
-  // This function is called only after validation passes
-  
+  e.preventDefault();
   const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
@@ -633,9 +631,40 @@ async function handleParcelSubmission(e) {
       files: []
     };
     
-    // Note: Field validation is already done in the HTML
-    // We only need to handle file validation here
-    
+    // Validate required fields - FIXED VERSION
+    const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
+    for (const field of requiredFields) {
+      const value = payload.data[field];
+      
+      // Special handling for price field (0 is valid)
+      if (field === 'price') {
+        if (value === undefined || value === null || isNaN(value)) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for quantity field
+      else if (field === 'quantity') {
+        if (isNaN(value) || value < 1) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for item description
+      else if (field === 'itemDescription') {
+        if (!value || value.trim().length < 3) {
+          throw new Error('Item description must be at least 3 characters');
+        }
+      }
+      // For other fields, check if they're not empty
+      else if (!value) {
+        throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+      }
+    }
+
+    // Validate item description length (minimum 3 characters)
+    if (payload.data.itemDescription.trim().length < 3) {
+      throw new Error('Item description must be at least 3 characters');
+    }
+
     // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
@@ -710,8 +739,13 @@ async function handleParcelSubmission(e) {
     console.error('Submission error:', error);
     
     // Show user-friendly error message
-    // These are server-side or file validation errors that passed initial validation
-    if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+    if (error.message.includes('Price must be')) {
+      showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
+    } else if (error.message.includes('Item description must be')) {
+      showError('❌ Item description must be at least 3 characters.');
+    } else if (error.message.includes('Invoice/document upload')) {
+      showError('❌ Invoice/document upload is required for starred categories.');
+    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
       showError('⚠️ Network connection issue. Please check your internet and try again.');
     } else if (error.message.includes('timeout')) {
       showError('⚠️ Submission timeout. The request took too long. Please try again.');
@@ -724,8 +758,11 @@ async function handleParcelSubmission(e) {
       showError(`❌ ${error.message}`);
     }
     
-    // Only offer to save as draft for network/timeout errors
-    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch'))) {
+    // Only offer to save as draft for network/timeout errors, not validation errors
+    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
+        !error.message.includes('Price must be') && 
+        !error.message.includes('Item description must be') &&
+        !error.message.includes('Invoice/document upload')) {
       if (confirm('Would you like to save this form as a draft?')) {
         saveFormAsDraft();
       }
@@ -735,7 +772,6 @@ async function handleParcelSubmission(e) {
     showLoading(false);
   }
 }
-
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
@@ -939,7 +975,6 @@ function isSafariBrowser() {
 }
 
 // ================= VALIDATION CORE =================
-
 // ================= REAL-TIME VALIDATION SYSTEM =================
 function initRealTimeValidation() {
   console.log('Initializing real-time validation...');
@@ -2521,7 +2556,6 @@ window.deleteDraft = deleteDraft;
 window.retryFailedSubmissions = retryFailedSubmissions;
 window.showRegistration = () => safeRedirect('register.html');
 window.showForgotPassword = () => safeRedirect('forgot-password.html');
-window.handleParcelSubmission = handleParcelSubmission;
 
 // Safari-specific functions
 window.isSafariBrowser = isSafariBrowser;
@@ -2546,24 +2580,3 @@ function debugValidation() {
   const submitBtn = document.getElementById('submitBtn');
   console.log('Submit button disabled?', submitBtn.disabled);
 }
-
-// Field validation functions for HTML use
-window.validateField = validateField;
-window.validateFiles = validateFiles;
-window.updateSubmitButton = updateSubmitButton;
-window.checkCategoryRequirements = checkCategoryRequirements;
-window.saveFormAsDraft = saveFormAsDraft;
-
-// Validation utility functions
-window.validateTrackingNumberInput = validateTrackingNumberInput;
-window.validateName = validateName;
-window.validateDescription = validateDescription;
-window.validateQuantity = validateQuantity;
-window.validatePrice = validatePrice;
-window.validateCollectionPoint = validateCollectionPoint;
-window.validateCategory = validateCategory;
-window.validateInvoiceFiles = validateInvoiceFiles;
-window.validateParcelPhone = validateParcelPhone;
-window.checkAllFields = checkAllFields;
-window.checkInvoiceRequirements = checkInvoiceRequirements;
-window.updateSubmitButtonState = updateSubmitButtonState;
