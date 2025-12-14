@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mx0wkMfoWapxqFWx_gsW9Yu4HI0RGM9Xgi3Or6BzF9jYBLNIuuawFb7RiAyJD149/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9mBpctKXOUc6CvbcGNimcyyejc6PMRLwUfToiTRPyCk2WRCbFtHuxwCM/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mpxqFWx_gsW9Yu4HFb7RiAyJD149/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9vb2WRCbFtHuxwCM/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -604,7 +604,17 @@ function base64ToBlob(base64, mimeType) {
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
-  showLoading(true, "Validating form...");
+  
+  // First validate all fields before showing loading
+  const validationErrors = validateAllFields();
+  
+  if (validationErrors.length > 0) {
+    showValidationModal(validationErrors);
+    return; // Stop submission if there are validation errors
+  }
+  
+  // If validation passes, continue with submission
+  showLoading(true, "Submitting parcel declaration...");
 
   try {
     // Get form data
@@ -624,130 +634,79 @@ async function handleParcelSubmission(e) {
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,
+        price: Number(formData.get('price')) || 0,  // This allows 0
         collectionPoint: formData.get('collectionPoint') || '',
         itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
     
-    // Collect validation errors
-    const validationErrors = [];
-    
-    // Validate required fields
-    if (!payload.data.trackingNumber || !/^[A-Za-z0-9\-]{5,}$/.test(payload.data.trackingNumber)) {
-      validationErrors.push({
-        message: 'Tracking number must be at least 5 characters (letters, numbers, hyphens)',
-        fieldId: 'trackingNumber'
-      });
+    // Validate required fields - FIXED VERSION
+    const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
+    for (const field of requiredFields) {
+      const value = payload.data[field];
+      
+      // Special handling for price field (0 is valid)
+      if (field === 'price') {
+        if (value === undefined || value === null || isNaN(value)) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for quantity field
+      else if (field === 'quantity') {
+        if (isNaN(value) || value < 1) {
+          throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+        }
+      }
+      // Special handling for item description
+      else if (field === 'itemDescription') {
+        if (!value || value.trim().length < 3) {
+          throw new Error('Item description must be at least 3 characters');
+        }
+      }
+      // For other fields, check if they're not empty
+      else if (!value) {
+        throw new Error(`Please fill in ${field.replace(/([A-Z])/g, ' $1').toLowerCase()}`);
+      }
     }
-    
-    if (!payload.data.nameOnParcel || payload.data.nameOnParcel.length < 2) {
-      validationErrors.push({
-        message: 'Name on parcel must be at least 2 characters',
-        fieldId: 'nameOnParcel'
-      });
+
+    // Validate item description length (minimum 3 characters)
+    if (payload.data.itemDescription.trim().length < 3) {
+      throw new Error('Item description must be at least 3 characters');
     }
-    
-    if (!payload.data.itemDescription || payload.data.itemDescription.trim().length < 3) {
-      validationErrors.push({
-        message: 'Item description must be at least 3 characters',
-        fieldId: 'itemDescription'
-      });
-    }
-    
-    if (isNaN(payload.data.quantity) || payload.data.quantity < 1 || payload.data.quantity > 999) {
-      validationErrors.push({
-        message: 'Quantity must be between 1 and 999',
-        fieldId: 'quantity'
-      });
-    }
-    
-    if (isNaN(payload.data.price) || payload.data.price < 0) {
-      validationErrors.push({
-        message: 'Price must be 0 or greater',
-        fieldId: 'price'
-      });
-    }
-    
-    if (!payload.data.collectionPoint) {
-      validationErrors.push({
-        message: 'Please select a collection point',
-        fieldId: 'collectionPoint'
-      });
-    }
-    
-    if (!payload.data.itemCategory) {
-      validationErrors.push({
-        message: 'Please select an item category',
-        fieldId: 'itemCategory'
-      });
-    }
-    
-    // Validate file requirements for starred categories
+
+    // Handle file uploads
+    const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
+    
     const starredCategories = [
       '*Books', '*Cosmetics/Skincare/Bodycare',
       '*Food Beverage/Drinks', '*Gadgets',
       '*Oil Ointment', '*Supplement', '*Others'
     ];
 
-    const fileInput = document.getElementById('fileUpload');
-    const files = fileInput?.files || [];
-    
+    // Validate file requirements
     if (starredCategories.includes(category)) {
-      if (files.length === 0) {
-        validationErrors.push({
-          message: 'Invoice/document upload is required for this category',
-          fieldId: 'fileUpload'
-        });
-      } else {
-        // Validate each file
-        for (const file of files) {
-          if (file.size > CONFIG.MAX_FILE_SIZE) {
-            validationErrors.push({
-              message: `File "${file.name}" exceeds 5MB limit`,
-              fieldId: 'fileUpload'
-            });
-            break;
-          }
-          
-          if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-            validationErrors.push({
-              message: `File "${file.name}" must be JPG, PNG, or PDF`,
-              fieldId: 'fileUpload'
-            });
-            break;
-          }
-        }
-        
-        if (files.length > CONFIG.MAX_FILES) {
-          validationErrors.push({
-            message: `Maximum ${CONFIG.MAX_FILES} files allowed`,
-            fieldId: 'fileUpload'
-          });
-        }
+      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+        throw new Error('Invoice/document upload is required for this category');
       }
-    }
-    
-    // If there are validation errors, show modal and stop submission
-    if (validationErrors.length > 0) {
-      showLoading(false);
       
-      // Small delay to ensure loading is hidden
-      setTimeout(() => {
-        showValidationModal(validationErrors);
-        
-        // Log errors for debugging
-        console.log('Validation errors:', validationErrors);
-      }, 100);
+      // Process files
+      const files = Array.from(fileInput.files);
       
-      return;
-    }
+      if (files.length > CONFIG.MAX_FILES) {
+        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+      }
 
-    // Process files if validation passed
-    if (files.length > 0) {
       for (const file of files) {
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          throw new Error(`File "${file.name}" exceeds 5MB limit`);
+        }
+        
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
+        }
+        
         const base64Data = await readFileAsBase64(file);
         payload.files.push({
           name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
@@ -790,7 +749,17 @@ async function handleParcelSubmission(e) {
     console.error('Submission error:', error);
     
     // Show user-friendly error message
-    if (error.message.includes('Session expired')) {
+    if (error.message.includes('Price must be')) {
+      showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
+    } else if (error.message.includes('Item description must be')) {
+      showError('❌ Item description must be at least 3 characters.');
+    } else if (error.message.includes('Invoice/document upload')) {
+      showError('❌ Invoice/document upload is required for starred categories.');
+    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      showError('⚠️ Network connection issue. Please check your internet and try again.');
+    } else if (error.message.includes('timeout')) {
+      showError('⚠️ Submission timeout. The request took too long. Please try again.');
+    } else if (error.message.includes('Session expired')) {
       showError('❌ Session expired. Please login again.');
       setTimeout(() => {
         handleLogout();
@@ -799,10 +768,119 @@ async function handleParcelSubmission(e) {
       showError(`❌ ${error.message}`);
     }
     
+    // Only offer to save as draft for network/timeout errors, not validation errors
+    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
+        !error.message.includes('Price must be') && 
+        !error.message.includes('Item description must be') &&
+        !error.message.includes('Invoice/document upload')) {
+      if (confirm('Would you like to save this form as a draft?')) {
+        saveFormAsDraft();
+      }
+    }
+    
   } finally {
     showLoading(false);
   }
 }
+
+// ================= COMPREHENSIVE FIELD VALIDATION =================
+function validateAllFields() {
+  const errors = [];
+  
+  // Get field values
+  const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
+  const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
+  const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
+  const quantity = document.getElementById('quantity')?.value || '';
+  const price = document.getElementById('price')?.value || '';
+  const collectionPoint = document.getElementById('collectionPoint')?.value || '';
+  const itemCategory = document.getElementById('itemCategory')?.value || '';
+  const fileInput = document.getElementById('fileUpload');
+  const files = fileInput?.files || [];
+  
+  // Check tracking number
+  if (!trackingNumber) {
+    errors.push('Tracking Number is required');
+  } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
+    errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
+  }
+  
+  // Check name on parcel
+  if (!nameOnParcel) {
+    errors.push('Name on Parcel is required');
+  } else if (nameOnParcel.length < 2) {
+    errors.push('Name on Parcel must be at least 2 characters');
+  }
+  
+  // Check item description
+  if (!itemDescription) {
+    errors.push('Item Description is required');
+  } else if (itemDescription.length < 3) {
+    errors.push('Item Description must be at least 3 characters');
+  }
+  
+  // Check quantity
+  if (!quantity) {
+    errors.push('Quantity is required');
+  } else {
+    const qtyNum = parseInt(quantity);
+    if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
+      errors.push('Quantity must be between 1 and 999');
+    }
+  }
+  
+  // Check price
+  if (!price && price !== '0') {
+    errors.push('Price is required (enter 0 if no value)');
+  } else {
+    const priceNum = parseFloat(price);
+    if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
+      errors.push('Price must be between 0 and 99,999');
+    }
+  }
+  
+  // Check collection point
+  if (!collectionPoint) {
+    errors.push('Please select a Collection Point');
+  }
+  
+  // Check item category
+  if (!itemCategory) {
+    errors.push('Please select an Item Category');
+  }
+  
+  // Check file requirements for starred categories
+  const starredCategories = [
+    '*Books', '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks', '*Gadgets',
+    '*Oil Ointment', '*Supplement', '*Others'
+  ];
+  
+  if (starredCategories.includes(itemCategory)) {
+    if (files.length === 0) {
+      errors.push('Invoice/document upload is required for this category');
+    } else {
+      // Check file count
+      if (files.length > CONFIG.MAX_FILES) {
+        errors.push(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+      }
+      
+      // Check each file
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          errors.push(`File "${file.name}" exceeds 5MB limit`);
+        }
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
+        }
+      }
+    }
+  }
+  
+  return errors;
+}
+
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
@@ -1258,6 +1336,106 @@ function initValidationListeners() {
   }
 }
 
+// ================= VALIDATION MODAL FUNCTIONS =================
+function showValidationModal(errorMessages) {
+  const modal = document.getElementById('validationModal');
+  const errorList = document.getElementById('errorList');
+  
+  if (!modal || !errorList) return;
+  
+  // Build error list
+  errorList.innerHTML = '';
+  errorMessages.forEach(error => {
+    const li = document.createElement('li');
+    li.textContent = error;
+    errorList.appendChild(li);
+  });
+  
+  // Highlight invalid fields
+  highlightInvalidFields(errorMessages);
+  
+  // Show modal and disable background
+  modal.style.display = 'block';
+  document.body.classList.add('modal-open');
+  
+  // Focus the OK button
+  setTimeout(() => {
+    const okButton = modal.querySelector('.gold-button');
+    if (okButton) okButton.focus();
+  }, 100);
+}
+
+function closeValidationModal() {
+  const modal = document.getElementById('validationModal');
+  if (modal) {
+    modal.style.display = 'none';
+    document.body.classList.remove('modal-open');
+  }
+  
+  // Remove field highlights
+  removeFieldHighlights();
+}
+
+function highlightInvalidFields(errorMessages) {
+  // First remove all existing highlights
+  removeFieldHighlights();
+  
+  // Map error messages to field IDs
+  const fieldMap = {
+    'tracking number': 'trackingNumber',
+    'name on parcel': 'nameOnParcel',
+    'item description': 'itemDescription',
+    'quantity': 'quantity',
+    'price': 'price',
+    'collection point': 'collectionPoint',
+    'item category': 'itemCategory',
+    'invoice/document': 'fileUpload'
+  };
+  
+  errorMessages.forEach(error => {
+    // Check which field this error corresponds to
+    Object.keys(fieldMap).forEach(key => {
+      if (error.toLowerCase().includes(key)) {
+        const fieldId = fieldMap[key];
+        const field = document.getElementById(fieldId);
+        if (field) {
+          field.classList.add('field-error');
+          
+          // Scroll to first invalid field
+          if (fieldId === fieldMap[Object.keys(fieldMap)[0]]) {
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }
+      }
+    });
+  });
+}
+
+function removeFieldHighlights() {
+  document.querySelectorAll('.field-error').forEach(field => {
+    field.classList.remove('field-error');
+  });
+}
+
+// Close modal when clicking outside
+document.addEventListener('DOMContentLoaded', function() {
+  const modal = document.getElementById('validationModal');
+  if (modal) {
+    modal.addEventListener('click', function(e) {
+      if (e.target === this || e.target.classList.contains('modal-overlay')) {
+        closeValidationModal();
+      }
+    });
+    
+    // Close with Escape key
+    document.addEventListener('keydown', function(e) {
+      if (e.key === 'Escape' && modal.style.display === 'block') {
+        closeValidationModal();
+      }
+    });
+  }
+});
+
 // ================= AUTHENTICATION HANDLERS =================
 async function handleRegistration() {
   if (!validateRegistrationForm()) return;
@@ -1468,7 +1646,10 @@ function setupFormSubmission() {
   }
 }
 
+// ================= UPDATE EXISTING FUNCTIONS =================
+// Update the existing validateField function to work with the modal
 function validateField(field) {
+  // Your existing validateField function remains, but we'll ensure it works with the modal
   const value = field.value.trim();
   const errorId = field.id + 'Error';
   const errorElement = document.getElementById(errorId);
@@ -1524,6 +1705,16 @@ function validateField(field) {
   
   return isValid;
 }
+
+// Add validation on form submit
+document.addEventListener('DOMContentLoaded', function() {
+  const form = document.getElementById('declarationForm');
+  if (form) {
+    // Replace the existing submit handler with our enhanced one
+    form.removeEventListener('submit', handleParcelSubmission);
+    form.addEventListener('submit', handleParcelSubmission);
+  }
+});
 
 function validateFiles(fileInput) {
   const files = Array.from(fileInput.files);
@@ -1753,167 +1944,7 @@ function deleteDraft(index) {
   }
 }
 
-// ================= VALIDATION MODAL =================
-function showValidationModal(errors) {
-  console.log('Showing validation modal with errors:', errors);
-  
-  // Get or create modal elements
-  let modal = document.getElementById('validationModal');
-  let errorList = document.getElementById('errorList');
-  let okButton = document.getElementById('modalOkButton');
-  
-  if (!modal) {
-    // Create modal if it doesn't exist
-    modal = document.createElement('div');
-    modal.id = 'validationModal';
-    modal.className = 'modal';
-    modal.style.cssText = `
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.85);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 10001;
-    `;
-    
-    modal.innerHTML = `
-      <div style="background: rgba(0, 0, 0, 0.95); border: 2px solid #ff4444; border-radius: 10px; padding: 25px; max-width: 500px; width: 90%; color: white; box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);">
-        <div style="display: flex; align-items: center; margin-bottom: 20px;">
-          <div style="background: #ff4444; width: 40px; height: 40px; border-radius: 50%; display: flex; align-items: center; justify-content: center; margin-right: 15px; font-size: 20px;">
-            ⚠️
-          </div>
-          <h2 style="margin: 0; color: #ff4444;">Validation Error</h2>
-        </div>
-        
-        <div style="margin-bottom: 25px;">
-          <p style="margin-bottom: 15px; color: #ffcc00;">Please correct the following errors:</p>
-          <ul id="errorList" style="list-style: none; padding: 0; margin: 0; max-height: 300px; overflow-y: auto; border: 1px solid #444; border-radius: 5px; padding: 10px;">
-          </ul>
-        </div>
-        
-        <div style="text-align: right;">
-          <button id="modalOkButton" style="background: #ff4444; color: white; border: none; padding: 10px 25px; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: bold;">
-            OK - I'll Fix Them
-          </button>
-        </div>
-      </div>
-    `;
-    
-    document.body.appendChild(modal);
-    errorList = document.getElementById('errorList');
-    okButton = document.getElementById('modalOkButton');
-  }
-  
-  // Clear previous errors
-  if (errorList) {
-    errorList.innerHTML = '';
-    
-    // Add each error to the list
-    errors.forEach((error, index) => {
-      const li = document.createElement('li');
-      
-      // Create error message
-      const errorText = document.createElement('span');
-      errorText.textContent = error.message;
-      errorText.style.flex = '1';
-      
-      // Create "Go to field" link if fieldId exists
-      if (error.fieldId) {
-        const gotoLink = document.createElement('a');
-        gotoLink.textContent = 'Go to field →';
-        gotoLink.href = '#';
-        gotoLink.style.marginLeft = '10px';
-        gotoLink.style.fontSize = '14px';
-        
-        gotoLink.addEventListener('click', (e) => {
-          e.preventDefault();
-          closeValidationModal();
-          scrollToAndFocusField(error.fieldId);
-        });
-        
-        li.appendChild(errorText);
-        li.appendChild(gotoLink);
-      } else {
-        li.textContent = error.message;
-      }
-      
-      li.style.cssText = `
-        padding: 10px;
-        margin: 5px 0;
-        background: rgba(255, 68, 68, 0.1);
-        border-left: 3px solid #ff4444;
-        border-radius: 3px;
-        display: flex;
-        align-items: center;
-      `;
-      
-      li.insertBefore(document.createTextNode('❌ '), li.firstChild);
-      errorList.appendChild(li);
-    });
-  }
-  
-  // Setup OK button
-  if (okButton) {
-    okButton.onclick = closeValidationModal;
-  }
-  
-  // Show the modal
-  modal.style.display = 'flex';
-  
-  // Add escape key handler
-  const escapeHandler = (e) => {
-    if (e.key === 'Escape') {
-      closeValidationModal();
-      document.removeEventListener('keydown', escapeHandler);
-    }
-  };
-  
-  document.addEventListener('keydown', escapeHandler);
-  
-  // Add click outside to close
-  modal.onclick = (e) => {
-    if (e.target === modal) {
-      closeValidationModal();
-    }
-  };
-}
 
-function closeValidationModal() {
-  const modal = document.getElementById('validationModal');
-  if (modal) {
-    modal.style.display = 'none';
-  }
-  
-  // Re-enable scrolling
-  document.body.style.overflow = 'auto';
-}
-
-function scrollToAndFocusField(fieldId) {
-  const field = document.getElementById(fieldId);
-  if (field) {
-    // Scroll to the field
-    field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    
-    // Highlight the field
-    field.style.border = '2px solid #ff4444';
-    field.style.boxShadow = '0 0 10px rgba(255, 68, 68, 0.5)';
-    field.style.backgroundColor = 'rgba(255, 68, 68, 0.1)';
-    
-    // Focus on the field
-    field.focus();
-    
-    // Remove highlighting after 3 seconds
-    setTimeout(() => {
-      field.style.border = '';
-      field.style.boxShadow = '';
-      field.style.backgroundColor = '';
-    }, 3000);
-  }
-}
 
 // ================= BILLING SYSTEM HELPERS =================
 async function loadBillingDataWithRetry(phone, maxRetries = 3) {
