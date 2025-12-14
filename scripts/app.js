@@ -9,368 +9,6 @@ const CONFIG = {
   MAX_FILES: 3
 };
 
-// ================= VALIDATION MODAL FUNCTIONS =================
-function showValidationModal(errorMessages) {
-  const modal = document.getElementById('validationModal');
-  const errorList = document.getElementById('errorList');
-  
-  if (!modal || !errorList) {
-    // Create modal if it doesn't exist
-    createValidationModal();
-    return showValidationModal(errorMessages); // Retry after creation
-  }
-  
-  // Build error list
-  errorList.innerHTML = '';
-  errorMessages.forEach(error => {
-    const li = document.createElement('li');
-    li.textContent = error;
-    errorList.appendChild(li);
-  });
-  
-  // Highlight invalid fields
-  highlightInvalidFields(errorMessages);
-  
-  // Show modal and disable background
-  modal.style.display = 'block';
-  document.body.classList.add('modal-open');
-  
-  // Focus the OK button
-  setTimeout(() => {
-    const okButton = modal.querySelector('.gold-button');
-    if (okButton) okButton.focus();
-  }, 100);
-  
-  // Prevent form submission
-  return false;
-}
-
-function closeValidationModal() {
-  const modal = document.getElementById('validationModal');
-  if (modal) {
-    modal.style.display = 'none';
-    document.body.classList.remove('modal-open');
-  }
-  
-  // Remove field highlights
-  removeFieldHighlights();
-}
-
-function createValidationModal() {
-  // Create modal HTML if it doesn't exist
-  const modalHTML = `
-    <div id="validationModal" class="validation-modal" style="display: none;">
-      <div class="modal-overlay" onclick="closeValidationModal()"></div>
-      <div class="modal-content">
-        <div class="modal-header">
-          <h3>❌ Missing/Incorrect Information</h3>
-          <button type="button" class="modal-close" onclick="closeValidationModal()">×</button>
-        </div>
-        <div class="modal-body">
-          <p>Please correct the following fields:</p>
-          <ul id="errorList" class="error-list"></ul>
-        </div>
-        <div class="modal-footer">
-          <button type="button" class="gold-button" onclick="closeValidationModal()">OK</button>
-        </div>
-      </div>
-    </div>
-    
-    <style>
-      .validation-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        z-index: 10001;
-      }
-
-      .modal-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.8);
-      }
-
-      .modal-content {
-        position: absolute;
-        top: 50%;
-        left: 50%;
-        transform: translate(-50%, -50%);
-        background: #1e1e1e;
-        border: 2px solid #ff4444;
-        border-radius: 10px;
-        width: 90%;
-        max-width: 500px;
-        max-height: 80vh;
-        overflow-y: auto;
-        box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
-      }
-
-      .modal-header {
-        padding: 20px;
-        border-bottom: 1px solid #333;
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        background: #2a1a1a;
-      }
-
-      .modal-header h3 {
-        color: #ff4444;
-        margin: 0;
-        font-size: 1.3rem;
-      }
-
-      .modal-close {
-        background: none;
-        border: none;
-        color: #aaa;
-        font-size: 2rem;
-        cursor: pointer;
-        line-height: 1;
-        padding: 0;
-        width: 30px;
-        height: 30px;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-      }
-
-      .modal-close:hover {
-        color: white;
-      }
-
-      .modal-body {
-        padding: 20px;
-      }
-
-      .modal-body p {
-        color: #ddd;
-        margin-bottom: 15px;
-      }
-
-      .error-list {
-        list-style: none;
-        padding: 0;
-        margin: 0;
-      }
-
-      .error-list li {
-        padding: 10px 15px;
-        margin-bottom: 8px;
-        background: rgba(255, 68, 68, 0.1);
-        border-left: 4px solid #ff4444;
-        border-radius: 4px;
-        color: #ff9999;
-        display: flex;
-        align-items: center;
-      }
-
-      .error-list li:before {
-        content: "•";
-        color: #ff4444;
-        font-weight: bold;
-        margin-right: 10px;
-        font-size: 1.5rem;
-      }
-
-      .modal-footer {
-        padding: 15px 20px;
-        border-top: 1px solid #333;
-        text-align: right;
-        background: #2a2a2a;
-      }
-
-      .modal-footer button {
-        min-width: 100px;
-      }
-
-      .field-error {
-        border-color: #ff4444 !important;
-        background: rgba(255, 68, 68, 0.1) !important;
-        animation: shake 0.5s ease-in-out;
-      }
-
-      @keyframes shake {
-        0%, 100% { transform: translateX(0); }
-        10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-        20%, 40%, 60%, 80% { transform: translateX(5px); }
-      }
-
-      body.modal-open {
-        overflow: hidden;
-      }
-    </style>
-  `;
-  
-  // Add modal to body
-  const div = document.createElement('div');
-  div.innerHTML = modalHTML;
-  document.body.appendChild(div);
-  
-  // Add event listeners for the modal
-  const modal = document.getElementById('validationModal');
-  if (modal) {
-    // Close when clicking outside
-    modal.addEventListener('click', function(e) {
-      if (e.target.classList.contains('modal-overlay')) {
-        closeValidationModal();
-      }
-    });
-    
-    // Close with Escape key
-    document.addEventListener('keydown', function(e) {
-      if (e.key === 'Escape' && modal.style.display === 'block') {
-        closeValidationModal();
-      }
-    });
-  }
-}
-
-function highlightInvalidFields(errorMessages) {
-  // First remove all existing highlights
-  removeFieldHighlights();
-  
-  // Map error messages to field IDs
-  const fieldMap = {
-    'tracking number': 'trackingNumber',
-    'name on parcel': 'nameOnParcel',
-    'item description': 'itemDescription',
-    'quantity': 'quantity',
-    'price': 'price',
-    'collection point': 'collectionPoint',
-    'item category': 'itemCategory',
-    'invoice/document': 'fileUpload',
-    'file': 'fileUpload'
-  };
-  
-  errorMessages.forEach(error => {
-    // Check which field this error corresponds to
-    Object.keys(fieldMap).forEach(key => {
-      if (error.toLowerCase().includes(key)) {
-        const fieldId = fieldMap[key];
-        const field = document.getElementById(fieldId);
-        if (field) {
-          field.classList.add('field-error');
-          
-          // Scroll to first invalid field
-          const errorList = document.querySelectorAll('.field-error');
-          if (errorList.length === 1) {
-            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-          }
-        }
-      }
-    });
-  });
-}
-
-function removeFieldHighlights() {
-  document.querySelectorAll('.field-error').forEach(field => {
-    field.classList.remove('field-error');
-  });
-}
-
-function validateAllFields() {
-  const errors = [];
-  
-  // Get field values
-  const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
-  const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
-  const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
-  const quantity = document.getElementById('quantity')?.value || '';
-  const price = document.getElementById('price')?.value || '';
-  const collectionPoint = document.getElementById('collectionPoint')?.value || '';
-  const itemCategory = document.getElementById('itemCategory')?.value || '';
-  const fileInput = document.getElementById('fileUpload');
-  const files = fileInput?.files || [];
-  
-  // Check tracking number
-  if (!trackingNumber) {
-    errors.push('Tracking Number is required');
-  } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
-    errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
-  }
-  
-  // Check name on parcel
-  if (!nameOnParcel) {
-    errors.push('Name on Parcel is required');
-  } else if (nameOnParcel.length < 2) {
-    errors.push('Name on Parcel must be at least 2 characters');
-  }
-  
-  // Check item description
-  if (!itemDescription) {
-    errors.push('Item Description is required');
-  } else if (itemDescription.length < 3) {
-    errors.push('Item Description must be at least 3 characters');
-  }
-  
-  // Check quantity
-  if (!quantity) {
-    errors.push('Quantity is required');
-  } else {
-    const qtyNum = parseInt(quantity);
-    if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
-      errors.push('Quantity must be between 1 and 999');
-    }
-  }
-  
-  // Check price
-  if (!price && price !== '0') {
-    errors.push('Price is required (enter 0 if no value)');
-  } else {
-    const priceNum = parseFloat(price);
-    if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
-      errors.push('Price must be between 0 and 99,999');
-    }
-  }
-  
-  // Check collection point
-  if (!collectionPoint) {
-    errors.push('Please select a Collection Point');
-  }
-  
-  // Check item category
-  if (!itemCategory) {
-    errors.push('Please select an Item Category');
-  }
-  
-  // Check file requirements for starred categories
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
-  ];
-  
-  if (starredCategories.includes(itemCategory)) {
-    if (files.length === 0) {
-      errors.push('Invoice/document upload is required for this category');
-    } else {
-      // Check file count
-      if (files.length > CONFIG.MAX_FILES) {
-        errors.push(`Maximum ${CONFIG.MAX_FILES} files allowed`);
-      }
-      
-      // Check each file
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        if (file.size > CONFIG.MAX_FILE_SIZE) {
-          errors.push(`File "${file.name}" exceeds 5MB limit`);
-        }
-        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-          errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
-        }
-      }
-    }
-  }
-  
-  return errors;
-}
-
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
   const isMobile = (
@@ -967,15 +605,13 @@ async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
   
-  // First validate all fields before showing loading
-  const validationErrors = validateAllFields();
-  
-  if (validationErrors.length > 0) {
-    showValidationModal(validationErrors);
-    return; // Stop submission if there are validation errors
+  // First, validate all fields before showing loading
+  const validationResult = validateFormBeforeSubmit();
+  if (validationResult.errors.length > 0) {
+    showValidationModal(validationResult.errors);
+    return; // Stop submission if validation fails
   }
-  
-  // If validation passes, continue with submission
+
   showLoading(true, "Submitting parcel declaration...");
 
   try {
@@ -987,7 +623,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload
+    // Build payload (existing code remains the same)
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -996,14 +632,24 @@ async function handleParcelSubmission(e) {
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,  // This allows 0
+        price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
         itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
-    
-    // Handle file uploads
+
+    // Additional validation (price and description already validated above)
+    // This is just for extra safety
+    if (payload.data.price < 0) {
+      throw new Error('Price must be 0 or greater');
+    }
+
+    if (payload.data.itemDescription.trim().length < 3) {
+      throw new Error('Item description must be at least 3 characters');
+    }
+
+    // Handle file uploads (existing code remains the same)
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
@@ -1013,13 +659,13 @@ async function handleParcelSubmission(e) {
       '*Oil Ointment', '*Supplement', '*Others'
     ];
 
-    // Process files if needed
+    // Validate file requirements
     if (starredCategories.includes(category)) {
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files
+      // Process files (existing code remains the same)
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -1044,7 +690,7 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Submit the data
+    // Submit the data (existing code remains the same)
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
       filesCount: payload.files.length,
@@ -1077,6 +723,7 @@ async function handleParcelSubmission(e) {
     console.error('Submission error:', error);
     
     // Show user-friendly error message
+    // Use the existing error display for non-validation errors
     if (error.message.includes('Price must be')) {
       showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
     } else if (error.message.includes('Item description must be')) {
@@ -1110,7 +757,6 @@ async function handleParcelSubmission(e) {
     showLoading(false);
   }
 }
-
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
@@ -2410,16 +2056,11 @@ window.deleteDraft = deleteDraft;
 window.retryFailedSubmissions = retryFailedSubmissions;
 window.showRegistration = () => safeRedirect('register.html');
 window.showForgotPassword = () => safeRedirect('forgot-password.html');
-window.showValidationModal = showValidationModal;
-window.closeValidationModal = closeValidationModal;
 
 // Safari-specific functions
 window.isSafariBrowser = isSafariBrowser;
 window.safariFileReaderPolyfill = safariFileReaderPolyfill;
 window.safariFetchEnhancement = safariFetchEnhancement;
-
-// Validation functions
-window.validateAllFields = validateAllFields;
 
 // Debug function to check validation
 function debugValidation() {
@@ -2438,55 +2079,10 @@ function debugValidation() {
   // Call updateSubmitButton and see what it returns
   const submitBtn = document.getElementById('submitBtn');
   console.log('Submit button disabled?', submitBtn.disabled);
+
+  // Make validation functions globally available
+  window.validateFormBeforeSubmit = validateFormBeforeSubmit;
+  window.showValidationModal = showValidationModal;
+  window.closeValidationModal = closeValidationModal;
+  window.scrollToFirstError = scrollToFirstError;
 }
-
-// Add modal event listeners
-document.addEventListener('DOMContentLoaded', function() {
-  // Add global event listener for Escape key to close modal
-  document.addEventListener('keydown', function(e) {
-    const modal = document.getElementById('validationModal');
-    if (e.key === 'Escape' && modal && modal.style.display === 'block') {
-      closeValidationModal();
-    }
-  });
-});
-
-// Add this function at the end of app.js (before the closing bracket if any)
-
-// Debug function to test form submission
-function testFormSubmission() {
-  console.log('=== TESTING FORM SUBMISSION ===');
-  
-  // Fill in test data
-  document.getElementById('trackingNumber').value = 'TEST12345';
-  document.getElementById('nameOnParcel').value = 'John Doe';
-  document.getElementById('itemDescription').value = 'Test item description';
-  document.getElementById('quantity').value = '1';
-  document.getElementById('price').value = '100';
-  document.getElementById('collectionPoint').value = 'Rimba';
-  document.getElementById('itemCategory').value = 'Clothing';
-  
-  // Trigger validation updates
-  document.getElementById('trackingNumber').dispatchEvent(new Event('input'));
-  document.getElementById('nameOnParcel').dispatchEvent(new Event('input'));
-  document.getElementById('itemDescription').dispatchEvent(new Event('input'));
-  document.getElementById('quantity').dispatchEvent(new Event('input'));
-  document.getElementById('price').dispatchEvent(new Event('input'));
-  document.getElementById('collectionPoint').dispatchEvent(new Event('change'));
-  document.getElementById('itemCategory').dispatchEvent(new Event('change'));
-  
-  console.log('Test data filled. Submit button should be enabled.');
-  
-  // Check if submit is enabled
-  const submitBtn = document.getElementById('submitBtn');
-  console.log('Submit button disabled:', submitBtn.disabled);
-  
-  // If enabled, click it
-  if (!submitBtn.disabled) {
-    console.log('Attempting to submit form...');
-    document.getElementById('declarationForm').dispatchEvent(new Event('submit'));
-  }
-}
-
-// Make test function available globally
-window.testFormSubmission = testFormSubmission;
