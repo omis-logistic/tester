@@ -143,230 +143,7 @@
       color: #aaa;
       font-size: 1rem;
     }
-
-    /* Validation Modal Styles */
-    .validation-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      z-index: 10001;
-    }
-
-    .modal-overlay {
-      position: absolute;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-    }
-
-    .modal-content {
-      position: absolute;
-      top: 50%;
-      left: 50%;
-      transform: translate(-50%, -50%);
-      background: #1e1e1e;
-      border: 2px solid #ff4444;
-      border-radius: 10px;
-      width: 90%;
-      max-width: 500px;
-      max-height: 80vh;
-      overflow-y: auto;
-      box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
-    }
-
-    .modal-header {
-      padding: 20px;
-      border-bottom: 1px solid #333;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      background: #2a1a1a;
-    }
-
-    .modal-header h3 {
-      color: #ff4444;
-      margin: 0;
-      font-size: 1.3rem;
-    }
-
-    .modal-close {
-      background: none;
-      border: none;
-      color: #aaa;
-      font-size: 2rem;
-      cursor: pointer;
-      line-height: 1;
-      padding: 0;
-      width: 30px;
-      height: 30px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    .modal-close:hover {
-      color: white;
-    }
-
-    .modal-body {
-      padding: 20px;
-    }
-
-    .modal-body p {
-      color: #ddd;
-      margin-bottom: 15px;
-    }
-
-    .error-list {
-      list-style: none;
-      padding: 0;
-      margin: 0;
-    }
-
-    .error-list li {
-      padding: 10px 15px;
-      margin-bottom: 8px;
-      background: rgba(255, 68, 68, 0.1);
-      border-left: 4px solid #ff4444;
-      border-radius: 4px;
-      color: #ff9999;
-      display: flex;
-      align-items: center;
-    }
-
-    .error-list li:before {
-      content: "•";
-      color: #ff4444;
-      font-weight: bold;
-      margin-right: 10px;
-      font-size: 1.5rem;
-    }
-
-    .modal-footer {
-      padding: 15px 20px;
-      border-top: 1px solid #333;
-      text-align: right;
-      background: #2a2a2a;
-    }
-
-    .modal-footer button {
-      min-width: 100px;
-    }
-
-    .field-error {
-      border-color: #ff4444 !important;
-      background: rgba(255, 68, 68, 0.1) !important;
-      animation: shake 0.5s ease-in-out;
-    }
-
-    @keyframes shake {
-      0%, 100% { transform: translateX(0); }
-      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-      20%, 40%, 60%, 80% { transform: translateX(5px); }
-    }
-
-    body.modal-open {
-      overflow: hidden;
-    }
-
-    /* Drafts section styles */
-    .drafts-section {
-      margin-top: 2rem;
-      border-top: 1px solid #333;
-      padding-top: 1rem;
-    }
-
-    .drafts-toggle {
-      background: #2a2a2a;
-      color: var(--gold);
-      border: 1px solid var(--gold);
-      padding: 10px 15px;
-      border-radius: 5px;
-      cursor: pointer;
-      width: 100%;
-      text-align: left;
-      font-size: 1rem;
-      margin-bottom: 1rem;
-    }
-
-    .drafts-toggle:hover {
-      background: #3a3a3a;
-    }
-
-    .drafts-list {
-      background: #2a2a2a;
-      border-radius: 5px;
-      padding: 15px;
-      margin-top: 10px;
-    }
-
-    .drafts-container {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .draft-item {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      padding: 10px;
-      background: #333;
-      border-radius: 5px;
-      border-left: 4px solid var(--gold);
-    }
-
-    .draft-info {
-      flex: 1;
-    }
-
-    .draft-info strong {
-      color: white;
-      display: block;
-      margin-bottom: 5px;
-    }
-
-    .draft-info small {
-      color: #aaa;
-      font-size: 0.8rem;
-    }
-
-    .draft-actions {
-      display: flex;
-      gap: 10px;
-    }
-
-    .small-btn {
-      padding: 5px 10px;
-      font-size: 0.9rem;
-      background: #444;
-      color: white;
-      border: none;
-      border-radius: 3px;
-      cursor: pointer;
-    }
-
-    .small-btn:hover {
-      background: #555;
-    }
-
-    .small-btn.delete {
-      background: #ff4444;
-    }
-
-    .small-btn.delete:hover {
-      background: #ff5555;
-    }
-
-    .empty-drafts {
-      text-align: center;
-      color: #aaa;
-      padding: 20px;
-    }
+    
   </style>
 </head>
 <body class="safari-fix">
@@ -374,24 +151,6 @@
   <div id="globalSpinnerOverlay">
     <div class="global-spinner"></div>
     <div class="global-loading-text">Processing Submission...</div>
-  </div>
-
-  <!-- Validation Error Modal -->
-  <div id="validationModal" class="validation-modal" style="display: none;">
-    <div class="modal-overlay" onclick="closeValidationModal()"></div>
-    <div class="modal-content">
-      <div class="modal-header">
-        <h3>❌ Missing/Incorrect Information</h3>
-        <button type="button" class="modal-close" onclick="closeValidationModal()">×</button>
-      </div>
-      <div class="modal-body">
-        <p>Please correct the following fields:</p>
-        <ul id="errorList" class="error-list"></ul>
-      </div>
-      <div class="modal-footer">
-        <button type="button" class="gold-button" onclick="closeValidationModal()">OK</button>
-      </div>
-    </div>
   </div>
 
   <div class="container">
@@ -708,21 +467,207 @@
   window.addEventListener('online', updateNetworkStatus);
   window.addEventListener('offline', updateNetworkStatus);
   updateNetworkStatus();
+
+// Field validation with names mapping
+const FIELD_NAMES = {
+  'trackingNumber': 'Tracking Number',
+  'nameOnParcel': 'Name on Parcel',
+  'itemDescription': 'Item Description',
+  'quantity': 'Quantity',
+  'price': 'Price',
+  'collectionPoint': 'Collection Point',
+  'itemCategory': 'Item Category',
+  'fileUpload': 'Invoice/Document'
+};
+
+// Enhanced validation function for submission
+function validateFormBeforeSubmit() {
+  const errors = [];
+  const fieldsToHighlight = [];
+
+  // Clear previous highlights
+  document.querySelectorAll('.field-error').forEach(el => {
+    el.classList.remove('field-error');
+  });
+
+  // Check required fields
+  const requiredFields = [
+    'trackingNumber',
+    'nameOnParcel', 
+    'itemDescription',
+    'quantity',
+    'price',
+    'collectionPoint',
+    'itemCategory'
+  ];
+
+  requiredFields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (!field) return;
+
+    let isValid = true;
+    let errorMessage = '';
+
+    switch(fieldId) {
+      case 'trackingNumber':
+        isValid = /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
+        errorMessage = 'Tracking number must be at least 5 characters (letters, numbers, hyphens)';
+        break;
+      case 'nameOnParcel':
+        isValid = field.value.trim().length >= 2;
+        errorMessage = 'Name must be at least 2 characters';
+        break;
+      case 'itemDescription':
+        isValid = field.value.trim().length >= 3;
+        errorMessage = 'Description must be at least 3 characters';
+        break;
+      case 'quantity':
+        const qty = parseInt(field.value);
+        isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
+        errorMessage = 'Quantity must be between 1 and 999';
+        break;
+      case 'price':
+        const price = parseFloat(field.value);
+        isValid = !isNaN(price) && price >= 0;
+        errorMessage = 'Price must be 0 or greater';
+        break;
+      case 'collectionPoint':
+      case 'itemCategory':
+        isValid = field.value !== '';
+        errorMessage = `Please select ${FIELD_NAMES[fieldId]}`;
+        break;
+    }
+
+    if (!isValid) {
+      errors.push({
+        field: fieldId,
+        message: `${FIELD_NAMES[fieldId]}: ${errorMessage}`
+      });
+      fieldsToHighlight.push(fieldId);
+    }
+  });
+
+  // Check file requirements for starred categories
+  const category = document.getElementById('itemCategory')?.value || '';
+  const starredCategories = [
+    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+  ];
+
+  if (starredCategories.includes(category)) {
+    const files = document.getElementById('fileUpload')?.files || [];
+    if (files.length === 0) {
+      errors.push({
+        field: 'fileUpload',
+        message: 'Invoice/document upload is required for this category'
+      });
+      fieldsToHighlight.push('fileUpload');
+    }
+  }
+
+  return { errors, fieldsToHighlight };
+}
+
+// Show validation modal
+function showValidationModal(errors) {
+  const modal = document.getElementById('validationModal');
+  const errorsList = document.getElementById('validationErrorsList');
+  
+  if (!modal || !errorsList) return;
+
+  // Clear previous errors
+  errorsList.innerHTML = '';
+
+  // Add new errors to list
+  errors.forEach(error => {
+    const li = document.createElement('li');
+    li.textContent = error.message;
+    li.setAttribute('data-field', error.field);
+    errorsList.appendChild(li);
+  });
+
+  // Highlight error fields
+  errors.forEach(error => {
+    const field = document.getElementById(error.field);
+    if (field) {
+      field.classList.add('field-error');
+      
+      // Also highlight the label
+      const label = field.closest('.input-group')?.querySelector('label');
+      if (label) {
+        label.classList.add('error-label');
+      }
+    }
+  });
+
+  // Show modal
+  modal.style.display = 'flex';
+  
+  // Focus first field when modal closes
+  modal.addEventListener('click', function(e) {
+    if (e.target === modal) {
+      setTimeout(() => {
+        const firstErrorField = errors[0]?.field;
+        if (firstErrorField) {
+          const field = document.getElementById(firstErrorField);
+          if (field) field.focus();
+        }
+      }, 300);
+    }
+  });
+}
+
+// Close validation modal
+function closeValidationModal() {
+  const modal = document.getElementById('validationModal');
+  if (modal) {
+    modal.style.display = 'none';
+    
+    // Remove error highlights
+    document.querySelectorAll('.field-error').forEach(el => {
+      el.classList.remove('field-error');
+    });
+    document.querySelectorAll('.error-label').forEach(el => {
+      el.classList.remove('error-label');
+    });
+  }
+}
+
+// Scroll to first error field
+function scrollToFirstError() {
+  const firstError = document.querySelector('.field-error');
+  if (firstError) {
+    closeValidationModal();
+    
+    // Wait for modal to close
+    setTimeout(() => {
+      firstError.scrollIntoView({ 
+        behavior: 'smooth', 
+        block: 'center' 
+      });
+      
+      // Add extra highlight
+      firstError.classList.add('field-error');
+      setTimeout(() => {
+        firstError.focus();
+      }, 500);
+    }, 300);
+  }
+}
+
 </script>
 
 <script src="scripts/app.js"></script>
 <script>
   // Form-specific initialization
   document.addEventListener('DOMContentLoaded', function() {
-    console.log('DOM loaded, initializing form...');
-    
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
+      document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
-      console.log('No session found, redirecting to login');
       window.location.href = 'login.html';
       return;
     }
@@ -747,20 +692,10 @@
 
     // Check category requirements on load
     checkCategoryRequirements();
-    
-    // Enable form submission
-    setupFormSubmission();
-    
-    // Add debug button to check validation
-    addDebugButton();
-    
-    console.log('Form initialization complete');
   });
 
   // Set up field-by-field validation
   function setupFieldValidations() {
-    console.log('Setting up field validations...');
-    
     // Price field validation (allows 0)
     const priceField = document.getElementById('price');
     if (priceField) {
@@ -778,6 +713,16 @@
           }
         }
         updateSubmitButton();
+      });
+      
+      // Also validate on blur
+      priceField.addEventListener('blur', function() {
+        if (this.value === '') {
+          const errorEl = document.getElementById('priceError');
+          if (errorEl) errorEl.textContent = 'Price is required';
+          this.style.borderColor = '#ff4444';
+          updateSubmitButton();
+        }
       });
     }
 
@@ -882,7 +827,6 @@
           errorEl.textContent = this.value ? '' : 'Please select item category';
         }
         updateSubmitButton();
-        checkCategoryRequirements();
       });
     }
 
@@ -893,38 +837,18 @@
         updateSubmitButton();
       });
     }
-    
-    console.log('Field validations setup complete');
-  }
 
-  // Setup form submission
-  function setupFormSubmission() {
-    console.log('Setting up form submission...');
-    
+    // Form submission handler
     const form = document.getElementById('declarationForm');
     if (form) {
-      // Remove any existing submit listeners
-      const newForm = form.cloneNode(true);
-      form.parentNode.replaceChild(newForm, form);
-      
-      // Add submit handler
-      newForm.addEventListener('submit', function(e) {
-        console.log('Form submit event triggered');
-        e.preventDefault();
-        handleFormSubmission(e);
-      });
-      
-      console.log('Form submission handler attached');
+      form.addEventListener('submit', handleParcelSubmission);
     }
   }
 
-  // Update submit button state
+  // Update submit button state - SIMPLIFIED VERSION
   function updateSubmitButton() {
     const submitBtn = document.getElementById('submitBtn');
-    if (!submitBtn) {
-      console.log('Submit button not found!');
-      return;
-    }
+    if (!submitBtn) return;
     
     // Check each field individually
     const trackingValid = validateTrackingField();
@@ -940,84 +864,48 @@
                     quantityValid && priceValid && collectionValid && 
                     categoryValid && filesValid;
     
-    console.log('Validation status:', {
-      trackingValid,
-      nameValid,
-      descriptionValid,
-      quantityValid,
-      priceValid,
-      collectionValid,
-      categoryValid,
-      filesValid,
-      allValid
-    });
-    
     submitBtn.disabled = !allValid;
-    console.log('Submit button disabled:', submitBtn.disabled);
   }
 
   // Individual validation functions
   function validateTrackingField() {
     const field = document.getElementById('trackingNumber');
-    if (!field || !field.value.trim()) {
-      console.log('Tracking field: empty or not found');
-      return false;
-    }
-    const isValid = /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
-    console.log('Tracking field validation:', isValid, 'value:', field.value);
-    return isValid;
+    if (!field || !field.value.trim()) return false;
+    return /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
   }
 
   function validateNameField() {
     const field = document.getElementById('nameOnParcel');
-    const isValid = field && field.value.trim().length >= 2;
-    console.log('Name field validation:', isValid, 'value:', field?.value);
-    return isValid;
+    return field && field.value.trim().length >= 2;
   }
 
   function validateDescriptionField() {
     const field = document.getElementById('itemDescription');
-    const isValid = field && field.value.trim().length >= 3;
-    console.log('Description field validation:', isValid, 'value:', field?.value);
-    return isValid;
+    return field && field.value.trim().length >= 3;
   }
 
   function validateQuantityField() {
     const field = document.getElementById('quantity');
-    if (!field || !field.value) {
-      console.log('Quantity field: empty or not found');
-      return false;
-    }
+    if (!field || !field.value) return false;
     const value = parseInt(field.value);
-    const isValid = !isNaN(value) && value >= 1 && value <= 999;
-    console.log('Quantity field validation:', isValid, 'value:', field.value);
-    return isValid;
+    return !isNaN(value) && value >= 1 && value <= 999;
   }
 
   function validatePriceField() {
     const field = document.getElementById('price');
-    if (!field || field.value === '') {
-      console.log('Price field: empty or not found');
-      return false;
-    }
+    if (!field || field.value === '') return false;  // Empty is not valid
     const value = parseFloat(field.value);
-    const isValid = !isNaN(value) && value >= 0;
-    console.log('Price field validation:', isValid, 'value:', field.value);
-    return isValid;
+    return !isNaN(value) && value >= 0;  // Allow 0
   }
 
   function validateCollectionField() {
     const field = document.getElementById('collectionPoint');
-    const isValid = field && field.value !== '';
-    console.log('Collection field validation:', isValid, 'value:', field?.value);
-    return isValid;
+    return field && field.value !== '';
   }
 
   function validateCategoryField() {
     const field = document.getElementById('itemCategory');
-    const isValid = field && field.value !== '';
-    console.log('Category field validation:', isValid, 'value:', field?.value);
-    return isValid;
+    return field && field.value !== '';
   }
 
   function validateFilesField() {
@@ -1029,11 +917,8 @@
     
     if (starredCategories.includes(category)) {
       const files = document.getElementById('fileUpload')?.files || [];
-      const isValid = files.length > 0;
-      console.log('Files field validation for starred category:', isValid, 'files:', files.length);
-      return isValid;
+      return files.length > 0;
     }
-    console.log('Files field not required for category:', category);
     return true; // Not required for non-starred categories
   }
 
@@ -1101,148 +986,6 @@
     }
     
     updateSubmitButton();
-  }
-
-  // Handle form submission
-  async function handleFormSubmission(e) {
-    console.log('=== FORM SUBMISSION STARTED ===');
-    
-    // First validate all fields
-    const validationErrors = validateAllFields();
-    console.log('Validation errors:', validationErrors);
-    
-    if (validationErrors.length > 0) {
-      console.log('Showing validation modal with errors');
-      showValidationModal(validationErrors);
-      return;
-    }
-    
-    console.log('Validation passed, calling app.js handleParcelSubmission');
-    
-    // If validation passes, call the app.js function
-    if (typeof window.handleParcelSubmission === 'function') {
-      try {
-        await window.handleParcelSubmission(e);
-      } catch (error) {
-        console.error('Error in app.js handleParcelSubmission:', error);
-        showError('Submission failed: ' + error.message);
-      }
-    } else {
-      console.error('handleParcelSubmission not found in app.js');
-      showError('Submission handler not loaded. Please refresh the page.');
-    }
-  }
-
-  // Validate all fields function
-  function validateAllFields() {
-    console.log('=== VALIDATING ALL FIELDS ===');
-    const errors = [];
-    
-    // Get field values
-    const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
-    const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
-    const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
-    const quantity = document.getElementById('quantity')?.value || '';
-    const price = document.getElementById('price')?.value || '';
-    const collectionPoint = document.getElementById('collectionPoint')?.value || '';
-    const itemCategory = document.getElementById('itemCategory')?.value || '';
-    const fileInput = document.getElementById('fileUpload');
-    const files = fileInput?.files || [];
-    
-    console.log('Field values:', {
-      trackingNumber,
-      nameOnParcel,
-      itemDescription,
-      quantity,
-      price,
-      collectionPoint,
-      itemCategory,
-      filesCount: files.length
-    });
-    
-    // Check tracking number
-    if (!trackingNumber) {
-      errors.push('Tracking Number is required');
-    } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
-      errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
-    }
-    
-    // Check name on parcel
-    if (!nameOnParcel) {
-      errors.push('Name on Parcel is required');
-    } else if (nameOnParcel.length < 2) {
-      errors.push('Name on Parcel must be at least 2 characters');
-    }
-    
-    // Check item description
-    if (!itemDescription) {
-      errors.push('Item Description is required');
-    } else if (itemDescription.length < 3) {
-      errors.push('Item Description must be at least 3 characters');
-    }
-    
-    // Check quantity
-    if (!quantity) {
-      errors.push('Quantity is required');
-    } else {
-      const qtyNum = parseInt(quantity);
-      if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
-        errors.push('Quantity must be between 1 and 999');
-      }
-    }
-    
-    // Check price
-    if (!price && price !== '0') {
-      errors.push('Price is required (enter 0 if no value)');
-    } else {
-      const priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
-        errors.push('Price must be between 0 and 99,999');
-      }
-    }
-    
-    // Check collection point
-    if (!collectionPoint) {
-      errors.push('Please select a Collection Point');
-    }
-    
-    // Check item category
-    if (!itemCategory) {
-      errors.push('Please select an Item Category');
-    }
-    
-    // Check file requirements for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        errors.push('Invoice/document upload is required for this category');
-      } else {
-        // Check file count
-        if (files.length > 3) {
-          errors.push(`Maximum 3 files allowed`);
-        }
-        
-        // Check each file
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          if (file.size > 5 * 1024 * 1024) {
-            errors.push(`File "${file.name}" exceeds 5MB limit`);
-          }
-          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-          if (!allowedTypes.includes(file.type)) {
-            errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
-          }
-        }
-      }
-    }
-    
-    console.log('Validation complete. Errors found:', errors.length);
-    return errors;
   }
 
   // Save form as draft
@@ -1400,137 +1143,153 @@
       errorEl.style.display = 'none';
     }, 5000);
   }
-  
-  // Show validation modal
-  function showValidationModal(errors) {
-    console.log('Showing validation modal with errors:', errors);
-    
-    const modal = document.getElementById('validationModal');
-    const errorList = document.getElementById('errorList');
-    
-    if (!modal || !errorList) {
-      console.error('Validation modal elements not found');
-      alert('Validation Errors:\n\n' + errors.join('\n'));
-      return;
-    }
-    
-    // Build error list
-    errorList.innerHTML = '';
-    errors.forEach(error => {
-      const li = document.createElement('li');
-      li.textContent = error;
-      errorList.appendChild(li);
-    });
-    
-    // Highlight invalid fields
-    highlightInvalidFields(errors);
-    
-    // Show modal and disable background
-    modal.style.display = 'block';
-    document.body.classList.add('modal-open');
-    
-    // Focus the OK button
-    setTimeout(() => {
-      const okButton = modal.querySelector('.gold-button');
-      if (okButton) okButton.focus();
-    }, 100);
-  }
-  
-  // Close validation modal
-  function closeValidationModal() {
-    const modal = document.getElementById('validationModal');
-    if (modal) {
-      modal.style.display = 'none';
-      document.body.classList.remove('modal-open');
-    }
-    
-    // Remove field highlights
-    removeFieldHighlights();
-  }
-  
-  // Highlight invalid fields
-  function highlightInvalidFields(errorMessages) {
-    // First remove all existing highlights
-    removeFieldHighlights();
-    
-    // Map error messages to field IDs
-    const fieldMap = {
-      'tracking number': 'trackingNumber',
-      'name on parcel': 'nameOnParcel',
-      'item description': 'itemDescription',
-      'quantity': 'quantity',
-      'price': 'price',
-      'collection point': 'collectionPoint',
-      'item category': 'itemCategory',
-      'invoice/document': 'fileUpload',
-      'file': 'fileUpload'
-    };
-    
-    errorMessages.forEach(error => {
-      // Check which field this error corresponds to
-      Object.keys(fieldMap).forEach(key => {
-        if (error.toLowerCase().includes(key)) {
-          const fieldId = fieldMap[key];
-          const field = document.getElementById(fieldId);
-          if (field) {
-            field.classList.add('field-error');
-            
-            // Scroll to first invalid field
-            const errorList = document.querySelectorAll('.field-error');
-            if (errorList.length === 1) {
-              field.scrollIntoView({ behavior: 'smooth', block: 'center' });
-            }
-          }
-        }
-      });
-    });
-  }
-  
-  function removeFieldHighlights() {
-    document.querySelectorAll('.field-error').forEach(field => {
-      field.classList.remove('field-error');
-    });
-  }
-  
-  // Add debug button for testing
-  function addDebugButton() {
-    // Create debug button
-    const debugBtn = document.createElement('button');
-    debugBtn.textContent = '🛠️ Debug Form';
-    debugBtn.style.cssText = `
-      position: fixed;
-      bottom: 20px;
-      right: 20px;
-      background: #444;
-      color: white;
-      border: none;
-      padding: 10px;
-      border-radius: 5px;
-      cursor: pointer;
-      z-index: 999;
-      font-size: 12px;
-    `;
-    debugBtn.onclick = function() {
-      console.log('=== DEBUG FORM STATUS ===');
-      console.log('All fields validation:', validateAllFields());
-      console.log('Submit button disabled:', document.getElementById('submitBtn').disabled);
-      console.log('=== END DEBUG ===');
-    };
-    
-    document.body.appendChild(debugBtn);
-  }
-  
-  // Make functions globally available
-  window.showValidationModal = showValidationModal;
-  window.closeValidationModal = closeValidationModal;
-  window.validateAllFields = validateAllFields;
-  window.safeRedirect = safeRedirect;
-  window.loadDrafts = loadDrafts;
-  window.loadDraft = loadDraft;
-  window.deleteDraft = deleteDraft;
-  window.saveDraft = saveDraft;
-  window.checkCategoryRequirements = checkCategoryRequirements;
-  window.toggleDrafts = toggleDrafts;
 </script>
+
+<!-- Validation Error Modal -->
+<div id="validationModal" class="modal" style="display: none;">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3>⚠️ Missing Information</h3>
+      <button class="close-modal" onclick="closeValidationModal()">&times;</button>
+    </div>
+    <div class="modal-body">
+      <p>Please fill in the following required fields:</p>
+      <ul id="validationErrorsList"></ul>
+    </div>
+    <div class="modal-footer">
+      <button class="secondary-button" onclick="closeValidationModal()">Close</button>
+      <button class="gold-button" onclick="scrollToFirstError()">Go to First Error</button>
+    </div>
+  </div>
+</div>
+
+<style>
+  /* Validation Modal Styles */
+  .modal {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.8);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 10001;
+    animation: fadeIn 0.3s ease;
+  }
+
+  .modal-content {
+    background: #1a1a1a;
+    border: 2px solid #ff4444;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    animation: slideUp 0.3s ease;
+  }
+
+  .modal-header {
+    background: #2a1a1a;
+    padding: 20px;
+    border-bottom: 1px solid #ff4444;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .modal-header h3 {
+    color: #ff4444;
+    margin: 0;
+    font-size: 1.3rem;
+  }
+
+  .close-modal {
+    background: none;
+    border: none;
+    color: white;
+    font-size: 28px;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 50%;
+  }
+
+  .close-modal:hover {
+    background: rgba(255, 68, 68, 0.2);
+  }
+
+  .modal-body {
+    padding: 20px;
+  }
+
+  .modal-body p {
+    color: #ccc;
+    margin-bottom: 15px;
+  }
+
+  #validationErrorsList {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+  }
+
+  #validationErrorsList li {
+    padding: 10px;
+    margin-bottom: 8px;
+    background: rgba(255, 68, 68, 0.1);
+    border-left: 3px solid #ff4444;
+    border-radius: 3px;
+    color: #ff9999;
+  }
+
+  .modal-footer {
+    padding: 20px;
+    border-top: 1px solid #333;
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+  }
+
+  @keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+  }
+
+  @keyframes slideUp {
+    from { 
+      opacity: 0;
+      transform: translateY(20px);
+    }
+    to { 
+      opacity: 1;
+      transform: translateY(0);
+    }
+  }
+
+  /* Highlight error fields */
+  .field-error {
+    border-color: #ff4444 !important;
+    background: rgba(255, 68, 68, 0.1) !important;
+    animation: shake 0.5s ease;
+  }
+
+  @keyframes shake {
+    0%, 100% { transform: translateX(0); }
+    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+    20%, 40%, 60%, 80% { transform: translateX(5px); }
+  }
+
+  /* Error label style */
+  .error-label {
+    color: #ff4444;
+    font-weight: bold;
+  }
+</style>
 </body>
 </html>
