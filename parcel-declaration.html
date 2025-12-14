@@ -615,7 +615,74 @@
     .file-upload-section input[type="file"]:hover {
       border-color: var(--gold);
     }
-  </style>
+    /* Real-time validation styles */
+  .validation-message {
+    color: #ff4444;
+    font-size: 0.9em;
+    margin-top: 5px;
+    min-height: 20px;
+    display: block;
+    font-weight: 500;
+    transition: opacity 0.3s ease;
+  }
+  
+  .validation-message.success {
+    color: #00C851;
+  }
+  
+  .validation-message.warning {
+    color: #ffbb33;
+  }
+  
+  .input-group.invalid input,
+  .input-group.invalid select,
+  .input-group.invalid textarea {
+    border-color: #ff4444 !important;
+    background-color: rgba(255, 68, 68, 0.05) !important;
+  }
+  
+  .input-group.valid input,
+  .input-group.valid select,
+  .input-group.valid textarea {
+    border-color: #00C851 !important;
+    background-color: rgba(0, 200, 81, 0.05) !important;
+  }
+  
+  /* Field requirement indicators */
+  .field-requirements {
+    font-size: 0.85em;
+    color: #ff4444;
+    margin-top: 3px;
+    display: block;
+    font-weight: 500;
+  }
+  
+  /* Page load validation summary */
+  #validationSummary {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid #ff4444;
+    border-radius: 5px;
+    padding: 15px;
+    margin-bottom: 20px;
+    display: none;
+  }
+  
+  #validationSummary h4 {
+    color: #ff4444;
+    margin-top: 0;
+    margin-bottom: 10px;
+  }
+  
+  #validationSummary ul {
+    margin: 0;
+    padding-left: 20px;
+  }
+  
+  #validationSummary li {
+    margin-bottom: 5px;
+    color: #ff4444;
+  }
+</style>
 
   <div class="container">
     <!-- Page Header -->
@@ -636,39 +703,39 @@
 
     <!-- Main Form -->
     <form id="declarationForm" novalidate onsubmit="return validateAndSubmitForm(event)">
-      <!-- Tracking Number -->
-      <div class="input-group">
-        <label for="trackingNumber" class="required">Tracking Number:</label>
-        <input 
-          type="text" 
-          id="trackingNumber" 
-          name="trackingNumber"
-          pattern="^[A-Za-z0-9\-]{5,}$"
-          title="Minimum 5 characters, letters, numbers, and hyphens only"
-          placeholder="e.g., ABC123456 or 123-456-789"
-          required
-          autocomplete="off"
-          autocapitalize="characters"
-        >
-        <small class="form-help">Enter your tracking number exactly as provided by the carrier</small>
-        <span id="trackingError" class="error-message"></span>
-      </div>
-
-      <!-- Name on Parcel -->
-      <div class="input-group">
-        <label for="nameOnParcel" class="required">Name on Parcel:</label>
-        <input 
-          type="text" 
-          id="nameOnParcel" 
-          name="nameOnParcel"
-          minlength="2"
-          maxlength="100"
-          placeholder="Enter the exact name as on the parcel"
-          required
-          autocomplete="name"
-        >
-        <span id="nameOnParcelError" class="error-message"></span>
-      </div>
+    <!-- Tracking Number -->
+    <div class="input-group">
+      <label for="trackingNumber" class="required">Tracking Number:</label>
+      <input 
+        type="text" 
+        id="trackingNumber" 
+        name="trackingNumber"
+        pattern="^[A-Za-z0-9\-]{5,}$"
+        title="Minimum 5 characters, letters, numbers, and hyphens only"
+        placeholder="e.g., ABC123456 or 123-456-789"
+        required
+        autocomplete="off"
+        autocapitalize="characters"
+      >
+      <small class="form-help">Enter your tracking number exactly as provided by the carrier</small>
+      <span id="trackingError" class="error-message"></span> <!-- Already exists -->
+    </div>
+    
+    <!-- Name on Parcel -->
+    <div class="input-group">
+      <label for="nameOnParcel" class="required">Name on Parcel:</label>
+      <input 
+        type="text" 
+        id="nameOnParcel" 
+        name="nameOnParcel"
+        minlength="2"
+        maxlength="100"
+        placeholder="Enter the exact name as on the parcel"
+        required
+        autocomplete="name"
+      >
+      <span id="nameOnParcelError" class="error-message"></span> <!-- Already exists -->
+    </div>
 
       <!-- Auto-populated Phone Number -->
       <div class="input-group">
@@ -1278,178 +1345,54 @@
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
+      document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
       window.location.href = 'login.html';
       return;
     }
-
+  
     // Load saved drafts
     loadDrafts();
-
+  
     // Initialize file upload preview
     const fileInput = document.getElementById('fileUpload');
     if (fileInput) {
       fileInput.addEventListener('change', handleFileSelection);
     }
-
-    // Category change handler
-    const categorySelect = document.getElementById('itemCategory');
-    if (categorySelect) {
-      categorySelect.addEventListener('change', checkCategoryRequirements);
-    }
-
-    // Set up individual field validators
+  
+    // Initialize real-time validation system FIRST
+    initRealTimeValidation();
+    
+    // Set up individual field validators (will be enhanced by real-time validation)
     setupFieldValidations();
-
+  
     // Check category requirements on load
     checkCategoryRequirements();
   });
 
-  // Set up field-by-field validation
   function setupFieldValidations() {
-    // Price field validation (allows 0)
-    const priceField = document.getElementById('price');
-    if (priceField) {
-      priceField.addEventListener('input', function() {
-        const value = parseFloat(this.value) || 0;
-        const errorEl = document.getElementById('priceError');
-        
-        if (errorEl) {
-          if (isNaN(value) || value < 0) {
-            errorEl.textContent = 'Price must be 0 or greater';
-            this.style.borderColor = '#ff4444';
-          } else {
-            errorEl.textContent = '';
-            this.style.borderColor = '#00C851';
-          }
-        }
-        updateSubmitButton();
-      });
-      
-      // Also validate on blur
-      priceField.addEventListener('blur', function() {
-        if (this.value === '') {
-          const errorEl = document.getElementById('priceError');
-          if (errorEl) errorEl.textContent = 'Price is required';
-          this.style.borderColor = '#ff4444';
-          updateSubmitButton();
-        }
-      });
-    }
-
-    // Item description validation (minimum 3 characters)
-    const descriptionField = document.getElementById('itemDescription');
-    if (descriptionField) {
-      descriptionField.addEventListener('input', function() {
-        const value = this.value.trim();
-        const errorEl = document.getElementById('itemDescriptionError');
-        
-        if (errorEl) {
-          if (value.length < 3) {
-            errorEl.textContent = 'Minimum 3 characters required';
-            this.style.borderColor = '#ff4444';
-          } else {
-            errorEl.textContent = '';
-            this.style.borderColor = '#00C851';
-          }
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // Quantity validation
-    const quantityField = document.getElementById('quantity');
-    if (quantityField) {
-      quantityField.addEventListener('input', function() {
-        const value = parseInt(this.value) || 0;
-        const errorEl = document.getElementById('quantityError');
-        
-        if (errorEl) {
-          if (isNaN(value) || value < 1 || value > 999) {
-            errorEl.textContent = 'Must be between 1 and 999';
-            this.style.borderColor = '#ff4444';
-          } else {
-            errorEl.textContent = '';
-            this.style.borderColor = '#00C851';
-          }
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // Tracking number validation
-    const trackingField = document.getElementById('trackingNumber');
-    if (trackingField) {
-      trackingField.addEventListener('input', function() {
-        const value = this.value.trim();
-        const errorEl = document.getElementById('trackingError');
-        
-        if (errorEl) {
-          if (!/^[A-Za-z0-9\-]{5,}$/.test(value)) {
-            errorEl.textContent = 'Minimum 5 chars, letters/numbers/hyphens only';
-            this.style.borderColor = '#ff4444';
-          } else {
-            errorEl.textContent = '';
-            this.style.borderColor = '#00C851';
-          }
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // Name on parcel validation
-    const nameField = document.getElementById('nameOnParcel');
-    if (nameField) {
-      nameField.addEventListener('input', function() {
-        const value = this.value.trim();
-        const errorEl = document.getElementById('nameOnParcelError');
-        
-        if (errorEl) {
-          if (value.length < 2) {
-            errorEl.textContent = 'Minimum 2 characters required';
-            this.style.borderColor = '#ff4444';
-          } else {
-            errorEl.textContent = '';
-            this.style.borderColor = '#00C851';
-          }
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // Collection point validation
-    const collectionField = document.getElementById('collectionPoint');
-    if (collectionField) {
-      collectionField.addEventListener('change', function() {
-        const errorEl = document.getElementById('collectionPointError');
-        if (errorEl) {
-          errorEl.textContent = this.value ? '' : 'Please select collection point';
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // Item category validation
-    const categoryField = document.getElementById('itemCategory');
-    if (categoryField) {
-      categoryField.addEventListener('change', function() {
-        const errorEl = document.getElementById('itemCategoryError');
-        if (errorEl) {
-          errorEl.textContent = this.value ? '' : 'Please select item category';
-        }
-        updateSubmitButton();
-      });
-    }
-
-    // File upload validation
-    const fileUploadField = document.getElementById('fileUpload');
-    if (fileUploadField) {
-      fileUploadField.addEventListener('change', function() {
-        updateSubmitButton();
-      });
-    }
+    // These event listeners are now handled by the real-time validation system
+    // We just need to ensure the real-time validation triggers on changes
+    
+    const fields = [
+      'trackingNumber',
+      'nameOnParcel',
+      'itemDescription',
+      'quantity',
+      'price',
+      'collectionPoint',
+      'itemCategory'
+    ];
+    
+    fields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.addEventListener('input', () => validateFieldInRealTime(field));
+        field.addEventListener('change', () => validateFieldInRealTime(field));
+      }
+    });
   }
 
   // Update submit button state - SIMPLIFIED VERSION
