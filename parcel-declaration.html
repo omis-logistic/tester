@@ -143,7 +143,6 @@
       color: #aaa;
       font-size: 1rem;
     }
-    
   </style>
 </head>
 <body class="safari-fix">
@@ -152,6 +151,471 @@
     <div class="global-spinner"></div>
     <div class="global-loading-text">Processing Submission...</div>
   </div>
+
+  <!-- Validation Error Modal -->
+  <div id="validationModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>⚠️ Missing or Invalid Information</h3>
+        <button class="close-modal" onclick="closeValidationModal()">&times;</button>
+      </div>
+      <div class="modal-body">
+        <p>Please correct the following errors before submitting:</p>
+        <div id="validationErrorsContainer"></div>
+      </div>
+      <div class="modal-footer">
+        <button class="secondary-button" onclick="closeValidationModal()">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    /* Validation Modal Styles */
+    .modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.85);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 10001;
+      animation: fadeIn 0.3s ease;
+    }
+
+    .modal-content {
+      background: #1a1a1a;
+      border: 2px solid #ff4444;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      animation: slideUp 0.3s ease;
+      box-shadow: 0 10px 30px rgba(255, 68, 68, 0.2);
+    }
+
+    .modal-header {
+      background: linear-gradient(135deg, #2a1a1a 0%, #3a1a1a 100%);
+      padding: 20px;
+      border-bottom: 1px solid #ff4444;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .modal-header h3 {
+      color: #ffcc00;
+      margin: 0;
+      font-size: 1.3rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .modal-header h3:before {
+      content: "⚠️";
+    }
+
+    .close-modal {
+      background: rgba(255, 68, 68, 0.2);
+      border: 1px solid #ff4444;
+      color: white;
+      font-size: 24px;
+      cursor: pointer;
+      padding: 0;
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 50%;
+      transition: all 0.3s ease;
+    }
+
+    .close-modal:hover {
+      background: #ff4444;
+      transform: scale(1.1);
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-body p {
+      color: #ccc;
+      margin-bottom: 15px;
+      font-size: 1rem;
+      line-height: 1.5;
+    }
+
+    #validationErrorsContainer {
+      background: rgba(255, 68, 68, 0.05);
+      border-radius: 8px;
+      padding: 15px;
+      border: 1px solid rgba(255, 68, 68, 0.2);
+    }
+
+    .error-item {
+      display: flex;
+      align-items: flex-start;
+      gap: 10px;
+      padding: 10px;
+      margin-bottom: 8px;
+      background: rgba(255, 68, 68, 0.1);
+      border-radius: 5px;
+      border-left: 3px solid #ff4444;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+
+    .error-item:hover {
+      background: rgba(255, 68, 68, 0.15);
+      transform: translateX(5px);
+    }
+
+    .error-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .error-icon {
+      color: #ff4444;
+      font-size: 1.2rem;
+      min-width: 24px;
+    }
+
+    .error-details {
+      flex: 1;
+    }
+
+    .error-field {
+      color: #ff9999;
+      font-weight: 600;
+      margin-bottom: 3px;
+      display: block;
+    }
+
+    .error-message-text {
+      color: #ffaaaa;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .modal-footer {
+      padding: 20px;
+      border-top: 1px solid #333;
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; }
+      to { opacity: 1; }
+    }
+
+    @keyframes slideUp {
+      from { 
+        opacity: 0;
+        transform: translateY(30px) scale(0.95);
+      }
+      to { 
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+    }
+
+    /* Updated field error styling */
+    .field-error {
+      border-color: #ff4444 !important;
+      background: rgba(255, 68, 68, 0.1) !important;
+      box-shadow: 0 0 0 1px rgba(255, 68, 68, 0.3) !important;
+    }
+
+    .field-error:focus {
+      border-color: #ff4444 !important;
+      box-shadow: 0 0 0 3px rgba(255, 68, 68, 0.2) !important;
+    }
+
+    .error-label {
+      color: #ff4444 !important;
+      font-weight: bold !important;
+    }
+
+    /* Shake animation for error fields */
+    @keyframes shakeError {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-3px); }
+      20%, 40%, 60%, 80% { transform: translateX(3px); }
+    }
+
+    .shake {
+      animation: shakeError 0.5s ease;
+    }
+
+    /* Network Status Indicator */
+    .network-status {
+      background: #ff4444;
+      color: white;
+      padding: 10px;
+      text-align: center;
+      border-radius: 5px;
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .status-icon {
+      font-size: 1.2rem;
+    }
+
+    /* Message styles */
+    .message {
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 5px;
+      text-align: center;
+    }
+
+    .message.success {
+      background: #00C851;
+      color: white;
+    }
+
+    .message.info {
+      background: #33b5e5;
+      color: white;
+    }
+
+    .message.error {
+      background: #ff4444;
+      color: white;
+    }
+
+    /* Drafts section */
+    .drafts-section {
+      margin-top: 30px;
+      border-top: 1px solid #333;
+      padding-top: 20px;
+    }
+
+    .drafts-toggle {
+      background: #2a2a2a;
+      border: 1px solid var(--gold);
+      color: var(--gold);
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+    }
+
+    .drafts-list {
+      margin-top: 15px;
+      padding: 15px;
+      background: #1a1a1a;
+      border-radius: 5px;
+    }
+
+    .draft-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      border-bottom: 1px solid #333;
+    }
+
+    .draft-item:last-child {
+      border-bottom: none;
+    }
+
+    .draft-info strong {
+      color: var(--gold);
+    }
+
+    .draft-info small {
+      color: #888;
+      display: block;
+      margin-top: 5px;
+    }
+
+    .draft-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .small-btn {
+      padding: 5px 10px;
+      font-size: 0.9rem;
+      border-radius: 3px;
+      border: none;
+      cursor: pointer;
+    }
+
+    .small-btn.delete {
+      background: #ff4444;
+      color: white;
+    }
+
+    .empty-drafts {
+      color: #888;
+      text-align: center;
+      padding: 20px;
+    }
+
+    /* Info box */
+    .info-box {
+      background: #2a2a2a;
+      border-left: 4px solid var(--gold);
+      padding: 15px;
+      margin: 20px 0;
+      border-radius: 0 5px 5px 0;
+    }
+
+    .info-box h3 {
+      color: var(--gold);
+      margin-top: 0;
+    }
+
+    .info-box ul {
+      margin: 10px 0 0 0;
+      padding-left: 20px;
+    }
+
+    .info-box li {
+      margin-bottom: 8px;
+      color: #ccc;
+    }
+
+    /* Button styles */
+    .gold-button {
+      background: linear-gradient(135deg, var(--gold) 0%, #d4af37 100%);
+      color: #1a1a1a;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-weight: bold;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .gold-button:hover:not(:disabled) {
+      transform: translateY(-2px);
+      box-shadow: 0 5px 15px rgba(212, 175, 55, 0.3);
+    }
+
+    .gold-button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none !important;
+      box-shadow: none !important;
+    }
+
+    .secondary-button {
+      background: #2a2a2a;
+      color: white;
+      border: 1px solid #444;
+      padding: 12px 24px;
+      border-radius: 5px;
+      cursor: pointer;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .secondary-button:hover {
+      background: #333;
+      border-color: var(--gold);
+    }
+
+    /* Form styles */
+    .input-group {
+      margin-bottom: 20px;
+    }
+
+    .input-group label {
+      display: block;
+      margin-bottom: 8px;
+      color: var(--gold);
+      font-weight: 600;
+    }
+
+    .input-group input,
+    .input-group select,
+    .input-group textarea {
+      width: 100%;
+      padding: 12px;
+      background: #2a2a2a;
+      border: 1px solid #444;
+      border-radius: 5px;
+      color: white;
+      font-size: 1rem;
+      transition: all 0.3s ease;
+    }
+
+    .input-group input:focus,
+    .input-group select:focus,
+    .input-group textarea:focus {
+      outline: none;
+      border-color: var(--gold);
+      box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2);
+    }
+
+    .input-group textarea {
+      resize: vertical;
+      min-height: 100px;
+    }
+
+    .form-help {
+      display: block;
+      margin-top: 5px;
+      color: #888;
+      font-size: 0.9rem;
+    }
+
+    .double-column {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    @media (max-width: 768px) {
+      .double-column {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .button-group {
+      display: flex;
+      gap: 15px;
+      margin-top: 30px;
+      flex-wrap: wrap;
+    }
+
+    @media (max-width: 768px) {
+      .button-group {
+        flex-direction: column;
+      }
+    }
+
+    .file-upload-section input[type="file"] {
+      padding: 10px;
+      background: #2a2a2a;
+      border: 1px dashed #444;
+      border-radius: 5px;
+      color: #888;
+      cursor: pointer;
+    }
+
+    .file-upload-section input[type="file"]:hover {
+      border-color: var(--gold);
+    }
+  </style>
 
   <div class="container">
     <!-- Page Header -->
@@ -171,7 +635,7 @@
     <div id="errorMessage" class="error-message" style="display: none;"></div>
 
     <!-- Main Form -->
-    <form id="declarationForm" novalidate>
+    <form id="declarationForm" novalidate onsubmit="return validateAndSubmitForm(event)">
       <!-- Tracking Number -->
       <div class="input-group">
         <label for="trackingNumber" class="required">Tracking Number:</label>
@@ -231,10 +695,9 @@
           rows="3"
           minlength="3"
           maxlength="500"
-          placeholder=
-          "Simple item detail. For multiple items example:
-          - Baju x2 RM30
-          - Seluar x1 RM10"
+          placeholder="Simple item detail. For multiple items example:
+- Baju x2 RM30
+- Seluar x1 RM10"
           required
         ></textarea>
         <small class="form-help">Be specific for customs clearance</small>
@@ -467,273 +930,354 @@
   window.addEventListener('online', updateNetworkStatus);
   window.addEventListener('offline', updateNetworkStatus);
   updateNetworkStatus();
-
-// Field validation with names mapping
-const FIELD_NAMES = {
-  'trackingNumber': 'Tracking Number',
-  'nameOnParcel': 'Name on Parcel',
-  'itemDescription': 'Item Description',
-  'quantity': 'Quantity',
-  'price': 'Price',
-  'collectionPoint': 'Collection Point',
-  'itemCategory': 'Item Category',
-  'fileUpload': 'Invoice/Document'
-};
-
-// Enhanced validation function for submission
-function validateFormBeforeSubmit() {
-  const errors = [];
-  const fieldsToHighlight = [];
-
-  // Clear previous highlights
-  document.querySelectorAll('.field-error').forEach(el => {
-    el.classList.remove('field-error');
-  });
-
-  // Check required fields
-  const requiredFields = [
-    'trackingNumber',
-    'nameOnParcel', 
-    'itemDescription',
-    'quantity',
-    'price',
-    'collectionPoint',
-    'itemCategory'
-  ];
-
-  requiredFields.forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (!field) return;
-
-    let isValid = true;
-    let errorMessage = '';
-
-    switch(fieldId) {
-      case 'trackingNumber':
-        isValid = /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
-        errorMessage = 'Tracking number must be at least 5 characters (letters, numbers, hyphens)';
-        break;
-      case 'nameOnParcel':
-        isValid = field.value.trim().length >= 2;
-        errorMessage = 'Name must be at least 2 characters';
-        break;
-      case 'itemDescription':
-        isValid = field.value.trim().length >= 3;
-        errorMessage = 'Description must be at least 3 characters';
-        break;
-      case 'quantity':
-        const qty = parseInt(field.value);
-        isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
-        errorMessage = 'Quantity must be between 1 and 999';
-        break;
-      case 'price':
-        const price = parseFloat(field.value);
-        isValid = !isNaN(price) && price >= 0;
-        errorMessage = 'Price must be 0 or greater';
-        break;
-      case 'collectionPoint':
-      case 'itemCategory':
-        isValid = field.value !== '';
-        errorMessage = `Please select ${FIELD_NAMES[fieldId]}`;
-        break;
-    }
-
-    if (!isValid) {
-      errors.push({
-        field: fieldId,
-        message: `${FIELD_NAMES[fieldId]}: ${errorMessage}`
-      });
-      fieldsToHighlight.push(fieldId);
-    }
-  });
-
-  // Check file requirements for starred categories
-  const category = document.getElementById('itemCategory')?.value || '';
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    const files = document.getElementById('fileUpload')?.files || [];
-    if (files.length === 0) {
-      errors.push({
-        field: 'fileUpload',
-        message: 'Invoice/document upload is required for this category'
-      });
-      fieldsToHighlight.push('fileUpload');
-    }
-  }
-
-  return { errors, fieldsToHighlight };
-}
-
-// Show validation modal
-function showValidationModal(errors) {
-  const modal = document.getElementById('validationModal');
-  const errorsList = document.getElementById('validationErrorsList');
-  
-  if (!modal || !errorsList) return;
-
-  // Clear previous errors
-  errorsList.innerHTML = '';
-
-  // Add new errors to list
-  errors.forEach(error => {
-    const li = document.createElement('li');
-    li.textContent = error.message;
-    li.setAttribute('data-field', error.field);
-    errorsList.appendChild(li);
-  });
-
-  // Highlight error fields
-  errors.forEach(error => {
-    const field = document.getElementById(error.field);
-    if (field) {
-      field.classList.add('field-error');
-      
-      // Also highlight the label
-      const label = field.closest('.input-group')?.querySelector('label');
-      if (label) {
-        label.classList.add('error-label');
-      }
-    }
-  });
-
-  // Show modal
-  modal.style.display = 'flex';
-  
-  // Focus first field when modal closes
-  modal.addEventListener('click', function(e) {
-    if (e.target === modal) {
-      setTimeout(() => {
-        const firstErrorField = errors[0]?.field;
-        if (firstErrorField) {
-          const field = document.getElementById(firstErrorField);
-          if (field) field.focus();
-        }
-      }, 300);
-    }
-  });
-}
-
-// Close validation modal
-function closeValidationModal() {
-  const modal = document.getElementById('validationModal');
-  if (modal) {
-    modal.style.display = 'none';
-    
-    // Remove error highlights
-    document.querySelectorAll('.field-error').forEach(el => {
-      el.classList.remove('field-error');
-    });
-    document.querySelectorAll('.error-label').forEach(el => {
-      el.classList.remove('error-label');
-    });
-  }
-}
-
-// Scroll to first error field
-function scrollToFirstError() {
-  const firstError = document.querySelector('.field-error');
-  if (firstError) {
-    closeValidationModal();
-    
-    // Wait for modal to close
-    setTimeout(() => {
-      firstError.scrollIntoView({ 
-        behavior: 'smooth', 
-        block: 'center' 
-      });
-      
-      // Add extra highlight
-      firstError.classList.add('field-error');
-      setTimeout(() => {
-        firstError.focus();
-      }, 500);
-    }, 300);
-  }
-}
-
-// Real-time validation for each field
-function setupRealTimeValidation() {
-  const fields = [
-    'trackingNumber', 'nameOnParcel', 'itemDescription',
-    'quantity', 'price', 'collectionPoint', 'itemCategory'
-  ];
-
-  fields.forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (field) {
-      field.addEventListener('blur', function() {
-        validateField(this);
-      });
-      
-      // Also validate on input for some fields
-      if (fieldId === 'trackingNumber' || fieldId === 'nameOnParcel' || 
-          fieldId === 'itemDescription') {
-        field.addEventListener('input', function() {
-          if (this.value.length >= (fieldId === 'itemDescription' ? 3 : 2)) {
-            this.classList.remove('field-error');
-            const label = this.closest('.input-group')?.querySelector('label');
-            if (label) label.classList.remove('error-label');
-          }
-        });
-      }
-    }
-  });
-}
-
-// Validate individual field
-function validateField(field) {
-  const value = field.value.trim();
-  let isValid = true;
-
-  switch(field.id) {
-    case 'trackingNumber':
-      isValid = /^[A-Za-z0-9\-]{5,}$/.test(value);
-      break;
-    case 'nameOnParcel':
-      isValid = value.length >= 2;
-      break;
-    case 'itemDescription':
-      isValid = value.length >= 3;
-      break;
-    case 'quantity':
-      const qty = parseInt(value);
-      isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
-      break;
-    case 'price':
-      const price = parseFloat(value);
-      isValid = !isNaN(price) && price >= 0;
-      break;
-    case 'collectionPoint':
-    case 'itemCategory':
-      isValid = value !== '';
-      break;
-  }
-
-  if (!isValid) {
-    field.classList.add('field-error');
-    const label = field.closest('.input-group')?.querySelector('label');
-    if (label) label.classList.add('error-label');
-  } else {
-    field.classList.remove('field-error');
-    const label = field.closest('.input-group')?.querySelector('label');
-    if (label) label.classList.remove('error-label');
-  }
-}
-
 </script>
 
 <script src="scripts/app.js"></script>
 <script>
+  // Field names mapping for user-friendly display
+  const FIELD_DISPLAY_NAMES = {
+    'trackingNumber': 'Tracking Number',
+    'nameOnParcel': 'Name on Parcel',
+    'itemDescription': 'Item Description',
+    'quantity': 'Quantity',
+    'price': 'Price (MYR)',
+    'collectionPoint': 'Collection Point',
+    'itemCategory': 'Item Category',
+    'fileUpload': 'Invoice/Document'
+  };
+
+  // Comprehensive form validation function
+  function validateEntireForm() {
+    const errors = [];
+    
+    // Clear previous error highlights
+    clearErrorHighlights();
+    
+    // 1. Tracking Number
+    const trackingNumber = document.getElementById('trackingNumber');
+    if (!trackingNumber.value.trim()) {
+      errors.push({
+        field: 'trackingNumber',
+        message: 'Tracking number is required'
+      });
+      highlightFieldError(trackingNumber);
+    } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber.value.trim())) {
+      errors.push({
+        field: 'trackingNumber',
+        message: 'Must be at least 5 characters (letters, numbers, hyphens only)'
+      });
+      highlightFieldError(trackingNumber);
+    }
+    
+    // 2. Name on Parcel
+    const nameOnParcel = document.getElementById('nameOnParcel');
+    if (!nameOnParcel.value.trim()) {
+      errors.push({
+        field: 'nameOnParcel',
+        message: 'Name on parcel is required'
+      });
+      highlightFieldError(nameOnParcel);
+    } else if (nameOnParcel.value.trim().length < 2) {
+      errors.push({
+        field: 'nameOnParcel',
+        message: 'Must be at least 2 characters'
+      });
+      highlightFieldError(nameOnParcel);
+    }
+    
+    // 3. Item Description
+    const itemDescription = document.getElementById('itemDescription');
+    if (!itemDescription.value.trim()) {
+      errors.push({
+        field: 'itemDescription',
+        message: 'Item description is required'
+      });
+      highlightFieldError(itemDescription);
+    } else if (itemDescription.value.trim().length < 3) {
+      errors.push({
+        field: 'itemDescription',
+        message: 'Must be at least 3 characters'
+      });
+      highlightFieldError(itemDescription);
+    }
+    
+    // 4. Quantity
+    const quantity = document.getElementById('quantity');
+    const quantityValue = parseInt(quantity.value);
+    if (!quantity.value.trim()) {
+      errors.push({
+        field: 'quantity',
+        message: 'Quantity is required'
+      });
+      highlightFieldError(quantity);
+    } else if (isNaN(quantityValue)) {
+      errors.push({
+        field: 'quantity',
+        message: 'Must be a valid number'
+      });
+      highlightFieldError(quantity);
+    } else if (quantityValue < 1) {
+      errors.push({
+        field: 'quantity',
+        message: 'Must be at least 1'
+      });
+      highlightFieldError(quantity);
+    } else if (quantityValue > 999) {
+      errors.push({
+        field: 'quantity',
+        message: 'Cannot exceed 999'
+      });
+      highlightFieldError(quantity);
+    }
+    
+    // 5. Price
+    const price = document.getElementById('price');
+    const priceValue = parseFloat(price.value);
+    if (!price.value.trim()) {
+      errors.push({
+        field: 'price',
+        message: 'Price is required (enter 0 if no value)'
+      });
+      highlightFieldError(price);
+    } else if (isNaN(priceValue)) {
+      errors.push({
+        field: 'price',
+        message: 'Must be a valid number'
+      });
+      highlightFieldError(price);
+    } else if (priceValue < 0) {
+      errors.push({
+        field: 'price',
+        message: 'Cannot be negative'
+      });
+      highlightFieldError(price);
+    } else if (priceValue > 99999) {
+      errors.push({
+        field: 'price',
+        message: 'Cannot exceed 99,999 MYR'
+      });
+      highlightFieldError(price);
+    }
+    
+    // 6. Collection Point
+    const collectionPoint = document.getElementById('collectionPoint');
+    if (!collectionPoint.value) {
+      errors.push({
+        field: 'collectionPoint',
+        message: 'Please select a collection point'
+      });
+      highlightFieldError(collectionPoint);
+    }
+    
+    // 7. Item Category
+    const itemCategory = document.getElementById('itemCategory');
+    if (!itemCategory.value) {
+      errors.push({
+        field: 'itemCategory',
+        message: 'Please select an item category'
+      });
+      highlightFieldError(itemCategory);
+    }
+    
+    // 8. File Upload (only for starred categories)
+    const category = itemCategory.value || '';
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      const fileUpload = document.getElementById('fileUpload');
+      const files = fileUpload?.files || [];
+      
+      if (files.length === 0) {
+        errors.push({
+          field: 'fileUpload',
+          message: 'Invoice/document upload is required for this category'
+        });
+        if (fileUpload) highlightFieldError(fileUpload);
+      } else {
+        // Validate each file
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          
+          if (!allowedTypes.includes(file.type)) {
+            errors.push({
+              field: 'fileUpload',
+              message: `File "${file.name}" must be JPG, PNG, or PDF`
+            });
+            if (fileUpload) highlightFieldError(fileUpload);
+            break;
+          }
+          
+          if (file.size > MAX_SIZE) {
+            errors.push({
+              field: 'fileUpload',
+              message: `File "${file.name}" exceeds 5MB limit`
+            });
+            if (fileUpload) highlightFieldError(fileUpload);
+            break;
+          }
+        }
+      }
+    }
+    
+    return errors;
+  }
+
+  // Highlight field with error
+  function highlightFieldError(fieldElement) {
+    if (!fieldElement) return;
+    
+    fieldElement.classList.add('field-error');
+    fieldElement.classList.add('shake');
+    
+    // Find and highlight label
+    const inputGroup = fieldElement.closest('.input-group');
+    if (inputGroup) {
+      const label = inputGroup.querySelector('label');
+      if (label) {
+        label.classList.add('error-label');
+      }
+    }
+    
+    // Remove shake animation after it completes
+    setTimeout(() => {
+      fieldElement.classList.remove('shake');
+    }, 500);
+  }
+
+  // Clear all error highlights
+  function clearErrorHighlights() {
+    // Remove field errors
+    document.querySelectorAll('.field-error').forEach(el => {
+      el.classList.remove('field-error');
+    });
+    
+    // Remove label errors
+    document.querySelectorAll('.error-label').forEach(el => {
+      el.classList.remove('error-label');
+    });
+  }
+
+  // Show validation modal with errors
+  function showValidationModal(errors) {
+    const modal = document.getElementById('validationModal');
+    const errorsContainer = document.getElementById('validationErrorsContainer');
+    
+    if (!modal || !errorsContainer) return;
+    
+    // Clear previous errors
+    errorsContainer.innerHTML = '';
+    
+    // Create error items
+    errors.forEach(error => {
+      const errorItem = document.createElement('div');
+      errorItem.className = 'error-item';
+      
+      const displayName = FIELD_DISPLAY_NAMES[error.field] || error.field;
+      
+      errorItem.innerHTML = `
+        <div class="error-icon">❌</div>
+        <div class="error-details">
+          <span class="error-field">${displayName}</span>
+          <span class="error-message-text">${error.message}</span>
+        </div>
+      `;
+      
+      // Add click to focus on field
+      errorItem.addEventListener('click', function() {
+        closeValidationModal();
+        setTimeout(() => {
+          const field = document.getElementById(error.field);
+          if (field) {
+            field.focus();
+            field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          }
+        }, 300);
+      });
+      
+      errorsContainer.appendChild(errorItem);
+    });
+    
+    // Show modal
+    modal.style.display = 'flex';
+    
+    // Focus close button
+    setTimeout(() => {
+      const closeBtn = modal.querySelector('.close-modal');
+      if (closeBtn) closeBtn.focus();
+    }, 100);
+  }
+
+  // Close validation modal
+  function closeValidationModal() {
+    const modal = document.getElementById('validationModal');
+    if (modal) {
+      modal.style.display = 'none';
+    }
+  }
+
+  // Validate and submit form
+  function validateAndSubmitForm(event) {
+    // Prevent default form submission
+    event.preventDefault();
+    
+    // Validate form
+    const errors = validateEntireForm();
+    
+    if (errors.length > 0) {
+      // Show validation modal with errors
+      showValidationModal(errors);
+      return false;
+    }
+    
+    // If no errors, proceed with submission
+    return handleParcelSubmission(event);
+  }
+
+  // Scroll to first error field
+  function scrollToFirstError() {
+    const firstErrorField = document.querySelector('.field-error');
+    if (firstErrorField) {
+      closeValidationModal();
+      setTimeout(() => {
+        firstErrorField.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        firstErrorField.focus();
+      }, 300);
+    }
+  }
+
+  // Add keyboard support for modal
+  document.addEventListener('keydown', function(event) {
+    const modal = document.getElementById('validationModal');
+    if (modal && modal.style.display === 'flex') {
+      // ESC key closes modal
+      if (event.key === 'Escape') {
+        closeValidationModal();
+      }
+      // Enter key on close button
+      if (event.key === 'Enter' && document.activeElement.classList.contains('close-modal')) {
+        closeValidationModal();
+      }
+    }
+  });
+
+  // Close modal when clicking outside
+  document.addEventListener('click', function(event) {
+    const modal = document.getElementById('validationModal');
+    if (modal && modal.style.display === 'flex' && event.target === modal) {
+      closeValidationModal();
+    }
+  });
+
   // Form-specific initialization
   document.addEventListener('DOMContentLoaded', function() {
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
-      document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
@@ -761,7 +1305,6 @@ function validateField(field) {
 
     // Check category requirements on load
     checkCategoryRequirements();
-    setupRealTimeValidation();
   });
 
   // Set up field-by-field validation
@@ -906,12 +1449,6 @@ function validateField(field) {
       fileUploadField.addEventListener('change', function() {
         updateSubmitButton();
       });
-    }
-
-    // Form submission handler
-    const form = document.getElementById('declarationForm');
-    if (form) {
-      form.addEventListener('submit', handleParcelSubmission);
     }
   }
 
@@ -1214,152 +1751,5 @@ function validateField(field) {
     }, 5000);
   }
 </script>
-
-<!-- Validation Error Modal -->
-<div id="validationModal" class="modal" style="display: none;">
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>⚠️ Missing Information</h3>
-      <button class="close-modal" onclick="closeValidationModal()">&times;</button>
-    </div>
-    <div class="modal-body">
-      <p>Please fill in the following required fields:</p>
-      <ul id="validationErrorsList"></ul>
-    </div>
-    <div class="modal-footer">
-      <button class="secondary-button" onclick="closeValidationModal()">Close</button>
-      <button class="gold-button" onclick="scrollToFirstError()">Go to First Error</button>
-    </div>
-  </div>
-</div>
-
-<style>
-  /* Validation Modal Styles */
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 10001;
-    animation: fadeIn 0.3s ease;
-  }
-
-  .modal-content {
-    background: #1a1a1a;
-    border: 2px solid #ff4444;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    animation: slideUp 0.3s ease;
-  }
-
-  .modal-header {
-    background: #2a1a1a;
-    padding: 20px;
-    border-bottom: 1px solid #ff4444;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-  }
-
-  .modal-header h3 {
-    color: #ff4444;
-    margin: 0;
-    font-size: 1.3rem;
-  }
-
-  .close-modal {
-    background: none;
-    border: none;
-    color: white;
-    font-size: 28px;
-    cursor: pointer;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 50%;
-  }
-
-  .close-modal:hover {
-    background: rgba(255, 68, 68, 0.2);
-  }
-
-  .modal-body {
-    padding: 20px;
-  }
-
-  .modal-body p {
-    color: #ccc;
-    margin-bottom: 15px;
-  }
-
-  #validationErrorsList {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  #validationErrorsList li {
-    padding: 10px;
-    margin-bottom: 8px;
-    background: rgba(255, 68, 68, 0.1);
-    border-left: 3px solid #ff4444;
-    border-radius: 3px;
-    color: #ff9999;
-  }
-
-  .modal-footer {
-    padding: 20px;
-    border-top: 1px solid #333;
-    display: flex;
-    justify-content: flex-end;
-    gap: 10px;
-  }
-
-  @keyframes fadeIn {
-    from { opacity: 0; }
-    to { opacity: 1; }
-  }
-
-  @keyframes slideUp {
-    from { 
-      opacity: 0;
-      transform: translateY(20px);
-    }
-    to { 
-      opacity: 1;
-      transform: translateY(0);
-    }
-  }
-
-  /* Highlight error fields */
-  .field-error {
-    border-color: #ff4444 !important;
-    background: rgba(255, 68, 68, 0.1) !important;
-    animation: shake 0.5s ease;
-  }
-
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-    20%, 40%, 60%, 80% { transform: translateX(5px); }
-  }
-
-  /* Error label style */
-  .error-label {
-    color: #ff4444;
-    font-weight: bold;
-  }
-</style>
 </body>
 </html>
