@@ -2450,3 +2450,43 @@ document.addEventListener('DOMContentLoaded', function() {
     }
   });
 });
+
+// Add this function at the end of app.js (before the closing bracket if any)
+
+// Debug function to test form submission
+function testFormSubmission() {
+  console.log('=== TESTING FORM SUBMISSION ===');
+  
+  // Fill in test data
+  document.getElementById('trackingNumber').value = 'TEST12345';
+  document.getElementById('nameOnParcel').value = 'John Doe';
+  document.getElementById('itemDescription').value = 'Test item description';
+  document.getElementById('quantity').value = '1';
+  document.getElementById('price').value = '100';
+  document.getElementById('collectionPoint').value = 'Rimba';
+  document.getElementById('itemCategory').value = 'Clothing';
+  
+  // Trigger validation updates
+  document.getElementById('trackingNumber').dispatchEvent(new Event('input'));
+  document.getElementById('nameOnParcel').dispatchEvent(new Event('input'));
+  document.getElementById('itemDescription').dispatchEvent(new Event('input'));
+  document.getElementById('quantity').dispatchEvent(new Event('input'));
+  document.getElementById('price').dispatchEvent(new Event('input'));
+  document.getElementById('collectionPoint').dispatchEvent(new Event('change'));
+  document.getElementById('itemCategory').dispatchEvent(new Event('change'));
+  
+  console.log('Test data filled. Submit button should be enabled.');
+  
+  // Check if submit is enabled
+  const submitBtn = document.getElementById('submitBtn');
+  console.log('Submit button disabled:', submitBtn.disabled);
+  
+  // If enabled, click it
+  if (!submitBtn.disabled) {
+    console.log('Attempting to submit form...');
+    document.getElementById('declarationForm').dispatchEvent(new Event('submit'));
+  }
+}
+
+// Make test function available globally
+window.testFormSubmission = testFormSubmission;
