@@ -655,6 +655,75 @@ function scrollToFirstError() {
   }
 }
 
+// Real-time validation for each field
+function setupRealTimeValidation() {
+  const fields = [
+    'trackingNumber', 'nameOnParcel', 'itemDescription',
+    'quantity', 'price', 'collectionPoint', 'itemCategory'
+  ];
+
+  fields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.addEventListener('blur', function() {
+        validateField(this);
+      });
+      
+      // Also validate on input for some fields
+      if (fieldId === 'trackingNumber' || fieldId === 'nameOnParcel' || 
+          fieldId === 'itemDescription') {
+        field.addEventListener('input', function() {
+          if (this.value.length >= (fieldId === 'itemDescription' ? 3 : 2)) {
+            this.classList.remove('field-error');
+            const label = this.closest('.input-group')?.querySelector('label');
+            if (label) label.classList.remove('error-label');
+          }
+        });
+      }
+    }
+  });
+}
+
+// Validate individual field
+function validateField(field) {
+  const value = field.value.trim();
+  let isValid = true;
+
+  switch(field.id) {
+    case 'trackingNumber':
+      isValid = /^[A-Za-z0-9\-]{5,}$/.test(value);
+      break;
+    case 'nameOnParcel':
+      isValid = value.length >= 2;
+      break;
+    case 'itemDescription':
+      isValid = value.length >= 3;
+      break;
+    case 'quantity':
+      const qty = parseInt(value);
+      isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
+      break;
+    case 'price':
+      const price = parseFloat(value);
+      isValid = !isNaN(price) && price >= 0;
+      break;
+    case 'collectionPoint':
+    case 'itemCategory':
+      isValid = value !== '';
+      break;
+  }
+
+  if (!isValid) {
+    field.classList.add('field-error');
+    const label = field.closest('.input-group')?.querySelector('label');
+    if (label) label.classList.add('error-label');
+  } else {
+    field.classList.remove('field-error');
+    const label = field.closest('.input-group')?.querySelector('label');
+    if (label) label.classList.remove('error-label');
+  }
+}
+
 </script>
 
 <script src="scripts/app.js"></script>
@@ -692,6 +761,7 @@ function scrollToFirstError() {
 
     // Check category requirements on load
     checkCategoryRequirements();
+    setupRealTimeValidation();
   });
 
   // Set up field-by-field validation
