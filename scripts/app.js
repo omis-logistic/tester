@@ -247,6 +247,17 @@ function resetForm() {
     phoneField.style.backgroundColor = '#2a2a2a';
     phoneField.style.color = '#ffffff';
   }
+
+  // Trigger validation after reset
+  setTimeout(() => {
+    if (typeof runInitialValidation === 'function') {
+      runInitialValidation();
+    }
+    // Also check category requirements
+    if (typeof checkCategoryRequirements === 'function') {
+      checkCategoryRequirements();
+    }
+  }, 100);
 }
 
 // ================= ENHANCED SUBMISSION SYSTEM =================
@@ -792,6 +803,11 @@ function showSubmissionSuccess(trackingNumber) {
   messageElement.className = 'success';
   messageElement.style.display = 'block';
   
+  // Reset form after successful submission
+  setTimeout(() => {
+    resetForm();
+  }, 500);
+  
   // Auto-hide after 5 seconds
   setTimeout(() => {
     messageElement.style.display = 'none';
@@ -979,9 +995,6 @@ function isSafariBrowser() {
 function initRealTimeValidation() {
   console.log('Initializing real-time validation...');
   
-  // Create validation summary element
-  createValidationSummary();
-  
   // Run initial validation on page load
   setTimeout(() => {
     console.log('Running initial page load validation...');
@@ -990,29 +1003,6 @@ function initRealTimeValidation() {
     // Update validation on every input
     setupRealTimeValidationListeners();
   }, 100);
-}
-
-function createValidationSummary() {
-  // Remove existing validation summary if any
-  const existingSummary = document.getElementById('validationSummary');
-  if (existingSummary) existingSummary.remove();
-  
-  // Create new validation summary
-  const summary = document.createElement('div');
-  summary.id = 'validationSummary';
-  summary.innerHTML = `
-    <h4>⚠️ Please fix the following issues:</h4>
-    <ul id="validationErrorsList"></ul>
-  `;
-  
-  // Insert after page header
-  const container = document.querySelector('.container');
-  const header = document.querySelector('.page-header');
-  if (header && container) {
-    container.insertBefore(summary, header.nextSibling);
-  } else if (container) {
-    container.insertBefore(summary, container.firstChild);
-  }
 }
 
 function runInitialValidation() {
@@ -1027,9 +1017,6 @@ function runInitialValidation() {
     { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
     { id: 'itemCategory', name: 'Item Category', type: 'select' }
   ];
-  
-  let hasErrors = false;
-  const errorMessages = [];
   
   // Validate each field
   fieldsToValidate.forEach(field => {
@@ -1071,12 +1058,6 @@ function runInitialValidation() {
     
     // Update UI
     updateFieldValidationState(fieldElement, isValid, message);
-    
-    // Collect errors for summary
-    if (!isValid) {
-      hasErrors = true;
-      errorMessages.push(`${field.name}: ${message}`);
-    }
   });
   
   // Validate files if required
@@ -1089,9 +1070,6 @@ function runInitialValidation() {
   if (starredCategories.includes(category)) {
     const files = document.getElementById('fileUpload')?.files || [];
     if (files.length === 0) {
-      hasErrors = true;
-      errorMessages.push('Invoice/Documents: Required for this category');
-      
       const fileInput = document.getElementById('fileUpload');
       const fileError = document.getElementById('invoiceFilesError') || 
                        createErrorMessageElement('invoiceFiles');
@@ -1099,18 +1077,17 @@ function runInitialValidation() {
       if (fileInput && fileError) {
         fileError.textContent = 'Required: At least 1 invoice/document required';
         fileError.style.color = '#ff4444';
+        fileError.style.display = 'block';
         fileInput.style.borderColor = '#ff4444';
+        fileInput.parentElement.classList.add('invalid');
       }
     }
   }
   
-  // Show/hide validation summary
-  updateValidationSummary(hasErrors, errorMessages);
-  
   // Update submit button
   updateSubmitButton();
   
-  return !hasErrors;
+  return true;
 }
 
 function validateTrackingNumberOnLoad(value) {
@@ -1166,6 +1143,7 @@ function updateFieldValidationState(fieldElement, isValid, message) {
     if (errorElement) {
       errorElement.textContent = '';
       errorElement.style.display = 'none';
+      fieldElement.style.borderColor = '#444';
     }
   } else {
     parent.classList.add('invalid');
@@ -1173,32 +1151,21 @@ function updateFieldValidationState(fieldElement, isValid, message) {
       errorElement.textContent = message;
       errorElement.style.color = '#ff4444';
       errorElement.style.display = 'block';
+      fieldElement.style.borderColor = '#ff4444';
     }
   }
-}
-
-function updateValidationSummary(hasErrors, errorMessages) {
-  const summary = document.getElementById('validationSummary');
-  const errorsList = document.getElementById('validationErrorsList');
   
-  if (!summary || !errorsList) return;
-  
-  if (hasErrors) {
-    summary.style.display = 'block';
-    errorsList.innerHTML = '';
-    
-    errorMessages.forEach(msg => {
-      const li = document.createElement('li');
-      li.textContent = msg;
-      errorsList.appendChild(li);
-    });
-    
-    // Scroll to validation summary
-    setTimeout(() => {
-      summary.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-    }, 100);
-  } else {
-    summary.style.display = 'none';
+  // Special handling for select elements to ensure error text is visible
+  if (fieldElement.tagName === 'SELECT') {
+    if (errorElement) {
+      errorElement.style.position = 'relative';
+      errorElement.style.zIndex = '1000';
+      errorElement.style.backgroundColor = 'rgba(26, 26, 26, 0.95)';
+      errorElement.style.padding = '5px 10px';
+      errorElement.style.borderRadius = '3px';
+      errorElement.style.marginTop = '8px';
+      errorElement.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
+    }
   }
 }
 
@@ -1276,7 +1243,9 @@ function validateFieldInRealTime(field) {
   
   // If this is the category field, also check file requirements
   if (field.id === 'itemCategory') {
-    checkCategoryRequirements();
+    setTimeout(() => {
+      checkCategoryRequirements();
+    }, 100);
   }
 }
 
@@ -1294,6 +1263,8 @@ function validateFilesInRealTime() {
                       createErrorMessageElement('invoiceFiles');
   const parent = fileInput.parentElement;
   
+  parent.classList.remove('valid', 'invalid');
+  
   if (starredCategories.includes(category)) {
     const files = fileInput.files;
     
@@ -1302,7 +1273,7 @@ function validateFilesInRealTime() {
       errorElement.style.color = '#ff4444';
       errorElement.style.display = 'block';
       parent.classList.add('invalid');
-      parent.classList.remove('valid');
+      fileInput.style.borderColor = '#ff4444';
     } else {
       // Validate each file
       let allValid = true;
@@ -1329,7 +1300,11 @@ function validateFilesInRealTime() {
         errorElement.textContent = `${files.length} file(s) selected`;
         errorElement.style.color = '#00C851';
         parent.classList.add('valid');
-        parent.classList.remove('invalid');
+        fileInput.style.borderColor = '#00C851';
+      } else {
+        errorElement.style.color = '#ff4444';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
       }
     }
   } else {
@@ -1360,10 +1335,18 @@ function validateFilesInRealTime() {
       if (allValid) {
         errorElement.textContent = `${files.length} file(s) selected (optional)`;
         errorElement.style.color = '#888';
+        parent.classList.add('valid');
+        fileInput.style.borderColor = '#00C851';
+      } else {
+        errorElement.style.color = '#ff4444';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
       }
     } else {
       errorElement.textContent = 'Optional: Upload invoice/documents if available';
       errorElement.style.color = '#888';
+      errorElement.style.display = 'block';
+      fileInput.style.borderColor = '#444';
     }
   }
   
@@ -1393,7 +1376,9 @@ function checkCategoryRequirements() {
     fileHelp.style.fontWeight = 'bold';
     
     // Validate immediately
-    validateFilesInRealTime();
+    setTimeout(() => {
+      validateFilesInRealTime();
+    }, 100);
   } else {
     // Show as optional
     if (fileRequirement) {
@@ -1405,13 +1390,15 @@ function checkCategoryRequirements() {
     
     // Clear any error state
     const errorElement = document.getElementById('invoiceFilesError');
+    const parent = fileInput.parentElement;
+    
     if (errorElement) {
       errorElement.textContent = 'Optional: Upload invoice/documents if available';
       errorElement.style.color = '#888';
     }
     
-    const parent = fileInput.parentElement;
     parent.classList.remove('invalid');
+    fileInput.style.borderColor = '#444';
   }
   
   updateSubmitButton();
@@ -1999,14 +1986,15 @@ function updateSubmitButton() {
     const field = document.getElementById(fieldId);
     const parent = field?.parentElement;
     
-    if (!field || !parent) {
+    if (!field) {
       allValid = false;
       return;
     }
     
-    // Check if field has invalid class
-    if (parent.classList.contains('invalid')) {
+    // Check if field has invalid class or is empty
+    if (parent && parent.classList.contains('invalid')) {
       allValid = false;
+      return;
     }
     
     // Check field value
@@ -2035,6 +2023,7 @@ function updateSubmitButton() {
     }
   }
   
+  // Update button state
   submitBtn.disabled = !allValid;
   
   // Update button text based on state
@@ -2047,9 +2036,11 @@ function updateSubmitButton() {
   if (allValid) {
     submitBtn.style.background = 'linear-gradient(135deg, #d4af37, #b8941f)';
     submitBtn.style.cursor = 'pointer';
+    submitBtn.style.opacity = '1';
   } else {
-    submitBtn.style.background = '#666';
+    submitBtn.style.background = '#555';
     submitBtn.style.cursor = 'not-allowed';
+    submitBtn.style.opacity = '0.7';
   }
 }
 
