@@ -8,166 +8,178 @@
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <title>Parcel Declaration - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
-  <style>
-    /* Safari-specific fixes */
-    .safari-fix input[type="file"] {
-      -webkit-appearance: none;
-      appearance: none;
-      border-radius: 5px;
-      padding: 8px;
-      background: #2a2a2a;
-      color: white;
+<style>
+  /* Safari-specific fixes */
+  .safari-fix input[type="file"] {
+    -webkit-appearance: none;
+    appearance: none;
+    border-radius: 5px;
+    padding: 8px;
+    background: #2a2a2a;
+    color: white;
+  }
+  
+  .safari-fix input:focus,
+  .safari-fix select:focus,
+  .safari-fix textarea:focus {
+    outline: 2px solid var(--gold);
+    outline-offset: 2px;
+    -webkit-tap-highlight-color: transparent;
+  }
+  
+  .safari-fix button {
+    -webkit-appearance: none;
+    appearance: none;
+    -webkit-tap-highlight-color: rgba(212, 175, 55, 0.3);
+  }
+  
+  /* Prevent iOS zoom on input focus */
+  @media screen and (max-width: 768px) {
+    input[type="text"],
+    input[type="tel"],
+    input[type="number"],
+    input[type="email"],
+    select,
+    textarea {
+      font-size: 16px !important;
     }
-    
-    .safari-fix input:focus,
-    .safari-fix select:focus,
-    .safari-fix textarea:focus {
-      outline: 2px solid var(--gold);
-      outline-offset: 2px;
-      -webkit-tap-highlight-color: transparent;
-    }
-    
-    .safari-fix button {
-      -webkit-appearance: none;
-      appearance: none;
-      -webkit-tap-highlight-color: rgba(212, 175, 55, 0.3);
-    }
-    
-    /* Prevent iOS zoom on input focus */
-    @media screen and (max-width: 768px) {
-      input[type="text"],
-      input[type="tel"],
-      input[type="number"],
-      input[type="email"],
-      select,
-      textarea {
-        font-size: 16px !important;
-      }
-    }
-    
-    /* Safari loading animation fix */
-    @keyframes safari-spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
-    .loading-spinner {
-      animation: safari-spin 1s linear infinite;
-    }
-    
-    /* Required field indicator */
-    .required::after {
-      content: " *";
-      color: #ff4444;
-    }
-    
-    /* Form validation styles */
-    .input-group.error input,
-    .input-group.error select,
-    .input-group.error textarea {
-      border-color: #ff4444;
-      background: #3a1a1a;
-    }
-    
-    .input-group.success input,
-    .input-group.success select,
-    .input-group.success textarea {
-      border-color: #00C851;
-      background: #1a3a1a;
-    }
-    
-    .error-message {
-      color: #ff4444;
-      font-size: 0.9em;
-      margin-top: 5px;
-      display: block;
-    }
-    
-    .success-message {
-      color: #00C851;
-      font-size: 0.9em;
-      margin-top: 5px;
-      display: block;
-    }
-
-    /* Global spinner overlay */
-    #globalSpinnerOverlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      flex-direction: column;
-      gap: 1rem;
-    }
-
-    .global-spinner {
-      width: 50px;
-      height: 50px;
-      border: 4px solid rgba(212, 175, 55, 0.3);
-      border-top: 4px solid var(--gold);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-
-    .global-loading-text {
-      color: var(--gold);
-      font-size: 1.2rem;
-      text-align: center;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    /* Page header */
-    .page-header {
-      text-align: center;
-      margin-bottom: 2rem;
-      padding-bottom: 1rem;
-      border-bottom: 2px solid var(--gold);
-    }
-
-    .page-header h1 {
-      color: var(--gold);
-      margin-bottom: 0.5rem;
-    }
-
-    .page-header .subtitle {
-      color: #aaa;
-      font-size: 1rem;
-    }
-    
-  /* Real-time validation styles */
-  .validation-message {
+  }
+  
+  /* Safari loading animation fix */
+  @keyframes safari-spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+  
+  .loading-spinner {
+    animation: safari-spin 1s linear infinite;
+  }
+  
+  /* Required field indicator */
+  .required::after {
+    content: " *";
+    color: #ff4444;
+  }
+  
+  /* Form validation styles */
+  .input-group.error input,
+  .input-group.error select,
+  .input-group.error textarea {
+    border-color: #ff4444;
+    background: #3a1a1a;
+  }
+  
+  .input-group.success input,
+  .input-group.success select,
+  .input-group.success textarea {
+    border-color: #00C851;
+    background: #1a3a1a;
+  }
+  
+  .error-message {
     color: #ff4444;
     font-size: 0.9em;
     margin-top: 5px;
+    display: block;
+  }
+  
+  .success-message {
+    color: #00C851;
+    font-size: 0.9em;
+    margin-top: 5px;
+    display: block;
+  }
+
+  /* Global spinner overlay */
+  #globalSpinnerOverlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.85);
+    display: none;
+    justify-content: center;
+    align-items: center;
+    z-index: 9999;
+    flex-direction: column;
+    gap: 1rem;
+  }
+
+  .global-spinner {
+    width: 50px;
+    height: 50px;
+    border: 4px solid rgba(212, 175, 55, 0.3);
+    border-top: 4px solid var(--gold);
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+  }
+
+  .global-loading-text {
+    color: var(--gold);
+    font-size: 1.2rem;
+    text-align: center;
+  }
+
+  @keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+  }
+
+  /* Page header */
+  .page-header {
+    text-align: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid var(--gold);
+  }
+
+  .page-header h1 {
+    color: var(--gold);
+    margin-bottom: 0.5rem;
+  }
+
+  .page-header .subtitle {
+    color: #aaa;
+    font-size: 1rem;
+  }
+
+  /* ===== REAL-TIME VALIDATION STYLES ===== */
+  /* Validation message styling */
+  .validation-message {
+    color: #ff4444 !important;
+    font-size: 0.85em !important;
+    margin-top: 8px !important;
     min-height: 20px;
     display: block;
     font-weight: 500;
     transition: opacity 0.3s ease;
+    position: relative;
+    z-index: 1000;
+    background-color: rgba(26, 26, 26, 0.95);
+    padding: 5px 10px;
+    border-radius: 3px;
+    border-left: 3px solid #ff4444;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
   }
   
   .validation-message.success {
-    color: #00C851;
+    color: #00C851 !important;
+    border-left-color: #00C851;
   }
   
   .validation-message.warning {
-    color: #ffbb33;
+    color: #ffbb33 !important;
+    border-left-color: #ffbb33;
   }
   
+  /* Field validation states */
   .input-group.invalid input,
   .input-group.invalid select,
   .input-group.invalid textarea {
     border-color: #ff4444 !important;
     background-color: rgba(255, 68, 68, 0.05) !important;
+    color: #fff !important;
   }
   
   .input-group.valid input,
@@ -175,6 +187,84 @@
   .input-group.valid textarea {
     border-color: #00C851 !important;
     background-color: rgba(0, 200, 81, 0.05) !important;
+  }
+  
+  /* Dropdown specific styles - FIXED FOR COLLAPSE ISSUE */
+  .input-group select.invalid {
+    color: #ff4444 !important;
+    border-color: #ff4444 !important;
+    background-color: rgba(255, 68, 68, 0.05) !important;
+  }
+  
+  .input-group select option {
+    color: #fff !important;
+    background-color: #2a2a2a !important;
+  }
+  
+  .input-group select.invalid option {
+    color: #fff !important;
+    background-color: #2a2a2a !important;
+  }
+  
+  /* Ensure dropdown error messages are ALWAYS visible */
+  #collectionPointError,
+  #itemCategoryError {
+    position: relative !important;
+    z-index: 9999 !important;
+    background-color: rgba(26, 26, 26, 0.95) !important;
+    padding: 5px 10px !important;
+    border-radius: 3px !important;
+    margin-top: 8px !important;
+    display: block !important;
+    color: #ff4444 !important;
+    font-weight: 500 !important;
+    border-left: 3px solid #ff4444 !important;
+    max-width: 100% !important;
+    word-wrap: break-word !important;
+    overflow-wrap: break-word !important;
+  }
+  
+  /* Desktop-specific fix for dropdown error visibility */
+  @media (min-width: 769px) {
+    #collectionPointError,
+    #itemCategoryError {
+      position: absolute !important;
+      top: 100% !important;
+      left: 0 !important;
+      right: 0 !important;
+      margin-top: 5px !important;
+      z-index: 10000 !important;
+      background-color: rgba(26, 26, 26, 0.98) !important;
+      backdrop-filter: blur(5px);
+      -webkit-backdrop-filter: blur(5px);
+      border: 1px solid #ff4444 !important;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.5) !important;
+    }
+    
+    /* Ensure dropdown doesn't cover the error message */
+    .input-group {
+      position: relative;
+      margin-bottom: 35px; /* Add space for error messages */
+    }
+  }
+  
+  /* Mobile-specific fix for dropdown error visibility */
+  @media (max-width: 768px) {
+    #collectionPointError,
+    #itemCategoryError {
+      position: relative !important;
+      z-index: 1000 !important;
+      margin-top: 8px !important;
+      background-color: rgba(26, 26, 26, 0.95) !important;
+      border: 1px solid #ff4444 !important;
+    }
+  }
+  
+  /* Page load validation - show all errors immediately */
+  .input-group input:invalid,
+  .input-group select:invalid,
+  .input-group textarea:invalid {
+    border-color: #ff4444 !important;
   }
   
   /* Field requirement indicators */
@@ -186,33 +276,342 @@
     font-weight: 500;
   }
   
-  /* Page load validation summary */
-  #validationSummary {
-    background: rgba(255, 68, 68, 0.1);
-    border: 1px solid #ff4444;
-    border-radius: 5px;
-    padding: 15px;
-    margin-bottom: 20px;
-    display: none;
+  /* Submit button states */
+  #submitBtn:disabled {
+    background: #555 !important;
+    cursor: not-allowed !important;
+    opacity: 0.7 !important;
   }
   
-  #validationSummary h4 {
-    color: #ff4444;
+  #submitBtn:enabled {
+    background: linear-gradient(135deg, #d4af37, #b8941f) !important;
+    cursor: pointer !important;
+    opacity: 1 !important;
+  }
+  
+  /* File upload specific validation styles */
+  #invoiceFilesError {
+    color: #ff4444 !important;
+    font-size: 0.85em !important;
+    margin-top: 8px !important;
+    display: block;
+    font-weight: 500;
+    background-color: rgba(26, 26, 26, 0.95);
+    padding: 5px 10px;
+    border-radius: 3px;
+    border-left: 3px solid #ff4444;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+  }
+  
+  .input-group.file-upload-section.invalid input[type="file"] {
+    border-color: #ff4444 !important;
+    background-color: rgba(255, 68, 68, 0.05) !important;
+  }
+  
+  .input-group.file-upload-section.valid input[type="file"] {
+    border-color: #00C851 !important;
+    background-color: rgba(0, 200, 81, 0.05) !important;
+  }
+  
+  /* Form field focus states */
+  .input-group input:focus,
+  .input-group select:focus,
+  .input-group textarea:focus {
+    border-color: var(--gold) !important;
+    outline: none !important;
+    box-shadow: 0 0 0 2px rgba(212, 175, 55, 0.2) !important;
+  }
+  
+  /* Input group adjustments for validation */
+  .input-group {
+    margin-bottom: 25px;
+    position: relative;
+  }
+  
+  /* Double column layout adjustments */
+  .input-group.double-column {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+  }
+  
+  @media (max-width: 768px) {
+    .input-group.double-column {
+      grid-template-columns: 1fr;
+      gap: 15px;
+    }
+  }
+  
+  /* Form help text styling */
+  .form-help {
+    font-size: 0.85em;
+    color: #888;
+    margin-top: 5px;
+    display: block;
+  }
+  
+  /* Form buttons group */
+  .button-group {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    margin-top: 30px;
+  }
+  
+  .button-group button {
+    width: 100%;
+    padding: 12px;
+    font-size: 1em;
+  }
+  
+  /* Gold button styling */
+  .gold-button {
+    background: linear-gradient(135deg, #d4af37, #b8941f);
+    color: #000;
+    font-weight: bold;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .gold-button:hover:not(:disabled) {
+    background: linear-gradient(135deg, #e6c158, #c9a42f);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+  }
+  
+  /* Secondary button styling */
+  .secondary-button {
+    background: #444;
+    color: #fff;
+    border: 1px solid #666;
+    border-radius: 5px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+  }
+  
+  .secondary-button:hover {
+    background: #555;
+    border-color: #777;
+  }
+  
+  /* Info box styling */
+  .info-box {
+    background: rgba(212, 175, 55, 0.1);
+    border: 1px solid rgba(212, 175, 55, 0.3);
+    border-radius: 5px;
+    padding: 15px;
+    margin-top: 30px;
+  }
+  
+  .info-box h3 {
+    color: var(--gold);
     margin-top: 0;
     margin-bottom: 10px;
   }
   
-  #validationSummary ul {
+  .info-box ul {
     margin: 0;
     padding-left: 20px;
   }
   
-  #validationSummary li {
-    margin-bottom: 5px;
-    color: #ff4444;
+  .info-box li {
+    margin-bottom: 8px;
+    color: #ccc;
   }
-
-  </style>
+  
+  /* Drafts section styling */
+  .drafts-section {
+    margin-top: 30px;
+  }
+  
+  .drafts-toggle {
+    background: #333;
+    color: #fff;
+    border: 1px solid #555;
+    border-radius: 5px;
+    padding: 10px 15px;
+    width: 100%;
+    text-align: left;
+    cursor: pointer;
+    font-size: 1em;
+  }
+  
+  .drafts-toggle:hover {
+    background: #444;
+  }
+  
+  .drafts-list {
+    background: #2a2a2a;
+    border: 1px solid #444;
+    border-radius: 5px;
+    margin-top: 10px;
+    padding: 15px;
+  }
+  
+  .drafts-container {
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+  }
+  
+  .draft-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 10px;
+    background: #333;
+    border-radius: 3px;
+    border: 1px solid #444;
+  }
+  
+  .draft-info {
+    flex: 1;
+  }
+  
+  .draft-info strong {
+    color: #fff;
+    display: block;
+    margin-bottom: 3px;
+  }
+  
+  .draft-info small {
+    color: #888;
+    font-size: 0.85em;
+  }
+  
+  .draft-actions {
+    display: flex;
+    gap: 5px;
+  }
+  
+  .small-btn {
+    background: #444;
+    color: #fff;
+    border: none;
+    border-radius: 3px;
+    padding: 5px 10px;
+    font-size: 0.85em;
+    cursor: pointer;
+  }
+  
+  .small-btn:hover {
+    background: #555;
+  }
+  
+  .small-btn.delete {
+    background: #ff4444;
+  }
+  
+  .small-btn.delete:hover {
+    background: #ff5555;
+  }
+  
+  .empty-drafts {
+    color: #888;
+    text-align: center;
+    padding: 10px;
+    font-style: italic;
+  }
+  
+  /* Network status indicator */
+  .network-status {
+    background: #ff4444;
+    color: white;
+    padding: 10px 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+  }
+  
+  .status-icon {
+    margin-right: 8px;
+  }
+  
+  /* Message styling */
+  .message {
+    background: rgba(0, 200, 81, 0.1);
+    border: 1px solid #00C851;
+    color: #00C851;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+  }
+  
+  .message.info {
+    background: rgba(33, 150, 243, 0.1);
+    border-color: #2196F3;
+    color: #2196F3;
+  }
+  
+  .message.warning {
+    background: rgba(255, 193, 7, 0.1);
+    border-color: #FFC107;
+    color: #FFC107;
+  }
+  
+  /* Error message styling */
+  .error-message {
+    background: rgba(255, 68, 68, 0.1);
+    border: 1px solid #ff4444;
+    color: #ff4444;
+    padding: 15px;
+    border-radius: 5px;
+    margin-bottom: 20px;
+    text-align: center;
+    font-weight: 500;
+  }
+  
+  /* Form input base styling */
+  input, select, textarea {
+    background: #2a2a2a;
+    color: #fff;
+    border: 1px solid #444;
+    border-radius: 5px;
+    padding: 12px;
+    font-size: 1em;
+    width: 100%;
+    box-sizing: border-box;
+    transition: border-color 0.3s ease, background-color 0.3s ease;
+  }
+  
+  input:focus, select:focus, textarea:focus {
+    border-color: var(--gold);
+    outline: none;
+  }
+  
+  /* Label styling */
+  label {
+    display: block;
+    margin-bottom: 8px;
+    color: #eee;
+    font-weight: 500;
+  }
+  
+  /* Container styling */
+  .container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+    background: #1a1a1a;
+    border-radius: 10px;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+  }
+  
+  /* Body styling */
+  body {
+    background: linear-gradient(135deg, #121212, #1a1a1a);
+    color: #fff;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+    min-height: 100vh;
+    padding: 20px;
+    margin: 0;
+  }
+</style>
 </head>
 <body class="safari-fix">
   <!-- Global Spinner Overlay -->
@@ -571,9 +970,9 @@
     checkCategoryRequirements();
   });
 
-    function setupFieldValidations() {
-    // These event listeners are now handled by the real-time validation system
-    // We just need to ensure the real-time validation triggers on changes
+  function setupFieldValidations() {
+    // These are handled by the real-time validation system
+    // Just ensure event listeners are set up
     
     const fields = [
       'trackingNumber',
@@ -588,8 +987,21 @@
     fields.forEach(fieldId => {
       const field = document.getElementById(fieldId);
       if (field) {
-        field.addEventListener('input', () => validateFieldInRealTime(field));
-        field.addEventListener('change', () => validateFieldInRealTime(field));
+        // Clear existing listeners by cloning
+        const newField = field.cloneNode(true);
+        field.parentNode.replaceChild(newField, field);
+        
+        // Add new listeners
+        newField.addEventListener('input', () => {
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(newField);
+          }
+        });
+        newField.addEventListener('change', () => {
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(newField);
+          }
+        });
       }
     });
   }
