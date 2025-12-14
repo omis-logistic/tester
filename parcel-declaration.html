@@ -714,13 +714,15 @@
 <script>
   // Form-specific initialization
   document.addEventListener('DOMContentLoaded', function() {
+    console.log('DOM loaded, initializing form...');
+    
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
-      document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
+      console.log('No session found, redirecting to login');
       window.location.href = 'login.html';
       return;
     }
@@ -746,27 +748,19 @@
     // Check category requirements on load
     checkCategoryRequirements();
     
-    // Add modal event listeners
-    const modal = document.getElementById('validationModal');
-    if (modal) {
-      // Close when clicking outside
-      modal.addEventListener('click', function(e) {
-        if (e.target.classList.contains('modal-overlay')) {
-          closeValidationModal();
-        }
-      });
-      
-      // Close with Escape key
-      document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && modal.style.display === 'block') {
-          closeValidationModal();
-        }
-      });
-    }
+    // Enable form submission
+    setupFormSubmission();
+    
+    // Add debug button to check validation
+    addDebugButton();
+    
+    console.log('Form initialization complete');
   });
 
   // Set up field-by-field validation
   function setupFieldValidations() {
+    console.log('Setting up field validations...');
+    
     // Price field validation (allows 0)
     const priceField = document.getElementById('price');
     if (priceField) {
@@ -784,16 +778,6 @@
           }
         }
         updateSubmitButton();
-      });
-      
-      // Also validate on blur
-      priceField.addEventListener('blur', function() {
-        if (this.value === '') {
-          const errorEl = document.getElementById('priceError');
-          if (errorEl) errorEl.textContent = 'Price is required';
-          this.style.borderColor = '#ff4444';
-          updateSubmitButton();
-        }
       });
     }
 
@@ -898,6 +882,7 @@
           errorEl.textContent = this.value ? '' : 'Please select item category';
         }
         updateSubmitButton();
+        checkCategoryRequirements();
       });
     }
 
@@ -908,18 +893,38 @@
         updateSubmitButton();
       });
     }
+    
+    console.log('Field validations setup complete');
+  }
 
-    // Form submission handler
+  // Setup form submission
+  function setupFormSubmission() {
+    console.log('Setting up form submission...');
+    
     const form = document.getElementById('declarationForm');
     if (form) {
-      form.addEventListener('submit', handleParcelSubmission);
+      // Remove any existing submit listeners
+      const newForm = form.cloneNode(true);
+      form.parentNode.replaceChild(newForm, form);
+      
+      // Add submit handler
+      newForm.addEventListener('submit', function(e) {
+        console.log('Form submit event triggered');
+        e.preventDefault();
+        handleFormSubmission(e);
+      });
+      
+      console.log('Form submission handler attached');
     }
   }
 
-  // Update submit button state - SIMPLIFIED VERSION
+  // Update submit button state
   function updateSubmitButton() {
     const submitBtn = document.getElementById('submitBtn');
-    if (!submitBtn) return;
+    if (!submitBtn) {
+      console.log('Submit button not found!');
+      return;
+    }
     
     // Check each field individually
     const trackingValid = validateTrackingField();
@@ -935,48 +940,84 @@
                     quantityValid && priceValid && collectionValid && 
                     categoryValid && filesValid;
     
+    console.log('Validation status:', {
+      trackingValid,
+      nameValid,
+      descriptionValid,
+      quantityValid,
+      priceValid,
+      collectionValid,
+      categoryValid,
+      filesValid,
+      allValid
+    });
+    
     submitBtn.disabled = !allValid;
+    console.log('Submit button disabled:', submitBtn.disabled);
   }
 
   // Individual validation functions
   function validateTrackingField() {
     const field = document.getElementById('trackingNumber');
-    if (!field || !field.value.trim()) return false;
-    return /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
+    if (!field || !field.value.trim()) {
+      console.log('Tracking field: empty or not found');
+      return false;
+    }
+    const isValid = /^[A-Za-z0-9\-]{5,}$/.test(field.value.trim());
+    console.log('Tracking field validation:', isValid, 'value:', field.value);
+    return isValid;
   }
 
   function validateNameField() {
     const field = document.getElementById('nameOnParcel');
-    return field && field.value.trim().length >= 2;
+    const isValid = field && field.value.trim().length >= 2;
+    console.log('Name field validation:', isValid, 'value:', field?.value);
+    return isValid;
   }
 
   function validateDescriptionField() {
     const field = document.getElementById('itemDescription');
-    return field && field.value.trim().length >= 3;
+    const isValid = field && field.value.trim().length >= 3;
+    console.log('Description field validation:', isValid, 'value:', field?.value);
+    return isValid;
   }
 
   function validateQuantityField() {
     const field = document.getElementById('quantity');
-    if (!field || !field.value) return false;
+    if (!field || !field.value) {
+      console.log('Quantity field: empty or not found');
+      return false;
+    }
     const value = parseInt(field.value);
-    return !isNaN(value) && value >= 1 && value <= 999;
+    const isValid = !isNaN(value) && value >= 1 && value <= 999;
+    console.log('Quantity field validation:', isValid, 'value:', field.value);
+    return isValid;
   }
 
   function validatePriceField() {
     const field = document.getElementById('price');
-    if (!field || field.value === '') return false;  // Empty is not valid
+    if (!field || field.value === '') {
+      console.log('Price field: empty or not found');
+      return false;
+    }
     const value = parseFloat(field.value);
-    return !isNaN(value) && value >= 0;  // Allow 0
+    const isValid = !isNaN(value) && value >= 0;
+    console.log('Price field validation:', isValid, 'value:', field.value);
+    return isValid;
   }
 
   function validateCollectionField() {
     const field = document.getElementById('collectionPoint');
-    return field && field.value !== '';
+    const isValid = field && field.value !== '';
+    console.log('Collection field validation:', isValid, 'value:', field?.value);
+    return isValid;
   }
 
   function validateCategoryField() {
     const field = document.getElementById('itemCategory');
-    return field && field.value !== '';
+    const isValid = field && field.value !== '';
+    console.log('Category field validation:', isValid, 'value:', field?.value);
+    return isValid;
   }
 
   function validateFilesField() {
@@ -988,8 +1029,11 @@
     
     if (starredCategories.includes(category)) {
       const files = document.getElementById('fileUpload')?.files || [];
-      return files.length > 0;
+      const isValid = files.length > 0;
+      console.log('Files field validation for starred category:', isValid, 'files:', files.length);
+      return isValid;
     }
+    console.log('Files field not required for category:', category);
     return true; // Not required for non-starred categories
   }
 
@@ -1057,6 +1101,148 @@
     }
     
     updateSubmitButton();
+  }
+
+  // Handle form submission
+  async function handleFormSubmission(e) {
+    console.log('=== FORM SUBMISSION STARTED ===');
+    
+    // First validate all fields
+    const validationErrors = validateAllFields();
+    console.log('Validation errors:', validationErrors);
+    
+    if (validationErrors.length > 0) {
+      console.log('Showing validation modal with errors');
+      showValidationModal(validationErrors);
+      return;
+    }
+    
+    console.log('Validation passed, calling app.js handleParcelSubmission');
+    
+    // If validation passes, call the app.js function
+    if (typeof window.handleParcelSubmission === 'function') {
+      try {
+        await window.handleParcelSubmission(e);
+      } catch (error) {
+        console.error('Error in app.js handleParcelSubmission:', error);
+        showError('Submission failed: ' + error.message);
+      }
+    } else {
+      console.error('handleParcelSubmission not found in app.js');
+      showError('Submission handler not loaded. Please refresh the page.');
+    }
+  }
+
+  // Validate all fields function
+  function validateAllFields() {
+    console.log('=== VALIDATING ALL FIELDS ===');
+    const errors = [];
+    
+    // Get field values
+    const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
+    const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
+    const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
+    const quantity = document.getElementById('quantity')?.value || '';
+    const price = document.getElementById('price')?.value || '';
+    const collectionPoint = document.getElementById('collectionPoint')?.value || '';
+    const itemCategory = document.getElementById('itemCategory')?.value || '';
+    const fileInput = document.getElementById('fileUpload');
+    const files = fileInput?.files || [];
+    
+    console.log('Field values:', {
+      trackingNumber,
+      nameOnParcel,
+      itemDescription,
+      quantity,
+      price,
+      collectionPoint,
+      itemCategory,
+      filesCount: files.length
+    });
+    
+    // Check tracking number
+    if (!trackingNumber) {
+      errors.push('Tracking Number is required');
+    } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
+      errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
+    }
+    
+    // Check name on parcel
+    if (!nameOnParcel) {
+      errors.push('Name on Parcel is required');
+    } else if (nameOnParcel.length < 2) {
+      errors.push('Name on Parcel must be at least 2 characters');
+    }
+    
+    // Check item description
+    if (!itemDescription) {
+      errors.push('Item Description is required');
+    } else if (itemDescription.length < 3) {
+      errors.push('Item Description must be at least 3 characters');
+    }
+    
+    // Check quantity
+    if (!quantity) {
+      errors.push('Quantity is required');
+    } else {
+      const qtyNum = parseInt(quantity);
+      if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
+        errors.push('Quantity must be between 1 and 999');
+      }
+    }
+    
+    // Check price
+    if (!price && price !== '0') {
+      errors.push('Price is required (enter 0 if no value)');
+    } else {
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
+        errors.push('Price must be between 0 and 99,999');
+      }
+    }
+    
+    // Check collection point
+    if (!collectionPoint) {
+      errors.push('Please select a Collection Point');
+    }
+    
+    // Check item category
+    if (!itemCategory) {
+      errors.push('Please select an Item Category');
+    }
+    
+    // Check file requirements for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        errors.push('Invoice/document upload is required for this category');
+      } else {
+        // Check file count
+        if (files.length > 3) {
+          errors.push(`Maximum 3 files allowed`);
+        }
+        
+        // Check each file
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.size > 5 * 1024 * 1024) {
+            errors.push(`File "${file.name}" exceeds 5MB limit`);
+          }
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          if (!allowedTypes.includes(file.type)) {
+            errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
+          }
+        }
+      }
+    }
+    
+    console.log('Validation complete. Errors found:', errors.length);
+    return errors;
   }
 
   // Save form as draft
@@ -1215,153 +1401,136 @@
     }, 5000);
   }
   
-  // Show validation modal (wrapper for app.js function)
+  // Show validation modal
   function showValidationModal(errors) {
-    if (window.showValidationModal) {
-      window.showValidationModal(errors);
-    } else {
-      // Fallback to alert if app.js not loaded
+    console.log('Showing validation modal with errors:', errors);
+    
+    const modal = document.getElementById('validationModal');
+    const errorList = document.getElementById('errorList');
+    
+    if (!modal || !errorList) {
+      console.error('Validation modal elements not found');
       alert('Validation Errors:\n\n' + errors.join('\n'));
-    }
-  }
-  
-  // Close validation modal (wrapper for app.js function)
-  function closeValidationModal() {
-    if (window.closeValidationModal) {
-      window.closeValidationModal();
-    }
-  }
-  
-  // Handle parcel submission (wrapper for app.js function)
-  function handleParcelSubmission(e) {
-    e.preventDefault();
-    
-    // First validate all fields
-    const validationErrors = validateAllFields();
-    
-    if (validationErrors.length > 0) {
-      showValidationModal(validationErrors);
       return;
     }
     
-    // If validation passes, call the app.js function
-    if (window.handleParcelSubmission) {
-      window.handleParcelSubmission(e);
-    } else {
-      alert('Form submission handler not loaded. Please refresh the page.');
-    }
+    // Build error list
+    errorList.innerHTML = '';
+    errors.forEach(error => {
+      const li = document.createElement('li');
+      li.textContent = error;
+      errorList.appendChild(li);
+    });
+    
+    // Highlight invalid fields
+    highlightInvalidFields(errors);
+    
+    // Show modal and disable background
+    modal.style.display = 'block';
+    document.body.classList.add('modal-open');
+    
+    // Focus the OK button
+    setTimeout(() => {
+      const okButton = modal.querySelector('.gold-button');
+      if (okButton) okButton.focus();
+    }, 100);
   }
   
-  // Validate all fields function
-  function validateAllFields() {
-    const errors = [];
-    
-    // Get field values
-    const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
-    const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
-    const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
-    const quantity = document.getElementById('quantity')?.value || '';
-    const price = document.getElementById('price')?.value || '';
-    const collectionPoint = document.getElementById('collectionPoint')?.value || '';
-    const itemCategory = document.getElementById('itemCategory')?.value || '';
-    const fileInput = document.getElementById('fileUpload');
-    const files = fileInput?.files || [];
-    
-    // Check tracking number
-    if (!trackingNumber) {
-      errors.push('Tracking Number is required');
-    } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
-      errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
+  // Close validation modal
+  function closeValidationModal() {
+    const modal = document.getElementById('validationModal');
+    if (modal) {
+      modal.style.display = 'none';
+      document.body.classList.remove('modal-open');
     }
     
-    // Check name on parcel
-    if (!nameOnParcel) {
-      errors.push('Name on Parcel is required');
-    } else if (nameOnParcel.length < 2) {
-      errors.push('Name on Parcel must be at least 2 characters');
-    }
+    // Remove field highlights
+    removeFieldHighlights();
+  }
+  
+  // Highlight invalid fields
+  function highlightInvalidFields(errorMessages) {
+    // First remove all existing highlights
+    removeFieldHighlights();
     
-    // Check item description
-    if (!itemDescription) {
-      errors.push('Item Description is required');
-    } else if (itemDescription.length < 3) {
-      errors.push('Item Description must be at least 3 characters');
-    }
+    // Map error messages to field IDs
+    const fieldMap = {
+      'tracking number': 'trackingNumber',
+      'name on parcel': 'nameOnParcel',
+      'item description': 'itemDescription',
+      'quantity': 'quantity',
+      'price': 'price',
+      'collection point': 'collectionPoint',
+      'item category': 'itemCategory',
+      'invoice/document': 'fileUpload',
+      'file': 'fileUpload'
+    };
     
-    // Check quantity
-    if (!quantity) {
-      errors.push('Quantity is required');
-    } else {
-      const qtyNum = parseInt(quantity);
-      if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
-        errors.push('Quantity must be between 1 and 999');
-      }
-    }
-    
-    // Check price
-    if (!price && price !== '0') {
-      errors.push('Price is required (enter 0 if no value)');
-    } else {
-      const priceNum = parseFloat(price);
-      if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
-        errors.push('Price must be between 0 and 99,999');
-      }
-    }
-    
-    // Check collection point
-    if (!collectionPoint) {
-      errors.push('Please select a Collection Point');
-    }
-    
-    // Check item category
-    if (!itemCategory) {
-      errors.push('Please select an Item Category');
-    }
-    
-    // Check file requirements for starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(itemCategory)) {
-      if (files.length === 0) {
-        errors.push('Invoice/document upload is required for this category');
-      } else {
-        // Check file count
-        if (files.length > 3) {
-          errors.push(`Maximum 3 files allowed`);
-        }
-        
-        // Check each file
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          if (file.size > 5 * 1024 * 1024) {
-            errors.push(`File "${file.name}" exceeds 5MB limit`);
-          }
-          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-          if (!allowedTypes.includes(file.type)) {
-            errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
+    errorMessages.forEach(error => {
+      // Check which field this error corresponds to
+      Object.keys(fieldMap).forEach(key => {
+        if (error.toLowerCase().includes(key)) {
+          const fieldId = fieldMap[key];
+          const field = document.getElementById(fieldId);
+          if (field) {
+            field.classList.add('field-error');
+            
+            // Scroll to first invalid field
+            const errorList = document.querySelectorAll('.field-error');
+            if (errorList.length === 1) {
+              field.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            }
           }
         }
-      }
-    }
+      });
+    });
+  }
+  
+  function removeFieldHighlights() {
+    document.querySelectorAll('.field-error').forEach(field => {
+      field.classList.remove('field-error');
+    });
+  }
+  
+  // Add debug button for testing
+  function addDebugButton() {
+    // Create debug button
+    const debugBtn = document.createElement('button');
+    debugBtn.textContent = '🛠️ Debug Form';
+    debugBtn.style.cssText = `
+      position: fixed;
+      bottom: 20px;
+      right: 20px;
+      background: #444;
+      color: white;
+      border: none;
+      padding: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+      z-index: 999;
+      font-size: 12px;
+    `;
+    debugBtn.onclick = function() {
+      console.log('=== DEBUG FORM STATUS ===');
+      console.log('All fields validation:', validateAllFields());
+      console.log('Submit button disabled:', document.getElementById('submitBtn').disabled);
+      console.log('=== END DEBUG ===');
+    };
     
-    return errors;
+    document.body.appendChild(debugBtn);
   }
   
   // Make functions globally available
-  window.validateAllFields = validateAllFields;
   window.showValidationModal = showValidationModal;
   window.closeValidationModal = closeValidationModal;
-  window.handleParcelSubmission = handleParcelSubmission;
+  window.validateAllFields = validateAllFields;
   window.safeRedirect = safeRedirect;
   window.loadDrafts = loadDrafts;
   window.loadDraft = loadDraft;
   window.deleteDraft = deleteDraft;
   window.saveDraft = saveDraft;
   window.checkCategoryRequirements = checkCategoryRequirements;
+  window.toggleDrafts = toggleDrafts;
 </script>
 </body>
 </html>
