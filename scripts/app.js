@@ -602,16 +602,10 @@ function base64ToBlob(base64, mimeType) {
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
 async function handleParcelSubmission(e) {
-  e.preventDefault();
-  const form = e.target;
+  // Note: Validation is now handled in the HTML file via validateAndSubmitForm
+  // This function is called only after validation passes
   
-  // First, validate all fields before showing loading
-  const validationResult = validateFormBeforeSubmit();
-  if (validationResult.errors.length > 0) {
-    showValidationModal(validationResult.errors);
-    return; // Stop submission if validation fails
-  }
-
+  const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
   try {
@@ -623,7 +617,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload (existing code remains the same)
+    // Build payload
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -632,24 +626,17 @@ async function handleParcelSubmission(e) {
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,
+        price: Number(formData.get('price')) || 0,  // This allows 0
         collectionPoint: formData.get('collectionPoint') || '',
         itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
-
-    // Additional validation (price and description already validated above)
-    // This is just for extra safety
-    if (payload.data.price < 0) {
-      throw new Error('Price must be 0 or greater');
-    }
-
-    if (payload.data.itemDescription.trim().length < 3) {
-      throw new Error('Item description must be at least 3 characters');
-    }
-
-    // Handle file uploads (existing code remains the same)
+    
+    // Note: Field validation is already done in the HTML
+    // We only need to handle file validation here
+    
+    // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
@@ -665,7 +652,7 @@ async function handleParcelSubmission(e) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files (existing code remains the same)
+      // Process files
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -690,7 +677,7 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Submit the data (existing code remains the same)
+    // Submit the data
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
       filesCount: payload.files.length,
@@ -723,14 +710,8 @@ async function handleParcelSubmission(e) {
     console.error('Submission error:', error);
     
     // Show user-friendly error message
-    // Use the existing error display for non-validation errors
-    if (error.message.includes('Price must be')) {
-      showError('❌ Price must be 0 or greater. 0 is allowed for items with no declared value.');
-    } else if (error.message.includes('Item description must be')) {
-      showError('❌ Item description must be at least 3 characters.');
-    } else if (error.message.includes('Invoice/document upload')) {
-      showError('❌ Invoice/document upload is required for starred categories.');
-    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+    // These are server-side or file validation errors that passed initial validation
+    if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
       showError('⚠️ Network connection issue. Please check your internet and try again.');
     } else if (error.message.includes('timeout')) {
       showError('⚠️ Submission timeout. The request took too long. Please try again.');
@@ -743,11 +724,8 @@ async function handleParcelSubmission(e) {
       showError(`❌ ${error.message}`);
     }
     
-    // Only offer to save as draft for network/timeout errors, not validation errors
-    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
-        !error.message.includes('Price must be') && 
-        !error.message.includes('Item description must be') &&
-        !error.message.includes('Invoice/document upload')) {
+    // Only offer to save as draft for network/timeout errors
+    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch'))) {
       if (confirm('Would you like to save this form as a draft?')) {
         saveFormAsDraft();
       }
@@ -757,6 +735,7 @@ async function handleParcelSubmission(e) {
     showLoading(false);
   }
 }
+
 // Enhanced success handler
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
@@ -2056,6 +2035,7 @@ window.deleteDraft = deleteDraft;
 window.retryFailedSubmissions = retryFailedSubmissions;
 window.showRegistration = () => safeRedirect('register.html');
 window.showForgotPassword = () => safeRedirect('forgot-password.html');
+window.handleParcelSubmission = handleParcelSubmission;
 
 // Safari-specific functions
 window.isSafariBrowser = isSafariBrowser;
@@ -2079,10 +2059,25 @@ function debugValidation() {
   // Call updateSubmitButton and see what it returns
   const submitBtn = document.getElementById('submitBtn');
   console.log('Submit button disabled?', submitBtn.disabled);
-
-  // Make validation functions globally available
-  window.validateFormBeforeSubmit = validateFormBeforeSubmit;
-  window.showValidationModal = showValidationModal;
-  window.closeValidationModal = closeValidationModal;
-  window.scrollToFirstError = scrollToFirstError;
 }
+
+// Field validation functions for HTML use
+window.validateField = validateField;
+window.validateFiles = validateFiles;
+window.updateSubmitButton = updateSubmitButton;
+window.checkCategoryRequirements = checkCategoryRequirements;
+window.saveFormAsDraft = saveFormAsDraft;
+
+// Validation utility functions
+window.validateTrackingNumberInput = validateTrackingNumberInput;
+window.validateName = validateName;
+window.validateDescription = validateDescription;
+window.validateQuantity = validateQuantity;
+window.validatePrice = validatePrice;
+window.validateCollectionPoint = validateCollectionPoint;
+window.validateCategory = validateCategory;
+window.validateInvoiceFiles = validateInvoiceFiles;
+window.validateParcelPhone = validateParcelPhone;
+window.checkAllFields = checkAllFields;
+window.checkInvoiceRequirements = checkInvoiceRequirements;
+window.updateSubmitButtonState = updateSubmitButtonState;
