@@ -144,7 +144,7 @@
       font-size: 1rem;
     }
 
-    /* ========== REAL-TIME VALIDATION STYLES ========== */
+    /* ========== CLEAN VALIDATION STYLES ========== */
     .validation-message {
       color: #ff4444 !important;
       font-size: 0.85em !important;
@@ -155,21 +155,20 @@
       transition: opacity 0.3s ease;
       position: relative;
       z-index: 1000;
-      background-color: rgba(26, 26, 26, 0.95);
-      padding: 5px 10px;
-      border-radius: 3px;
-      border-left: 3px solid #ff4444;
-      box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+      background-color: transparent !important; /* Remove grey box */
+      padding: 2px 0 !important; /* Remove padding */
+      border-radius: 0 !important; /* Remove rounded corners */
+      border-left: none !important; /* Remove red left border */
+      box-shadow: none !important; /* Remove shadow */
+      border: none !important; /* Remove all borders */
     }
     
     .validation-message.success {
       color: #00C851 !important;
-      border-left-color: #00C851;
     }
     
     .validation-message.warning {
       color: #ffbb33 !important;
-      border-left-color: #ffbb33;
     }
     
     .input-group.invalid input,
@@ -187,50 +186,33 @@
       background-color: rgba(0, 200, 81, 0.05) !important;
     }
     
-    /* Dropdown specific styles */
-    .input-group select.invalid {
-      color: #ff4444 !important;
-      border-color: #ff4444 !important;
+    /* Clean form help text - NO grey boxes or borders */
+    .form-help {
+      color: #888 !important;
+      font-size: 0.85em !important;
+      margin-top: 5px !important;
+      display: block !important;
+      background: transparent !important;
+      border: none !important;
+      padding: 0 !important;
+      border-radius: 0 !important;
+      box-shadow: none !important;
     }
     
-    .input-group select option {
-      color: #fff !important;
-      background-color: #2a2a2a !important;
-    }
-    
-    .input-group select.invalid option {
-      color: #fff !important;
-    }
-    
-    /* Ensure dropdown error messages are visible */
+    /* Remove all special styling for dropdown error messages */
     #collectionPointError,
     #itemCategoryError {
       position: relative !important;
       z-index: 1000 !important;
-      background-color: rgba(26, 26, 26, 0.95) !important;
-      padding: 5px 10px !important;
-      border-radius: 3px !important;
-      margin-top: 8px !important;
+      background-color: transparent !important;
+      padding: 2px 0 !important;
+      border-radius: 0 !important;
+      margin-top: 5px !important;
       display: block !important;
       color: #ff4444 !important;
       font-weight: 500 !important;
-      border-left: 3px solid #ff4444 !important;
-    }
-    
-    /* Page load validation - show all errors immediately */
-    .input-group input:invalid,
-    .input-group select:invalid,
-    .input-group textarea:invalid {
-      border-color: #ff4444 !important;
-    }
-    
-    /* Field requirement indicators */
-    .field-requirements {
-      font-size: 0.85em;
-      color: #ff4444;
-      margin-top: 3px;
-      display: block;
-      font-weight: 500;
+      border: none !important;
+      box-shadow: none !important;
     }
     
     /* Submit button states */
@@ -544,7 +526,7 @@
           <span id="fileRequirement">Optional: </span>JPEG, PNG, PDF (Max 5MB each)
         </small>
         
-        <span id="invoiceFilesError" class="validation-message">Optional: Upload invoice/documents if available</span>
+        <span id="invoiceFilesError" class="validation-message" style="color: #888;">Optional: Upload invoice/documents if available</span>
       </div>
 
       <!-- Form Buttons -->
@@ -732,8 +714,7 @@
       const files = document.getElementById('fileUpload')?.files || [];
       if (files.length === 0) {
         const fileInput = document.getElementById('fileUpload');
-        const fileError = document.getElementById('invoiceFilesError') || 
-                         createErrorMessageElement('invoiceFiles');
+        const fileError = document.getElementById('invoiceFilesError');
         
         if (fileInput && fileError) {
           fileError.textContent = 'Required: At least 1 invoice/document required';
@@ -816,17 +797,12 @@
       }
     }
     
-    // Special handling for select elements to ensure error text is visible
-    if (fieldElement.tagName === 'SELECT') {
-      if (errorElement) {
-        errorElement.style.position = 'relative';
-        errorElement.style.zIndex = '1000';
-        errorElement.style.backgroundColor = 'rgba(26, 26, 26, 0.95)';
-        errorElement.style.padding = '5px 10px';
-        errorElement.style.borderRadius = '3px';
-        errorElement.style.marginTop = '8px';
-        errorElement.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
-      }
+    // CLEAN styling - remove all special backgrounds and borders
+    if (errorElement) {
+      errorElement.style.backgroundColor = 'transparent';
+      errorElement.style.border = 'none';
+      errorElement.style.boxShadow = 'none';
+      errorElement.style.padding = '2px 0';
     }
   }
 
@@ -853,7 +829,7 @@
         if (field.tagName === 'SELECT') {
           field.addEventListener('change', () => {
             validateFieldInRealTime(field);
-            checkCategoryRequirements(); // Also check file requirements
+            checkCategoryRequirements();
           });
         }
       }
@@ -920,8 +896,7 @@
     
     if (!fileInput) return;
     
-    const errorElement = document.getElementById('invoiceFilesError') || 
-                        createErrorMessageElement('invoiceFiles');
+    const errorElement = document.getElementById('invoiceFilesError');
     const parent = fileInput.parentElement;
     
     parent.classList.remove('valid', 'invalid');
@@ -1171,7 +1146,7 @@
     // Initialize real-time validation system FIRST
     initRealTimeValidation();
     
-    // Set up individual field validators (will be enhanced by real-time validation)
+    // Set up individual field validators
     setupFieldValidations();
 
     // Check category requirements on load
@@ -1319,7 +1294,7 @@
               <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
             </div>
             <div class="draft-actions">
-              <button onclick="loadDraft(${index})" class="small-btn">Load</button>
+              <button onclick="loadDraftFromList(${index})" class="small-btn">Load</button>
               <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
             </div>
           </div>
@@ -1330,26 +1305,66 @@
     }
   }
 
-  // Load draft into form
-  function loadDraft(index) {
+  // Load draft into form - FIXED VERSION
+  function loadDraftFromList(index) {
     const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
     const draft = drafts[index];
     
     if (!draft) return;
     
+    // Clear all validation errors first
+    clearAllValidationErrors();
+    
     // Populate form fields
     Object.keys(draft).forEach(key => {
       if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
         const field = document.getElementById(key);
-        if (field) field.value = draft[key];
+        if (field) {
+          field.value = draft[key];
+          
+          // Trigger validation for each field after setting value
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(field);
+          }
+        }
       }
     });
     
     // Update UI
-    checkCategoryRequirements();
-    updateSubmitButton();
+    if (typeof checkCategoryRequirements === 'function') {
+      checkCategoryRequirements();
+    }
+    
+    if (typeof updateSubmitButton === 'function') {
+      updateSubmitButton();
+    }
     
     showMessage('Draft loaded!', 'success');
+  }
+
+  // Clear all validation errors
+  function clearAllValidationErrors() {
+    const errorElements = document.querySelectorAll('.validation-message');
+    errorElements.forEach(element => {
+      element.textContent = '';
+      element.style.display = 'none';
+      element.style.color = '';
+    });
+    
+    // Clear field borders
+    const fields = document.querySelectorAll('input, select, textarea');
+    fields.forEach(field => {
+      field.style.borderColor = '';
+      field.parentElement.classList.remove('invalid', 'valid');
+    });
+    
+    // Clear file upload error
+    const fileError = document.getElementById('invoiceFilesError');
+    if (fileError) {
+      fileError.textContent = 'Optional: Upload invoice/documents if available';
+      fileError.style.color = '#888';
+      fileError.style.display = 'block';
+    }
   }
 
   // Delete draft
@@ -1416,10 +1431,11 @@
 
   // Make functions available globally
   window.loadDrafts = loadDrafts;
-  window.loadDraft = loadDraft;
+  window.loadDraftFromList = loadDraftFromList;
   window.deleteDraft = deleteDraft;
   window.toggleDrafts = toggleDrafts;
   window.saveDraft = saveDraft;
+  window.clearAllValidationErrors = clearAllValidationErrors;
 </script>
 </body>
 </html>
