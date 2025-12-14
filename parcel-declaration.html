@@ -143,6 +143,230 @@
       color: #aaa;
       font-size: 1rem;
     }
+
+    /* Validation Modal Styles */
+    .validation-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10001;
+    }
+
+    .modal-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+    }
+
+    .modal-content {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #1e1e1e;
+      border: 2px solid #ff4444;
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      max-height: 80vh;
+      overflow-y: auto;
+      box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
+    }
+
+    .modal-header {
+      padding: 20px;
+      border-bottom: 1px solid #333;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #2a1a1a;
+    }
+
+    .modal-header h3 {
+      color: #ff4444;
+      margin: 0;
+      font-size: 1.3rem;
+    }
+
+    .modal-close {
+      background: none;
+      border: none;
+      color: #aaa;
+      font-size: 2rem;
+      cursor: pointer;
+      line-height: 1;
+      padding: 0;
+      width: 30px;
+      height: 30px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    .modal-close:hover {
+      color: white;
+    }
+
+    .modal-body {
+      padding: 20px;
+    }
+
+    .modal-body p {
+      color: #ddd;
+      margin-bottom: 15px;
+    }
+
+    .error-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+    }
+
+    .error-list li {
+      padding: 10px 15px;
+      margin-bottom: 8px;
+      background: rgba(255, 68, 68, 0.1);
+      border-left: 4px solid #ff4444;
+      border-radius: 4px;
+      color: #ff9999;
+      display: flex;
+      align-items: center;
+    }
+
+    .error-list li:before {
+      content: "•";
+      color: #ff4444;
+      font-weight: bold;
+      margin-right: 10px;
+      font-size: 1.5rem;
+    }
+
+    .modal-footer {
+      padding: 15px 20px;
+      border-top: 1px solid #333;
+      text-align: right;
+      background: #2a2a2a;
+    }
+
+    .modal-footer button {
+      min-width: 100px;
+    }
+
+    .field-error {
+      border-color: #ff4444 !important;
+      background: rgba(255, 68, 68, 0.1) !important;
+      animation: shake 0.5s ease-in-out;
+    }
+
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
+      20%, 40%, 60%, 80% { transform: translateX(5px); }
+    }
+
+    body.modal-open {
+      overflow: hidden;
+    }
+
+    /* Drafts section styles */
+    .drafts-section {
+      margin-top: 2rem;
+      border-top: 1px solid #333;
+      padding-top: 1rem;
+    }
+
+    .drafts-toggle {
+      background: #2a2a2a;
+      color: var(--gold);
+      border: 1px solid var(--gold);
+      padding: 10px 15px;
+      border-radius: 5px;
+      cursor: pointer;
+      width: 100%;
+      text-align: left;
+      font-size: 1rem;
+      margin-bottom: 1rem;
+    }
+
+    .drafts-toggle:hover {
+      background: #3a3a3a;
+    }
+
+    .drafts-list {
+      background: #2a2a2a;
+      border-radius: 5px;
+      padding: 15px;
+      margin-top: 10px;
+    }
+
+    .drafts-container {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .draft-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px;
+      background: #333;
+      border-radius: 5px;
+      border-left: 4px solid var(--gold);
+    }
+
+    .draft-info {
+      flex: 1;
+    }
+
+    .draft-info strong {
+      color: white;
+      display: block;
+      margin-bottom: 5px;
+    }
+
+    .draft-info small {
+      color: #aaa;
+      font-size: 0.8rem;
+    }
+
+    .draft-actions {
+      display: flex;
+      gap: 10px;
+    }
+
+    .small-btn {
+      padding: 5px 10px;
+      font-size: 0.9rem;
+      background: #444;
+      color: white;
+      border: none;
+      border-radius: 3px;
+      cursor: pointer;
+    }
+
+    .small-btn:hover {
+      background: #555;
+    }
+
+    .small-btn.delete {
+      background: #ff4444;
+    }
+
+    .small-btn.delete:hover {
+      background: #ff5555;
+    }
+
+    .empty-drafts {
+      text-align: center;
+      color: #aaa;
+      padding: 20px;
+    }
   </style>
 </head>
 <body class="safari-fix">
@@ -150,6 +374,24 @@
   <div id="globalSpinnerOverlay">
     <div class="global-spinner"></div>
     <div class="global-loading-text">Processing Submission...</div>
+  </div>
+
+  <!-- Validation Error Modal -->
+  <div id="validationModal" class="validation-modal" style="display: none;">
+    <div class="modal-overlay" onclick="closeValidationModal()"></div>
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3>❌ Missing/Incorrect Information</h3>
+        <button type="button" class="modal-close" onclick="closeValidationModal()">×</button>
+      </div>
+      <div class="modal-body">
+        <p>Please correct the following fields:</p>
+        <ul id="errorList" class="error-list"></ul>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="gold-button" onclick="closeValidationModal()">OK</button>
+      </div>
+    </div>
   </div>
 
   <div class="container">
@@ -503,6 +745,24 @@
 
     // Check category requirements on load
     checkCategoryRequirements();
+    
+    // Add modal event listeners
+    const modal = document.getElementById('validationModal');
+    if (modal) {
+      // Close when clicking outside
+      modal.addEventListener('click', function(e) {
+        if (e.target.classList.contains('modal-overlay')) {
+          closeValidationModal();
+        }
+      });
+      
+      // Close with Escape key
+      document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal.style.display === 'block') {
+          closeValidationModal();
+        }
+      });
+    }
   });
 
   // Set up field-by-field validation
@@ -954,177 +1214,154 @@
       errorEl.style.display = 'none';
     }, 5000);
   }
-
-// Add to the existing inline script
-function showValidationModal(errors) {
-  // This function is now in app.js, but we expose it globally
-  if (window.showValidationModal) {
-    window.showValidationModal(errors);
-  }
-}
-
-function closeValidationModal() {
-  if (window.closeValidationModal) {
-    window.closeValidationModal();
-  }
-}
-
-// Make functions globally available
-window.showValidationModal = showValidationModal;
-window.closeValidationModal = closeValidationModal;
   
+  // Show validation modal (wrapper for app.js function)
+  function showValidationModal(errors) {
+    if (window.showValidationModal) {
+      window.showValidationModal(errors);
+    } else {
+      // Fallback to alert if app.js not loaded
+      alert('Validation Errors:\n\n' + errors.join('\n'));
+    }
+  }
+  
+  // Close validation modal (wrapper for app.js function)
+  function closeValidationModal() {
+    if (window.closeValidationModal) {
+      window.closeValidationModal();
+    }
+  }
+  
+  // Handle parcel submission (wrapper for app.js function)
+  function handleParcelSubmission(e) {
+    e.preventDefault();
+    
+    // First validate all fields
+    const validationErrors = validateAllFields();
+    
+    if (validationErrors.length > 0) {
+      showValidationModal(validationErrors);
+      return;
+    }
+    
+    // If validation passes, call the app.js function
+    if (window.handleParcelSubmission) {
+      window.handleParcelSubmission(e);
+    } else {
+      alert('Form submission handler not loaded. Please refresh the page.');
+    }
+  }
+  
+  // Validate all fields function
+  function validateAllFields() {
+    const errors = [];
+    
+    // Get field values
+    const trackingNumber = document.getElementById('trackingNumber')?.value.trim() || '';
+    const nameOnParcel = document.getElementById('nameOnParcel')?.value.trim() || '';
+    const itemDescription = document.getElementById('itemDescription')?.value.trim() || '';
+    const quantity = document.getElementById('quantity')?.value || '';
+    const price = document.getElementById('price')?.value || '';
+    const collectionPoint = document.getElementById('collectionPoint')?.value || '';
+    const itemCategory = document.getElementById('itemCategory')?.value || '';
+    const fileInput = document.getElementById('fileUpload');
+    const files = fileInput?.files || [];
+    
+    // Check tracking number
+    if (!trackingNumber) {
+      errors.push('Tracking Number is required');
+    } else if (!/^[A-Za-z0-9\-]{5,}$/.test(trackingNumber)) {
+      errors.push('Tracking Number must be at least 5 characters (letters, numbers, hyphens only)');
+    }
+    
+    // Check name on parcel
+    if (!nameOnParcel) {
+      errors.push('Name on Parcel is required');
+    } else if (nameOnParcel.length < 2) {
+      errors.push('Name on Parcel must be at least 2 characters');
+    }
+    
+    // Check item description
+    if (!itemDescription) {
+      errors.push('Item Description is required');
+    } else if (itemDescription.length < 3) {
+      errors.push('Item Description must be at least 3 characters');
+    }
+    
+    // Check quantity
+    if (!quantity) {
+      errors.push('Quantity is required');
+    } else {
+      const qtyNum = parseInt(quantity);
+      if (isNaN(qtyNum) || qtyNum < 1 || qtyNum > 999) {
+        errors.push('Quantity must be between 1 and 999');
+      }
+    }
+    
+    // Check price
+    if (!price && price !== '0') {
+      errors.push('Price is required (enter 0 if no value)');
+    } else {
+      const priceNum = parseFloat(price);
+      if (isNaN(priceNum) || priceNum < 0 || priceNum > 99999) {
+        errors.push('Price must be between 0 and 99,999');
+      }
+    }
+    
+    // Check collection point
+    if (!collectionPoint) {
+      errors.push('Please select a Collection Point');
+    }
+    
+    // Check item category
+    if (!itemCategory) {
+      errors.push('Please select an Item Category');
+    }
+    
+    // Check file requirements for starred categories
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks', '*Gadgets',
+      '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(itemCategory)) {
+      if (files.length === 0) {
+        errors.push('Invoice/document upload is required for this category');
+      } else {
+        // Check file count
+        if (files.length > 3) {
+          errors.push(`Maximum 3 files allowed`);
+        }
+        
+        // Check each file
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          if (file.size > 5 * 1024 * 1024) {
+            errors.push(`File "${file.name}" exceeds 5MB limit`);
+          }
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          if (!allowedTypes.includes(file.type)) {
+            errors.push(`File "${file.name}" must be JPG, PNG, or PDF`);
+          }
+        }
+      }
+    }
+    
+    return errors;
+  }
+  
+  // Make functions globally available
+  window.validateAllFields = validateAllFields;
+  window.showValidationModal = showValidationModal;
+  window.closeValidationModal = closeValidationModal;
+  window.handleParcelSubmission = handleParcelSubmission;
+  window.safeRedirect = safeRedirect;
+  window.loadDrafts = loadDrafts;
+  window.loadDraft = loadDraft;
+  window.deleteDraft = deleteDraft;
+  window.saveDraft = saveDraft;
+  window.checkCategoryRequirements = checkCategoryRequirements;
 </script>
-
-<!-- Validation Error Modal -->
-<div id="validationModal" class="modal" style="display: none;">
-  <div class="modal-overlay"></div>
-  <div class="modal-content">
-    <div class="modal-header">
-      <h3>❌ Missing/Incorrect Information</h3>
-      <button type="button" class="modal-close" onclick="closeValidationModal()">×</button>
-    </div>
-    <div class="modal-body">
-      <p>Please correct the following fields:</p>
-      <ul id="errorList" class="error-list"></ul>
-    </div>
-    <div class="modal-footer">
-      <button type="button" class="gold-button" onclick="closeValidationModal()">OK</button>
-    </div>
-  </div>
-</div>
-
-<style>
-  /* Modal Styles */
-  .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 10001;
-  }
-
-  .modal-overlay {
-    position: absolute;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0, 0, 0, 0.8);
-  }
-
-  .modal-content {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: #1e1e1e;
-    border: 2px solid #ff4444;
-    border-radius: 10px;
-    width: 90%;
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    box-shadow: 0 0 30px rgba(255, 68, 68, 0.3);
-  }
-
-  .modal-header {
-    padding: 20px;
-    border-bottom: 1px solid #333;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    background: #2a1a1a;
-  }
-
-  .modal-header h3 {
-    color: #ff4444;
-    margin: 0;
-    font-size: 1.3rem;
-  }
-
-  .modal-close {
-    background: none;
-    border: none;
-    color: #aaa;
-    font-size: 2rem;
-    cursor: pointer;
-    line-height: 1;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .modal-close:hover {
-    color: white;
-  }
-
-  .modal-body {
-    padding: 20px;
-  }
-
-  .modal-body p {
-    color: #ddd;
-    margin-bottom: 15px;
-  }
-
-  .error-list {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-  }
-
-  .error-list li {
-    padding: 10px 15px;
-    margin-bottom: 8px;
-    background: rgba(255, 68, 68, 0.1);
-    border-left: 4px solid #ff4444;
-    border-radius: 4px;
-    color: #ff9999;
-    display: flex;
-    align-items: center;
-  }
-
-  .error-list li:before {
-    content: "•";
-    color: #ff4444;
-    font-weight: bold;
-    margin-right: 10px;
-    font-size: 1.5rem;
-  }
-
-  .modal-footer {
-    padding: 15px 20px;
-    border-top: 1px solid #333;
-    text-align: right;
-    background: #2a2a2a;
-  }
-
-  .modal-footer button {
-    min-width: 100px;
-  }
-
-  /* Highlight invalid fields */
-  .field-error {
-    border-color: #ff4444 !important;
-    background: rgba(255, 68, 68, 0.1) !important;
-    animation: shake 0.5s ease-in-out;
-  }
-
-  @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-    20%, 40%, 60%, 80% { transform: translateX(5px); }
-  }
-
-  /* Disable background scrolling when modal is open */
-  body.modal-open {
-    overflow: hidden;
-  }
-</style>
-  
 </body>
 </html>
