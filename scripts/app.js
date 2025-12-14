@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mpxqFWx_gsW9Yu4HFb7RiAyJD149/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9vb2WRCbFtHuxwCM/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbz5mx0wkMfoWapxqFWx_gsW9Yu4HI0RGM9Xgi3Or6BzF9jYBLNIuuawFb7RiAyJD149/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwaOGIFouY9mBpctKXOUc6CvbcGNimcyyejc6PMRLwUfToiTRPyCk2WRCbFtHuxwCM/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
