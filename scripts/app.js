@@ -209,7 +209,7 @@ function showSuccessMessage() {
   const messageElement = document.getElementById('message');
   if (!messageElement) return;
 
-  messageElement.textContent = '✓ Submission Successful!';
+  messageElement.textContent = 'Data is processed!';
   messageElement.className = 'success';
   messageElement.style.display = 'block';
 
