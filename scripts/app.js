@@ -788,8 +788,8 @@ async function handleParcelSubmission(e) {
 }
 
 // ================= ENHANCED SUCCESS HANDLER =================
-// Enhanced success handler with retry option
 function showSubmissionSuccess(trackingNumber) {
+  // Update message element
   const messageElement = document.getElementById('message') || createMessageElement();
   
   messageElement.innerHTML = `
@@ -800,7 +800,7 @@ function showSubmissionSuccess(trackingNumber) {
           position: absolute;
           top: 10px;
           right: 10px;
-          background: #ff4444;
+          background: #333;
           color: white;
           border: none;
           border-radius: 50%;
@@ -810,36 +810,44 @@ function showSubmissionSuccess(trackingNumber) {
           font-size: 18px;
           line-height: 1;
           padding: 0;
+          transition: all 0.3s ease;
         "
+        title="Close this message"
       >×</button>
       <div style="font-size: 48px; color: #00C851;">✓</div>
       <h3 style="color: #00C851; margin: 10px 0;">Submission Successful!</h3>
-      <p>Tracking Number: <strong>${trackingNumber}</strong></p>
-      <p style="font-size: 0.9em; color: #888; margin-top: 15px;">
-        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission, if not available please resubmit again.
+      <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
+      <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
+        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission,<br>if not available please resubmit again.
       </p>
-      <div style="margin-top: 15px; padding: 10px; background: rgba(255, 255, 255, 0.05); border-radius: 5px;">
-        <p style="font-size: 0.8em; color: #aaa; margin: 0;">
-          <strong>Note:</strong> If submission doesn't appear in 5 minutes, please resubmit.
-        </p>
-      </div>
     </div>
   `;
   
   messageElement.className = 'success';
   messageElement.style.display = 'block';
   
+  // Add hover effect to close button
+  const closeBtn = document.getElementById('closeMessageBtn');
+  closeBtn.addEventListener('mouseenter', function() {
+    this.style.background = '#ff4444';
+    this.style.transform = 'scale(1.1)';
+  });
+  closeBtn.addEventListener('mouseleave', function() {
+    this.style.background = '#333';
+    this.style.transform = 'scale(1)';
+  });
+  
   // Add click handler for close button
-  document.getElementById('closeMessageBtn').addEventListener('click', function() {
+  closeBtn.addEventListener('click', function() {
     messageElement.style.display = 'none';
   });
   
-  // Auto-close after 8 seconds (optional)
-  setTimeout(() => {
-    if (messageElement.style.display === 'block') {
-      messageElement.style.display = 'none';
-    }
-  }, 8000);
+  // REMOVED: Auto-close timeout - message stays until user closes it
+  // setTimeout(() => {
+  //   if (messageElement.style.display === 'block') {
+  //     messageElement.style.display = 'none';
+  //   }
+  // }, 8000);
 }
 
 
