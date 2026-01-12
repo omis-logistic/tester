@@ -1,11 +1,51 @@
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzhtOh6MIFv_AlLESbVnSEpOsuLtF4fnn5-ZEYzxYNTFQtB68l1c8_t5P2f9SVo_hDp/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzPTtH6qCRlriRSiaTT3PJfsZy1Q_WIkG2pJmI7hBR2MDgH5kw913bvhJiA41_mvbh2/exec',
-  SESSION_TIMEOUT: 3600,
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyVRBYtvDiV8jZ_ex3rbnPFcYsUkyKQO3bKuEmdBSzJrbIH7P4dluvnfKkegaK_qKnR/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwopaQUGaroleG-7L53J0x56lHyitPR5MCjGA-2s61wwTgL3x570Pw2FSxtsR6KUTHW/exec',
+  SESSION_TIMEOUT: 1800, // 30 minutes in seconds
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
   MAX_FILES: 3
+};
+
+// ================= SHARED VALIDATION RULES =================
+const VALIDATION_RULES = {
+  PATTERNS: {
+    TRACKING_NUMBER: /^[A-Za-z0-9-]{5,}$/,
+    PHONE_NUMBER: /^(673\d{7,}|60\d{9,})$/,
+    EMAIL: /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  },
+  
+  LIMITS: {
+    TRACKING_NUMBER_MIN: 5,
+    TRACKING_NUMBER_MAX: 50,
+    NAME_MIN: 2,
+    NAME_MAX: 100,
+    DESCRIPTION_MIN: 3,
+    DESCRIPTION_MAX: 500,
+    QUANTITY_MIN: 1,
+    QUANTITY_MAX: 999,
+    PRICE_MIN: 0,
+    PRICE_MAX: 99999,
+    FILE_SIZE_MAX: 5 * 1024 * 1024,
+    FILES_MAX_COUNT: 3
+  },
+  
+  MANDATORY_INVOICE_CATEGORIES: [
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
+  ],
+  
+  ALLOWED_FILE_TYPES: [
+    'image/jpeg',
+    'image/png',
+    'application/pdf'
+  ]
 };
 
 // ================= VIEWPORT MANAGEMENT =================
@@ -68,17 +108,18 @@ function createErrorElement() {
   return errorDiv;
 }
 
-// ================= IMPROVED SESSION CHECK =================
+// ================= ENHANCED SESSION MANAGEMENT =================
 const checkSession = () => {
   const sessionData = sessionStorage.getItem('userData');
-  const lastActivity = localStorage.getItem('lastActivity');
+  const sessionToken = sessionStorage.getItem('sessionToken');
+  const lastActivity = sessionStorage.getItem('lastActivity');
 
-  if (!sessionData) {
-    console.log('No session data found');
+  if (!sessionData || !sessionToken) {
+    console.log('No session data or token found');
     return null;
   }
 
-  // Check session timeout (1 hour)
+  // Check session timeout (30 minutes)
   if (lastActivity && Date.now() - lastActivity > CONFIG.SESSION_TIMEOUT * 1000) {
     console.log('Session expired');
     sessionStorage.clear();
@@ -90,6 +131,7 @@ const checkSession = () => {
     const userData = JSON.parse(sessionData);
     
     // Update last activity
+    sessionStorage.setItem('lastActivity', Date.now());
     localStorage.setItem('lastActivity', Date.now());
     
     // Check if temp password requires reset
@@ -98,7 +140,10 @@ const checkSession = () => {
       return null;
     }
 
-    return userData;
+    return {
+      ...userData,
+      sessionToken: sessionToken
+    };
   } catch (error) {
     console.error('Error parsing session data:', error);
     sessionStorage.clear();
@@ -118,6 +163,18 @@ function handleLogout() {
   if (!window.location.pathname.includes('login.html')) {
     window.location.href = 'login.html?logout=' + Date.now();
   }
+}
+
+// ================= IDEMPOTENCY KEY GENERATION =================
+function generateIdempotencyKey() {
+  const timestamp = Date.now();
+  const random = Math.random().toString(36).substring(2, 15);
+  const userData = checkSession();
+  const userId = userData?.phone || 'anonymous';
+  
+  // Create a hash-like key
+  const key = `${userId}_${timestamp}_${random}`;
+  return btoa(key).replace(/[^a-zA-Z0-9]/g, '');
 }
 
 // ================= API HANDLER =================
@@ -166,7 +223,7 @@ function showLoading(show = true, message = 'Processing...') {
       if (loader.style.display === 'flex' && textElement) {
         textElement.textContent = message + ' This may take a while...';
       }
-    }, 3000); // Show after 3 seconds
+    }, 3000);
   }
 }
 
@@ -259,6 +316,495 @@ function resetForm() {
   }, 100);
 }
 
+// ================= ENHANCED VALIDATION SYSTEM =================
+// Shared validation functions
+function validateTrackingNumberOnLoad(value) {
+  return value && VALIDATION_RULES.PATTERNS.TRACKING_NUMBER.test(value.trim());
+}
+
+function validateNameOnLoad(value) {
+  return value && value.trim().length >= VALIDATION_RULES.LIMITS.NAME_MIN;
+}
+
+function validateDescriptionOnLoad(value) {
+  return value && value.trim().length >= VALIDATION_RULES.LIMITS.DESCRIPTION_MIN;
+}
+
+function validateQuantityOnLoad(value) {
+  const num = parseInt(value);
+  return !isNaN(num) && num >= VALIDATION_RULES.LIMITS.QUANTITY_MIN && num <= VALIDATION_RULES.LIMITS.QUANTITY_MAX;
+}
+
+function validatePriceOnLoad(value) {
+  if (value === '' || value === null || value === undefined) return false;
+  const num = parseFloat(value);
+  return !isNaN(num) && num >= VALIDATION_RULES.LIMITS.PRICE_MIN && num <= VALIDATION_RULES.LIMITS.PRICE_MAX;
+}
+
+function validateSelectOnLoad(value) {
+  return value && value !== '';
+}
+
+function validatePhone(value) {
+  return VALIDATION_RULES.PATTERNS.PHONE_NUMBER.test(value.replace(/[^\d]/g, ''));
+}
+
+function validateEmail(value) {
+  return VALIDATION_RULES.PATTERNS.EMAIL.test(value);
+}
+
+// ================= REAL-TIME VALIDATION SYSTEM =================
+function initRealTimeValidation() {
+  console.log('Initializing real-time validation...');
+  
+  // Run initial validation on page load
+  setTimeout(() => {
+    console.log('Running initial page load validation...');
+    runInitialValidation();
+    
+    // Update validation on every input
+    setupRealTimeValidationListeners();
+  }, 100);
+}
+
+function runInitialValidation() {
+  console.log('Running initial validation for all fields...');
+  
+  const fieldsToValidate = [
+    { id: 'trackingNumber', name: 'Tracking Number', type: 'tracking' },
+    { id: 'nameOnParcel', name: 'Name on Parcel', type: 'name' },
+    { id: 'itemDescription', name: 'Item Description', type: 'description' },
+    { id: 'quantity', name: 'Quantity', type: 'quantity' },
+    { id: 'price', name: 'Price', type: 'price' },
+    { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
+    { id: 'itemCategory', name: 'Item Category', type: 'select' }
+  ];
+  
+  // Validate each field
+  fieldsToValidate.forEach(field => {
+    const fieldElement = document.getElementById(field.id);
+    const errorElement = document.getElementById(field.id + 'Error') || 
+                        createErrorMessageElement(field.id);
+    
+    if (!fieldElement) return;
+    
+    let isValid = false;
+    let message = '';
+    
+    switch(field.type) {
+      case 'tracking':
+        isValid = validateTrackingNumberOnLoad(fieldElement.value);
+        message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
+        break;
+      case 'name':
+        isValid = validateNameOnLoad(fieldElement.value);
+        message = isValid ? '' : `Minimum ${VALIDATION_RULES.LIMITS.NAME_MIN} characters required`;
+        break;
+      case 'description':
+        isValid = validateDescriptionOnLoad(fieldElement.value);
+        message = isValid ? '' : `Minimum ${VALIDATION_RULES.LIMITS.DESCRIPTION_MIN} characters required`;
+        break;
+      case 'quantity':
+        isValid = validateQuantityOnLoad(fieldElement.value);
+        message = isValid ? '' : `Must be between ${VALIDATION_RULES.LIMITS.QUANTITY_MIN} and ${VALIDATION_RULES.LIMITS.QUANTITY_MAX}`;
+        break;
+      case 'price':
+        isValid = validatePriceOnLoad(fieldElement.value);
+        message = isValid ? '' : `Price must be between ${VALIDATION_RULES.LIMITS.PRICE_MIN} and ${VALIDATION_RULES.LIMITS.PRICE_MAX}`;
+        break;
+      case 'select':
+        isValid = validateSelectOnLoad(fieldElement.value);
+        message = isValid ? '' : 'Please select an option';
+        break;
+    }
+    
+    // Update UI
+    updateFieldValidationState(fieldElement, isValid, message);
+  });
+  
+  // Validate files if required
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
+  
+  if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
+    const files = document.getElementById('fileUpload')?.files || [];
+    if (files.length === 0) {
+      const fileInput = document.getElementById('fileUpload');
+      const fileError = document.getElementById('invoiceFilesError') || 
+                       createErrorMessageElement('invoiceFiles');
+      
+      if (fileInput && fileError) {
+        fileError.textContent = 'Required: At least 1 invoice/document required';
+        fileError.style.color = '#ff4444';
+        fileError.style.display = 'block';
+        fileInput.style.borderColor = '#ff4444';
+        fileInput.parentElement.classList.add('invalid');
+      }
+    }
+  }
+  
+  // Update submit button
+  updateSubmitButton();
+  
+  return true;
+}
+
+function createErrorMessageElement(fieldId) {
+  const errorSpan = document.createElement('span');
+  errorSpan.id = fieldId + 'Error';
+  errorSpan.className = 'validation-message';
+  
+  const fieldElement = document.getElementById(fieldId);
+  const parent = fieldElement?.parentElement;
+  if (fieldElement && parent) {
+    parent.appendChild(errorSpan);
+  }
+  
+  return errorSpan;
+}
+
+function updateFieldValidationState(fieldElement, isValid, message) {
+  const errorElement = document.getElementById(fieldElement.id + 'Error');
+  const parent = fieldElement.parentElement;
+  
+  // Remove existing validation classes
+  parent.classList.remove('valid', 'invalid');
+  
+  if (isValid) {
+    parent.classList.add('valid');
+    if (errorElement) {
+      errorElement.textContent = '';
+      errorElement.style.display = 'none';
+      fieldElement.style.borderColor = '#444';
+    }
+  } else {
+    parent.classList.add('invalid');
+    if (errorElement) {
+      errorElement.textContent = message;
+      errorElement.style.color = '#ff4444';
+      errorElement.style.display = 'block';
+      fieldElement.style.borderColor = '#ff4444';
+    }
+  }
+  
+  // Clean styling - remove all special backgrounds and borders
+  if (errorElement) {
+    errorElement.style.backgroundColor = 'transparent';
+    errorElement.style.border = 'none';
+    errorElement.style.boxShadow = 'none';
+    errorElement.style.padding = '2px 0';
+  }
+}
+
+function setupRealTimeValidationListeners() {
+  console.log('Setting up real-time validation listeners...');
+  
+  const fields = [
+    'trackingNumber',
+    'nameOnParcel', 
+    'itemDescription',
+    'quantity',
+    'price',
+    'collectionPoint',
+    'itemCategory'
+  ];
+  
+  fields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    if (field) {
+      field.addEventListener('input', () => validateFieldInRealTime(field));
+      field.addEventListener('change', () => validateFieldInRealTime(field));
+      
+      // For select fields, validate on change
+      if (field.tagName === 'SELECT') {
+        field.addEventListener('change', () => {
+          validateFieldInRealTime(field);
+          checkCategoryRequirements();
+        });
+      }
+    }
+  });
+  
+  // File upload validation
+  const fileUpload = document.getElementById('fileUpload');
+  if (fileUpload) {
+    fileUpload.addEventListener('change', validateFilesInRealTime);
+  }
+}
+
+function validateFieldInRealTime(field) {
+  const value = field.value;
+  let isValid = false;
+  let message = '';
+  
+  switch(field.id) {
+    case 'trackingNumber':
+      isValid = validateTrackingNumberOnLoad(value);
+      message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
+      break;
+    case 'nameOnParcel':
+      isValid = validateNameOnLoad(value);
+      message = isValid ? '' : `Minimum ${VALIDATION_RULES.LIMITS.NAME_MIN} characters required`;
+      break;
+    case 'itemDescription':
+      isValid = validateDescriptionOnLoad(value);
+      message = isValid ? '' : `Minimum ${VALIDATION_RULES.LIMITS.DESCRIPTION_MIN} characters required`;
+      break;
+    case 'quantity':
+      isValid = validateQuantityOnLoad(value);
+      message = isValid ? '' : `Must be between ${VALIDATION_RULES.LIMITS.QUANTITY_MIN} and ${VALIDATION_RULES.LIMITS.QUANTITY_MAX}`;
+      break;
+    case 'price':
+      isValid = validatePriceOnLoad(value);
+      message = isValid ? '' : `Price must be between ${VALIDATION_RULES.LIMITS.PRICE_MIN} and ${VALIDATION_RULES.LIMITS.PRICE_MAX}`;
+      break;
+    case 'collectionPoint':
+    case 'itemCategory':
+      isValid = validateSelectOnLoad(value);
+      message = isValid ? '' : 'Please select an option';
+      break;
+  }
+  
+  updateFieldValidationState(field, isValid, message);
+  updateSubmitButton();
+  
+  // If this is the category field, also check file requirements
+  if (field.id === 'itemCategory') {
+    setTimeout(() => {
+      checkCategoryRequirements();
+    }, 100);
+  }
+}
+
+function validateFilesInRealTime() {
+  const fileInput = document.getElementById('fileUpload');
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
+  
+  if (!fileInput) return;
+  
+  const errorElement = document.getElementById('invoiceFilesError');
+  const parent = fileInput.parentElement;
+  
+  parent.classList.remove('valid', 'invalid');
+  
+  // Check if files are required for this category
+  if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
+    const files = fileInput.files;
+    
+    if (files.length === 0) {
+      errorElement.textContent = 'Required: At least 1 invoice/document required';
+      errorElement.style.color = '#ff4444';
+      errorElement.style.display = 'block';
+      parent.classList.add('invalid');
+      fileInput.style.borderColor = '#ff4444';
+    } else {
+      // Validate each file
+      let allValid = true;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!VALIDATION_RULES.ALLOWED_FILE_TYPES.includes(file.type)) {
+          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+          allValid = false;
+          break;
+        }
+        
+        if (file.size > VALIDATION_RULES.LIMITS.FILE_SIZE_MAX) {
+          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+          allValid = false;
+          break;
+        }
+        
+        if (files.length > VALIDATION_RULES.LIMITS.FILES_MAX_COUNT) {
+          errorElement.textContent = `Maximum ${VALIDATION_RULES.LIMITS.FILES_MAX_COUNT} files allowed`;
+          allValid = false;
+          break;
+        }
+      }
+      
+      if (allValid) {
+        errorElement.textContent = `${files.length} file(s) selected`;
+        errorElement.style.color = '#00C851';
+        parent.classList.add('valid');
+        fileInput.style.borderColor = '#00C851';
+      } else {
+        errorElement.style.color = '#ff4444';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
+      }
+    }
+  } else {
+    // Not required, but validate if files are uploaded
+    const files = fileInput.files;
+    if (files.length > 0) {
+      // Validate each file
+      let allValid = true;
+      
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        
+        if (!VALIDATION_RULES.ALLOWED_FILE_TYPES.includes(file.type)) {
+          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+          allValid = false;
+          break;
+        }
+        
+        if (file.size > VALIDATION_RULES.LIMITS.FILE_SIZE_MAX) {
+          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+          allValid = false;
+          break;
+        }
+        
+        if (files.length > VALIDATION_RULES.LIMITS.FILES_MAX_COUNT) {
+          errorElement.textContent = `Maximum ${VALIDATION_RULES.LIMITS.FILES_MAX_COUNT} files allowed`;
+          allValid = false;
+          break;
+        }
+      }
+      
+      if (allValid) {
+        errorElement.textContent = `${files.length} file(s) selected (optional)`;
+        errorElement.style.color = '#888';
+        parent.classList.add('valid');
+        fileInput.style.borderColor = '#00C851';
+      } else {
+        errorElement.style.color = '#ff4444';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
+      }
+    } else {
+      errorElement.textContent = 'Optional: Upload invoice/documents if available';
+      errorElement.style.color = '#888';
+      errorElement.style.display = 'block';
+      fileInput.style.borderColor = '#444';
+    }
+  }
+  
+  updateSubmitButton();
+}
+
+function checkCategoryRequirements() {
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
+  
+  const fileInput = document.getElementById('fileUpload');
+  const fileHelp = document.getElementById('fileHelp');
+  const fileRequirement = document.getElementById('fileRequirement');
+  
+  if (!fileInput || !fileHelp) return;
+  
+  if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
+    // Show as required
+    if (fileRequirement) {
+      fileRequirement.textContent = 'Required: ';
+      fileRequirement.style.color = '#ff4444';
+    }
+    fileHelp.style.color = '#ff4444';
+    fileHelp.style.fontWeight = 'bold';
+    
+    // Validate immediately
+    setTimeout(() => {
+      validateFilesInRealTime();
+    }, 100);
+  } else {
+    // Show as optional
+    if (fileRequirement) {
+      fileRequirement.textContent = 'Optional: ';
+      fileRequirement.style.color = '#888';
+    }
+    fileHelp.style.color = '#888';
+    fileHelp.style.fontWeight = 'normal';
+    
+    // Clear any error state
+    const errorElement = document.getElementById('invoiceFilesError');
+    const parent = fileInput.parentElement;
+    
+    if (errorElement) {
+      errorElement.textContent = 'Optional: Upload invoice/documents if available';
+      errorElement.style.color = '#888';
+    }
+    
+    parent.classList.remove('invalid');
+    fileInput.style.borderColor = '#444';
+  }
+  
+  updateSubmitButton();
+}
+
+function updateSubmitButton() {
+  const submitBtn = document.getElementById('submitBtn');
+  if (!submitBtn) return;
+  
+  // Check each field's validation state
+  const fields = [
+    'trackingNumber',
+    'nameOnParcel',
+    'itemDescription',
+    'quantity',
+    'price',
+    'collectionPoint',
+    'itemCategory'
+  ];
+  
+  let allValid = true;
+  
+  fields.forEach(fieldId => {
+    const field = document.getElementById(fieldId);
+    const parent = field?.parentElement;
+    
+    if (!field) {
+      allValid = false;
+      return;
+    }
+    
+    // Check if field has invalid class or is empty
+    if (parent && parent.classList.contains('invalid')) {
+      allValid = false;
+      return;
+    }
+    
+    // Check field value
+    if (field.tagName === 'SELECT') {
+      if (!field.value) allValid = false;
+    } else if (field.type === 'number') {
+      if (field.value === '') allValid = false;
+    } else {
+      if (!field.value.trim()) allValid = false;
+    }
+  });
+  
+  // Check file requirements for starred categories
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
+  
+  if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
+    const files = document.getElementById('fileUpload')?.files || [];
+    const fileParent = document.getElementById('fileUpload')?.parentElement;
+    
+    if (files.length === 0 || (fileParent && fileParent.classList.contains('invalid'))) {
+      allValid = false;
+    }
+  }
+  
+  // Update button state
+  submitBtn.disabled = !allValid;
+  
+  // Update button text based on state
+  const submitText = document.getElementById('submitText');
+  if (submitText) {
+    submitText.textContent = allValid ? 'Submit Declaration' : 'Please fix errors above';
+  }
+  
+  // Visual feedback
+  if (allValid) {
+    submitBtn.style.background = 'linear-gradient(135deg, #d4af37, #b8941f)';
+    submitBtn.style.cursor = 'pointer';
+    submitBtn.style.opacity = '1';
+  } else {
+    submitBtn.style.background = '#555';
+    submitBtn.style.cursor = 'not-allowed';
+    submitBtn.style.opacity = '0.7';
+  }
+}
+
 // ================= ENHANCED SUBMISSION SYSTEM =================
 // Universal submission function that works for all browsers
 async function submitParcelData(payload) {
@@ -315,7 +861,7 @@ async function tryAllSubmissionMethods(payload) {
   throw new Error('All submission methods failed');
 }
 
-// Update the tryPostViaProxy function to properly handle success:false
+// Method 1: POST via Proxy (UPDATED WITH AUTHENTICATION)
 async function tryPostViaProxy(payload) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -355,8 +901,13 @@ async function tryPostViaProxy(payload) {
       reject(new Error('Request timeout (30s)'));
     };
     
-    // Send data
-    const data = `payload=${encodeURIComponent(JSON.stringify(payload))}`;
+    // Send data with idempotency key
+    const dataToSend = {
+      ...payload,
+      idempotencyKey: generateIdempotencyKey()
+    };
+    
+    const data = `payload=${encodeURIComponent(JSON.stringify(dataToSend))}`;
     console.log('Sending to proxy:', url);
     xhr.send(data);
   });
@@ -476,8 +1027,14 @@ async function tryJSONPSubmission(payload) {
 async function tryFormDataSubmission(payload) {
   const formData = new FormData();
   
-  // Add JSON data
-  formData.append('data', JSON.stringify(payload.data));
+  // Add JSON data with idempotency key
+  const dataToSend = {
+    ...payload.data,
+    sessionToken: payload.data.sessionToken,
+    idempotencyKey: generateIdempotencyKey()
+  };
+  
+  formData.append('data', JSON.stringify(dataToSend));
   
   // Add files if they exist
   if (payload.files && payload.files.length > 0) {
@@ -516,7 +1073,9 @@ async function tryFallbackSubmission(payload) {
       quantity: payload.data.quantity,
       price: payload.data.price,
       collectionPoint: payload.data.collectionPoint,
-      itemCategory: payload.data.itemCategory
+      itemCategory: payload.data.itemCategory,
+      sessionToken: payload.data.sessionToken,
+      idempotencyKey: generateIdempotencyKey()
     }
   };
   
@@ -612,14 +1171,13 @@ function base64ToBlob(base64, mimeType) {
 }
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
-// Update handleParcelSubmission to show better error messages
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
   try {
-    // Get form data (same as before)
+    // Get form data
     const formData = new FormData(form);
     const userData = checkSession();
     
@@ -627,26 +1185,23 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload (same as before)
-    const payload = {
-      action: 'submitParcelDeclaration',
-      data: {
-        trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || '',
-        nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
-        phoneNumber: userData.phone,
-        itemDescription: formData.get('itemDescription')?.trim() || '',
-        quantity: Number(formData.get('quantity')) || 1,
-        price: Number(formData.get('price')) || 0,
-        collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory')?.trim() || '' // Added trim()
-      },
-      files: []
+    // Build payload with session token and idempotency key
+    const rawData = {
+      trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || '',
+      nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
+      phoneNumber: userData.phone,
+      itemDescription: formData.get('itemDescription')?.trim() || '',
+      quantity: Number(formData.get('quantity')) || 1,
+      price: Number(formData.get('price')) || 0,
+      collectionPoint: formData.get('collectionPoint') || '',
+      itemCategory: formData.get('itemCategory') || '',
+      sessionToken: userData.sessionToken
     };
-    
-    // Validate required fields (same as before)
+
+    // Validate required fields
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
-      const value = payload.data[field];
+      const value = rawData[field];
       
       if (field === 'price') {
         if (value === undefined || value === null || isNaN(value)) {
@@ -665,27 +1220,45 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Handle file uploads (same as before)
+    // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
-    const category = payload.data.itemCategory;
-    
-    // UPDATED: Corrected starred categories without spaces
-    const starredCategories = [
-      '*Books',
-      '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks',
-      '*Gadgets',
-      '*Oil Ointment',
-      '*Supplement',
-      '*Others'
-    ];
+    const category = rawData.itemCategory;
+    const payload = {
+      action: 'submitParcelDeclaration',
+      data: rawData,
+      files: []
+    };
 
-    if (starredCategories.includes(category)) {
+    if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
       if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files (same as before)
+      // Process files
+      const files = Array.from(fileInput.files);
+      
+      if (files.length > CONFIG.MAX_FILES) {
+        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+      }
+
+      for (const file of files) {
+        if (file.size > CONFIG.MAX_FILE_SIZE) {
+          throw new Error(`File "${file.name}" exceeds 5MB limit`);
+        }
+        
+        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+          throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
+        }
+        
+        const base64Data = await readFileAsBase64(file);
+        payload.files.push({
+          name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+          type: file.type,
+          base64: base64Data
+        });
+      }
+    } else if (fileInput && fileInput.files && fileInput.files.length > 0) {
+      // Process optional files
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -714,8 +1287,7 @@ async function handleParcelSubmission(e) {
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
       filesCount: payload.files.length,
-      price: payload.data.price,
-      category: payload.data.itemCategory
+      price: payload.data.price
     });
     
     const result = await submitParcelData(payload);
@@ -766,8 +1338,11 @@ async function handleParcelSubmission(e) {
       errorMessage = '❌ Server error: Could not save your submission. Please try again.';
     } else if (error.message.includes('No payload received')) {
       errorMessage = '❌ Submission data was corrupted. Please try again.';
-    } else if (error.message.includes('already exists in the system')) {
-      errorMessage = '❌ This tracking number has already been submitted. Please use a different tracking number.';
+    } else if (error.message.includes('Authentication failed')) {
+      errorMessage = '❌ Authentication failed. Please login again.';
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
     } else {
       errorMessage = `❌ ${error.message}`;
     }
@@ -779,7 +1354,7 @@ async function handleParcelSubmission(e) {
         !error.message.includes('Price must be') && 
         !error.message.includes('Item description must be') &&
         !error.message.includes('Invoice/document upload') &&
-        !error.message.includes('already exists')) {
+        !error.message.includes('Authentication failed')) {
       setTimeout(() => {
         if (confirm('Would you like to save this form as a draft?')) {
           saveFormAsDraft();
@@ -819,8 +1394,8 @@ function showSubmissionSuccess(trackingNumber) {
         "
         title="Close this message"
       >×</button>
-      <div style="font-size: 48px; color: #00C851;">⏳</div>
-      <h3 style="color: #00C851; margin: 10px 0;">Submission is processed!</h3>
+      <div style="font-size: 48px; color: #00C851;">✓</div>
+      <h3 style="color: #00C851; margin: 10px 0;">Submission Successful!</h3>
       <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
       <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
         Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission,<br>if not available please resubmit again.
@@ -846,15 +1421,7 @@ function showSubmissionSuccess(trackingNumber) {
   closeBtn.addEventListener('click', function() {
     messageElement.style.display = 'none';
   });
-  
-  // REMOVED: Auto-close timeout - message stays until user closes it
-  // setTimeout(() => {
-  //   if (messageElement.style.display === 'block') {
-  //     messageElement.style.display = 'none';
-  //   }
-  // }, 8000);
 }
-
 
 // Show local recovery notice
 function showLocalRecoveryNotice(payload) {
@@ -887,7 +1454,16 @@ async function retryFailedSubmissions() {
     
     for (const submission of failedSubmissions) {
       try {
-        const result = await submitParcelData(submission);
+        // Add new idempotency key for retry
+        const retryPayload = {
+          ...submission,
+          data: {
+            ...submission.data,
+            idempotencyKey: generateIdempotencyKey()
+          }
+        };
+        
+        const result = await submitParcelData(retryPayload);
         if (result.success) {
           successCount++;
         }
@@ -1024,711 +1600,281 @@ async function readFileAsBase64(file) {
   });
 }
 
-// ================= SAFARI DETECTION =================
-function isSafariBrowser() {
-  const ua = navigator.userAgent;
-  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
-  const isIOS = /iPad|iPhone|iPod/.test(ua);
+// ================= FORM SETUP =================
+function setupFormSubmission() {
+  const form = document.getElementById('declarationForm');
+  if (!form) return;
   
-  return isSafari || isIOS;
-}
-
-// ================= VALIDATION CORE =================
-// ================= REAL-TIME VALIDATION SYSTEM =================
-function initRealTimeValidation() {
-  console.log('Initializing real-time validation...');
+  // Remove existing event listeners by cloning
+  const newForm = form.cloneNode(true);
+  form.parentNode.replaceChild(newForm, form);
   
-  // Run initial validation on page load
-  setTimeout(() => {
-    console.log('Running initial page load validation...');
-    runInitialValidation();
-    
-    // Update validation on every input
-    setupRealTimeValidationListeners();
-  }, 100);
-}
-
-function runInitialValidation() {
-  console.log('Running initial validation for all fields...');
+  // Add enhanced submission handler
+  newForm.addEventListener('submit', handleParcelSubmission);
   
-  const fieldsToValidate = [
-    { id: 'trackingNumber', name: 'Tracking Number', type: 'tracking' },
-    { id: 'nameOnParcel', name: 'Name on Parcel', type: 'name' },
-    { id: 'itemDescription', name: 'Item Description', type: 'description' },
-    { id: 'quantity', name: 'Quantity', type: 'quantity' },
-    { id: 'price', name: 'Price', type: 'price' },
-    { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
-    { id: 'itemCategory', name: 'Item Category', type: 'select' }
-  ];
-  
-  // Validate each field
-  fieldsToValidate.forEach(field => {
-    const fieldElement = document.getElementById(field.id);
-    const errorElement = document.getElementById(field.id + 'Error') || 
-                        createErrorMessageElement(field.id);
-    
-    if (!fieldElement) return;
-    
-    let isValid = false;
-    let message = '';
-    
-    switch(field.type) {
-      case 'tracking':
-        isValid = validateTrackingNumberOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
-        break;
-      case 'name':
-        isValid = validateNameOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Minimum 2 characters required';
-        break;
-      case 'description':
-        isValid = validateDescriptionOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Minimum 3 characters required';
-        break;
-      case 'quantity':
-        isValid = validateQuantityOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Must be between 1 and 999';
-        break;
-      case 'price':
-        isValid = validatePriceOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Price must be 0 or greater (0 is allowed)';
-        break;
-      case 'select':
-        isValid = validateSelectOnLoad(fieldElement.value);
-        message = isValid ? '' : 'Please select an option';
-        break;
-    }
-    
-    // Update UI
-    updateFieldValidationState(fieldElement, isValid, message);
+  // Add input validation
+  newForm.addEventListener('input', function(e) {
+    validateField(e.target);
+    updateSubmitButton();
   });
   
-  // Validate files if required
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
-    const files = document.getElementById('fileUpload')?.files || [];
-    if (files.length === 0) {
-      const fileInput = document.getElementById('fileUpload');
-      const fileError = document.getElementById('invoiceFilesError') || 
-                       createErrorMessageElement('invoiceFiles');
-      
-      if (fileInput && fileError) {
-        fileError.textContent = 'Required: At least 1 invoice/document required';
-        fileError.style.color = '#ff4444';
-        fileError.style.display = 'block';
-        fileInput.style.borderColor = '#ff4444';
-        fileInput.parentElement.classList.add('invalid');
-      }
-    }
-  }
-  
-  // Update submit button
-  updateSubmitButton();
-  
-  return true;
-}
-
-function validateTrackingNumberOnLoad(value) {
-  return value && /^[A-Za-z0-9\-]{5,}$/.test(value.trim());
-}
-
-function validateNameOnLoad(value) {
-  return value && value.trim().length >= 2;
-}
-
-function validateDescriptionOnLoad(value) {
-  return value && value.trim().length >= 3;
-}
-
-function validateQuantityOnLoad(value) {
-  const num = parseInt(value);
-  return !isNaN(num) && num >= 1 && num <= 999;
-}
-
-function validatePriceOnLoad(value) {
-  if (value === '') return false;
-  const num = parseFloat(value);
-  return !isNaN(num) && num >= 0;
-}
-
-function validateSelectOnLoad(value) {
-  return value && value !== '';
-}
-
-function createErrorMessageElement(fieldId) {
-  const errorSpan = document.createElement('span');
-  errorSpan.id = fieldId + 'Error';
-  errorSpan.className = 'validation-message';
-  
-  const fieldElement = document.getElementById(fieldId);
-  const parent = fieldElement?.parentElement;
-  if (fieldElement && parent) {
-    parent.appendChild(errorSpan);
-  }
-  
-  return errorSpan;
-}
-
-function updateFieldValidationState(fieldElement, isValid, message) {
-  const errorElement = document.getElementById(fieldElement.id + 'Error');
-  const parent = fieldElement.parentElement;
-  
-  // Remove existing validation classes
-  parent.classList.remove('valid', 'invalid');
-  
-  if (isValid) {
-    parent.classList.add('valid');
-    if (errorElement) {
-      errorElement.textContent = '';
-      errorElement.style.display = 'none';
-      fieldElement.style.borderColor = '#444';
-    }
-  } else {
-    parent.classList.add('invalid');
-    if (errorElement) {
-      errorElement.textContent = message;
-      errorElement.style.color = '#ff4444';
-      errorElement.style.display = 'block';
-      fieldElement.style.borderColor = '#ff4444';
-    }
-  }
-  
-  // Special handling for select elements to ensure error text is visible
-  if (fieldElement.tagName === 'SELECT') {
-    if (errorElement) {
-      errorElement.style.position = 'relative';
-      errorElement.style.zIndex = '1000';
-      errorElement.style.backgroundColor = 'rgba(26, 26, 26, 0.95)';
-      errorElement.style.padding = '5px 10px';
-      errorElement.style.borderRadius = '3px';
-      errorElement.style.marginTop = '8px';
-      errorElement.style.boxShadow = '0 2px 5px rgba(0,0,0,0.3)';
-    }
+  // Add file validation
+  const fileInput = newForm.querySelector('#fileUpload');
+  if (fileInput) {
+    fileInput.addEventListener('change', function() {
+      validateFiles(this);
+      updateSubmitButton();
+    });
   }
 }
 
-function setupRealTimeValidationListeners() {
-  console.log('Setting up real-time validation listeners...');
+function validateField(field) {
+  const value = field.value.trim();
+  const errorId = field.id + 'Error';
+  const errorElement = document.getElementById(errorId);
   
-  const fields = [
-    'trackingNumber',
-    'nameOnParcel', 
-    'itemDescription',
-    'quantity',
-    'price',
-    'collectionPoint',
-    'itemCategory'
-  ];
+  if (!errorElement) return true;
   
-  fields.forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (field) {
-      field.addEventListener('input', () => validateFieldInRealTime(field));
-      field.addEventListener('change', () => validateFieldInRealTime(field));
-      
-      // For select fields, validate on change
-      if (field.tagName === 'SELECT') {
-        field.addEventListener('change', () => {
-          validateFieldInRealTime(field);
-          checkCategoryRequirements(); // Also check file requirements
-        });
-      }
-    }
-  });
-  
-  // File upload validation
-  const fileUpload = document.getElementById('fileUpload');
-  if (fileUpload) {
-    fileUpload.addEventListener('change', validateFilesInRealTime);
-  }
-}
-
-function validateFieldInRealTime(field) {
-  const value = field.value;
-  let isValid = false;
+  let isValid = true;
   let message = '';
   
   switch(field.id) {
     case 'trackingNumber':
-      isValid = validateTrackingNumberOnLoad(value);
+      isValid = VALIDATION_RULES.PATTERNS.TRACKING_NUMBER.test(value);
       message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
       break;
+      
     case 'nameOnParcel':
-      isValid = validateNameOnLoad(value);
-      message = isValid ? '' : 'Minimum 2 characters required';
+      isValid = value.length >= VALIDATION_RULES.LIMITS.NAME_MIN && value.length <= VALIDATION_RULES.LIMITS.NAME_MAX;
+      message = isValid ? '' : `${VALIDATION_RULES.LIMITS.NAME_MIN}-${VALIDATION_RULES.LIMITS.NAME_MAX} characters required`;
       break;
+      
     case 'itemDescription':
-      isValid = validateDescriptionOnLoad(value);
-      message = isValid ? '' : 'Minimum 3 characters required';
+      isValid = value.length >= VALIDATION_RULES.LIMITS.DESCRIPTION_MIN && value.length <= VALIDATION_RULES.LIMITS.DESCRIPTION_MAX;
+      message = isValid ? '' : `${VALIDATION_RULES.LIMITS.DESCRIPTION_MIN}-${VALIDATION_RULES.LIMITS.DESCRIPTION_MAX} characters required`;
       break;
+      
     case 'quantity':
-      isValid = validateQuantityOnLoad(value);
-      message = isValid ? '' : 'Must be between 1 and 999';
+      const qty = parseInt(value);
+      isValid = !isNaN(qty) && qty >= VALIDATION_RULES.LIMITS.QUANTITY_MIN && qty <= VALIDATION_RULES.LIMITS.QUANTITY_MAX;
+      message = isValid ? '' : `Must be between ${VALIDATION_RULES.LIMITS.QUANTITY_MIN} and ${VALIDATION_RULES.LIMITS.QUANTITY_MAX}`;
       break;
+      
     case 'price':
-      isValid = validatePriceOnLoad(value);
-      message = isValid ? '' : 'Price must be 0 or greater (0 is allowed)';
+      const price = parseFloat(value);
+      isValid = !isNaN(price) && price >= VALIDATION_RULES.LIMITS.PRICE_MIN && price <= VALIDATION_RULES.LIMITS.PRICE_MAX;
+      message = isValid ? '' : `Must be between ${VALIDATION_RULES.LIMITS.PRICE_MIN} and ${VALIDATION_RULES.LIMITS.PRICE_MAX}`;
       break;
+      
     case 'collectionPoint':
     case 'itemCategory':
-      isValid = validateSelectOnLoad(value);
-      message = isValid ? '' : 'Please select an option';
+      isValid = value !== '';
+      message = isValid ? '' : 'This field is required';
       break;
   }
   
-  updateFieldValidationState(field, isValid, message);
-  updateSubmitButton();
-  
-  // If this is the category field, also check file requirements
-  if (field.id === 'itemCategory') {
-    setTimeout(() => {
-      checkCategoryRequirements();
-    }, 100);
+  // Update UI
+  if (isValid) {
+    field.style.borderColor = '#00C851';
+    errorElement.textContent = '';
+  } else {
+    field.style.borderColor = '#ff4444';
+    errorElement.textContent = message;
   }
+  
+  return isValid;
 }
 
-function validateFilesInRealTime() {
-  const fileInput = document.getElementById('fileUpload');
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
+function validateFiles(fileInput) {
+  const files = Array.from(fileInput.files);
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   
-  if (!fileInput) return;
-  
-  const errorElement = document.getElementById('invoiceFilesError');
-  const parent = fileInput.parentElement;
-  
-  parent.classList.remove('valid', 'invalid');
-  
-  if (starredCategories.includes(category)) {
-    const files = fileInput.files;
-    
+  if (VALIDATION_RULES.MANDATORY_INVOICE_CATEGORIES.includes(category)) {
     if (files.length === 0) {
-      errorElement.textContent = 'Required: At least 1 invoice/document required';
-      errorElement.style.color = '#ff4444';
-      errorElement.style.display = 'block';
-      parent.classList.add('invalid');
-      fileInput.style.borderColor = '#ff4444';
-    } else {
-      // Validate each file
-      let allValid = true;
-      const MAX_SIZE = 5 * 1024 * 1024;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        if (!allowedTypes.includes(file.type)) {
-          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-          allValid = false;
-          break;
-        }
-        
-        if (file.size > MAX_SIZE) {
-          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-          allValid = false;
-          break;
-        }
-      }
-      
-      if (allValid) {
-        errorElement.textContent = `${files.length} file(s) selected`;
-        errorElement.style.color = '#00C851';
-        parent.classList.add('valid');
-        fileInput.style.borderColor = '#00C851';
-      } else {
-        errorElement.style.color = '#ff4444';
-        parent.classList.add('invalid');
-        fileInput.style.borderColor = '#ff4444';
-      }
+      showError('Invoice/document upload is required for this category', 'fileUploadError');
+      return false;
     }
+  }
+  
+  // Validate each file
+  for (const file of files) {
+    if (file.size > VALIDATION_RULES.LIMITS.FILE_SIZE_MAX) {
+      showError(`File "${file.name}" exceeds 5MB limit`, 'fileUploadError');
+      fileInput.value = '';
+      return false;
+    }
+    
+    if (!VALIDATION_RULES.ALLOWED_FILE_TYPES.includes(file.type)) {
+      showError(`File "${file.name}" must be JPG, PNG, or PDF`, 'fileUploadError');
+      fileInput.value = '';
+      return false;
+    }
+  }
+  
+  // Show file count
+  if (files.length > 0) {
+    showError(`${files.length} file(s) selected`, 'fileUploadError');
   } else {
-    // Not required, but validate if files are uploaded
-    const files = fileInput.files;
-    if (files.length > 0) {
-      // Validate each file
-      let allValid = true;
-      const MAX_SIZE = 5 * 1024 * 1024;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        if (!allowedTypes.includes(file.type)) {
-          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-          allValid = false;
-          break;
-        }
-        
-        if (file.size > MAX_SIZE) {
-          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-          allValid = false;
-          break;
-        }
-      }
-      
-      if (allValid) {
-        errorElement.textContent = `${files.length} file(s) selected (optional)`;
-        errorElement.style.color = '#888';
-        parent.classList.add('valid');
-        fileInput.style.borderColor = '#00C851';
-      } else {
-        errorElement.style.color = '#ff4444';
-        parent.classList.add('invalid');
-        fileInput.style.borderColor = '#ff4444';
-      }
-    } else {
-      errorElement.textContent = 'Optional: Upload invoice/documents if available';
-      errorElement.style.color = '#888';
-      errorElement.style.display = 'block';
-      fileInput.style.borderColor = '#444';
-    }
+    showError('', 'fileUploadError');
   }
   
-  updateSubmitButton();
+  return true;
 }
 
-function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-  
-  const fileInput = document.getElementById('fileUpload');
-  const fileHelp = document.getElementById('fileHelp');
-  const fileRequirement = document.getElementById('fileRequirement');
-  
-  if (!fileInput || !fileHelp) return;
-  
-  if (starredCategories.includes(category)) {
-    // Show as required
-    if (fileRequirement) {
-      fileRequirement.textContent = 'Required: ';
-      fileRequirement.style.color = '#ff4444';
-    }
-    fileHelp.style.color = '#ff4444';
-    fileHelp.style.fontWeight = 'bold';
-    
-    // Validate immediately
-    setTimeout(() => {
-      validateFilesInRealTime();
-    }, 100);
-  } else {
-    // Show as optional
-    if (fileRequirement) {
-      fileRequirement.textContent = 'Optional: ';
-      fileRequirement.style.color = '#888';
-    }
-    fileHelp.style.color = '#888';
-    fileHelp.style.fontWeight = 'normal';
-    
-    // Clear any error state
-    const errorElement = document.getElementById('invoiceFilesError');
-    const parent = fileInput.parentElement;
-    
-    if (errorElement) {
-      errorElement.textContent = 'Optional: Upload invoice/documents if available';
-      errorElement.style.color = '#888';
-    }
-    
-    parent.classList.remove('invalid');
-    fileInput.style.borderColor = '#444';
-  }
-  
-  updateSubmitButton();
-}
-
-function validateTrackingNumberInput(inputElement) {
-  const value = inputElement.value.trim().toUpperCase();
-  const isValid = /^[A-Z0-9-]{5,}$/i.test(value);
-  showError(isValid ? '' : 'Invalid tracking format (5+ alphanum/-)', 'trackingError');
-  return isValid;
-}
-
-function validateTrackingNumber(value) {
-  if (!/^[A-Z0-9-]{5,}$/i.test(value)) {
-    throw new Error('Invalid tracking number format');
-  }
-}
-
-function validateItemCategory(category) {
-  const validCategories = [
-    'Accessories/Jewellery', 'Baby Appliances', 'Bag', 'Car Parts/Accessories',
-    'Carpets/Mat', 'Clothing', 'Computer Accessories', 'Cordless', 'Decorations',
-    'Disposable Pad/Mask', 'Electrical Appliances', 'Fabric', 'Fashion Accessories',
-    'Fishing kits/Accessories', 'Footware Shoes/Slippers', 'Game/Console/Board',
-    'Hand Tools', 'Handphone Casing', 'Headgear', 'Home Fitting/Furniture',
-    'Kitchenware', 'LED/Lamp', 'Matters/Bedding', 'Mix Item', 'Motor Part/Accessories',
-    '*Others', 'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
-    'Rubber', 'Seluar', 'Socks', 'Sport Equipment', 'Stationery', 'Stickers',
-    'Storage', 'Telkong', 'Toys', 'Tudong', 'Tumbler', 'Underwear',
-    'Watch & Accessories', 'Wire, Adapter & Plug',
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement'
-  ];
-  
-  if (!validCategories.includes(category)) {
-    throw new Error('Please select a valid item category');
-  }
-}
-
-function validateName(inputElement) {
-  const value = inputElement?.value?.trim() || '';
-  const isValid = value.length >= 2;
-  showError(isValid ? '' : 'Minimum 2 characters required', 'nameOnParcelError');
-  return isValid;
-}
-
-function validateDescription(inputElement) {
-  const value = inputElement?.value?.trim() || '';
-  const isValid = value.length >= 3;
-  showError(isValid ? '' : 'Minimum 3 characters required', 'itemDescriptionError');
-  return isValid;
-}
-
-function validateQuantity(inputElement) {
-  const value = parseInt(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value > 0 && value < 1000;
-  showError(isValid ? '' : 'Valid quantity (1-999) required', 'quantityError');
-  return isValid;
-}
-
-function validatePrice(inputElement) {
-  const value = parseFloat(inputElement?.value || 0);
-  const isValid = !isNaN(value) && value >= 0 && value < 100000; 
-  showError(isValid ? '' : 'Valid price (0-100000) required', 'priceError');
-  return isValid;
-}
-
-function validateCollectionPoint(selectElement) {
-  const value = selectElement?.value || '';
-  const isValid = value !== '';
-  showError(isValid ? '' : 'Please select collection point', 'collectionPointError');
-  return isValid;
-}
-
-function validateCategory(selectElement) {
-  const value = selectElement?.value || '';
-  const isValid = value !== '';
-  showError(isValid ? '' : 'Please select item category', 'itemCategoryError');
-  if(isValid) checkInvoiceRequirements();
-  return isValid;
-}
-
-function validateInvoiceFiles() {
-  // UPDATED: Corrected mandatory categories
-  const mandatoryCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-  
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  const files = document.getElementById('invoiceFiles')?.files || [];
-  let isValid = true;
-  let errorMessage = '';
-
-  if(files.length > 3) {
-    errorMessage = 'Maximum 3 files allowed';
-    isValid = false;
-  }
-  else if(mandatoryCategories.includes(category)) {
-    isValid = files.length > 0;
-    errorMessage = isValid ? '' : 'At least 1 invoice required';
-  }
-
-  showError(errorMessage, 'invoiceFilesError');
-  return isValid;
-}
-
-function validateParcelPhone(input) {
-  const value = input.value.trim();
-  const isValid = /^(673\d{7,}|60\d{9,})$/.test(value);
-  showError(isValid ? '' : 'Invalid phone number format', 'phoneNumberError');
-  return isValid;
-}
-
-// ================= FILE HANDLING =================
-async function processFiles(files) {
-  return Promise.all(files.map(async file => ({
-    name: file.name.replace(/[^a-z0-9._-]/gi, '_'),
-    mimeType: file.type,
-    data: await toBase64(file),
-    size: file.size
-  })));
-}
-
-function toBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result.split(',')[1]);
-    reader.onerror = error => reject(error);
-    reader.readAsDataURL(file);
-  });
-}
-
-function validateFiles(category, files) {
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    if (files.length < 1) throw new Error('At least 1 file required');
-    if (files.length > 3) throw new Error('Maximum 3 files allowed');
-  }
-
-  files.forEach(file => {
-    if (file.size > CONFIG.MAX_FILE_SIZE) {
-      throw new Error(`${file.name} exceeds ${CONFIG.MAX_FILE_SIZE/1024/1024}MB limit`);
-    }
-  });
-}
-
-function handleFileSelection(input) {
+// ================= DRAFT SYSTEM =================
+function saveFormAsDraft() {
   try {
-    const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value?.trim() || ''; // Added trim()
+    const form = document.getElementById('declarationForm');
+    if (!form) return;
     
-    // UPDATED: Corrected starred categories
-    const starredCategories = [
-      '*Books',
-      '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks',
-      '*Gadgets',
-      '*Oil Ointment',
-      '*Supplement',
-      '*Others'
-    ];
+    const formData = new FormData(form);
+    const draft = {};
     
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
-    }
-
-    // Validate individual files
-    files.forEach(file => {
-      if (file.size > CONFIG.MAX_FILE_SIZE) {
-        throw new Error(`${file.name} exceeds 5MB`);
+    // Convert FormData to object
+    for (let [key, value] of formData.entries()) {
+      if (key !== 'files') {
+        draft[key] = value;
       }
-    });
-
-    showError(`${files.length} valid files selected`, 'status-message success');
+    }
+    
+    // Get files info
+    const files = document.getElementById('fileUpload')?.files || [];
+    if (files.length > 0) {
+      draft.filesCount = files.length;
+      draft.filesInfo = Array.from(files).map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
+    }
+    
+    // Add timestamp and ID
+    draft.timestamp = new Date().toISOString();
+    draft.id = 'draft_' + Date.now();
+    
+    // Save to localStorage
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.push(draft);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    
+    // Show success message
+    showError('Draft saved successfully!', 'draft-message');
     
   } catch (error) {
-    showError(error.message);
-    input.value = '';
+    console.error('Failed to save draft:', error);
+    showError('Failed to save draft');
   }
 }
 
-// ================= FORM VALIDATION UTILITIES =================
-function checkAllFields() {
-  const validations = [
-    validateTrackingNumberInput(document.getElementById('trackingNumber')),
-    validateName(document.getElementById('nameOnParcel')),
-    validateParcelPhone(document.getElementById('phoneNumber')),
-    validateDescription(document.getElementById('itemDescription')),
-    validateQuantity(document.getElementById('quantity')),
-    validatePrice(document.getElementById('price')),
-    validateCollectionPoint(document.getElementById('collectionPoint')),
-    validateCategory(document.getElementById('itemCategory')),
-    validateInvoiceFiles()
-  ];
-
-  return validations.every(v => v === true);
-}
-
-function checkInvoiceRequirements() {
-  return validateInvoiceFiles();
-}
-
-function updateSubmitButtonState() {
-  const submitBtn = document.getElementById('submitBtn');
-  if(!submitBtn) return;
-  submitBtn.disabled = !checkAllFields();
-}
-
-// ================= FORM INITIALIZATION =================
-function initValidationListeners() {
-  const parcelForm = document.getElementById('parcel-declaration-form');
-  if (parcelForm) {
-    const inputs = parcelForm.querySelectorAll('input, select');
+function loadDrafts() {
+  try {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draftCount = document.getElementById('draftCount');
+    const draftsList = document.getElementById('draftsList');
     
-    inputs.forEach(input => {
-      input.addEventListener('input', () => {
-        switch(input.id) {
-          case 'trackingNumber':
-            validateTrackingNumberInput(input);
-            break;
-          case 'nameOnParcel':
-            validateName(input);
-            break;
-          case 'phoneNumber':
-            validateParcelPhone(input);
-            break;
-          case 'itemDescription':
-            validateDescription(input);
-            break;
-          case 'quantity':
-            validateQuantity(input);
-            break;
-          case 'price':
-            validatePrice(input);
-            break;
-          case 'collectionPoint':
-            validateCollectionPoint(input);
-            break;
-          case 'itemCategory':
-            validateCategory(input);
-            break;
-        }
-        updateSubmitButtonState();
+    if (draftCount) draftCount.textContent = drafts.length;
+    
+    if (draftsList && drafts.length > 0) {
+      let html = '<div class="drafts-container">';
+      drafts.forEach((draft, index) => {
+        html += `
+          <div class="draft-item">
+            <div class="draft-info">
+              <strong>${draft.trackingNumber || 'Untitled'}</strong>
+              <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
+            </div>
+            <div class="draft-actions">
+              <button onclick="loadDraft(${index})" class="small-btn">Load</button>
+              <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
+            </div>
+          </div>
+        `;
       });
-    });
-
-    const fileInput = document.getElementById('invoiceFiles');
-    if(fileInput) {
-      fileInput.addEventListener('change', () => {
-        validateInvoiceFiles();
-        updateSubmitButtonState();
-      });
+      html += '</div>';
+      draftsList.innerHTML = html;
     }
+  } catch (error) {
+    console.error('Failed to load drafts:', error);
+  }
+}
+
+function loadDraft(index) {
+  try {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draft = drafts[index];
+    
+    if (!draft) return;
+    
+    // Clear all validation errors first
+    clearAllValidationErrors();
+    
+    // Populate form fields
+    Object.keys(draft).forEach(key => {
+      if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
+        const field = document.getElementById(key);
+        if (field) {
+          field.value = draft[key];
+          
+          // Trigger validation for each field after setting value
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(field);
+          }
+        }
+      }
+    });
+    
+    // Update UI
+    if (typeof checkCategoryRequirements === 'function') {
+      checkCategoryRequirements();
+    }
+    
+    if (typeof updateSubmitButton === 'function') {
+      updateSubmitButton();
+    }
+    
+    showError('Draft loaded!', 'draft-message');
+    
+  } catch (error) {
+    console.error('Failed to load draft:', error);
+    showError('Failed to load draft');
+  }
+}
+
+function deleteDraft(index) {
+  try {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.splice(index, 1);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    loadDrafts();
+    showError('Draft deleted', 'draft-message');
+  } catch (error) {
+    console.error('Failed to delete draft:', error);
+    showError('Failed to delete draft');
+  }
+}
+
+// Clear all validation errors
+function clearAllValidationErrors() {
+  const errorElements = document.querySelectorAll('.validation-message');
+  errorElements.forEach(element => {
+    element.textContent = '';
+    element.style.display = 'none';
+    element.style.color = '';
+  });
+  
+  // Clear field borders
+  const fields = document.querySelectorAll('input, select, textarea');
+  fields.forEach(field => {
+    field.style.borderColor = '';
+    field.parentElement.classList.remove('invalid', 'valid');
+  });
+  
+  // Clear file upload error
+  const fileError = document.getElementById('invoiceFilesError');
+  if (fileError) {
+    fileError.textContent = 'Optional: Upload invoice/documents if available';
+    fileError.style.color = '#888';
+    fileError.style.display = 'block';
   }
 }
 
@@ -1813,19 +1959,9 @@ async function handlePasswordReset() {
 }
 
 // ================= FORM VALIDATION =================
-function validatePhone(phone) {
-  const regex = /^(673\d{7,}|60\d{9,})$/;
-  return regex.test(phone);
-}
-
 function validatePassword(password) {
   const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
   return regex.test(password);
-}
-
-function validateEmail(email) {
-  const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-  return regex.test(email);
 }
 
 function validateRegistrationForm() {
@@ -1914,376 +2050,56 @@ function formatDate(dateString) {
   return new Date(dateString).toLocaleDateString('en-MY', options);
 }
 
-// ================= FORM SETUP =================
-function setupFormSubmission() {
-  const form = document.getElementById('declarationForm');
-  if (!form) return;
-  
-  // Remove existing event listeners by cloning
-  const newForm = form.cloneNode(true);
-  form.parentNode.replaceChild(newForm, form);
-  
-  // Add enhanced submission handler
-  newForm.addEventListener('submit', handleParcelSubmission);
-  
-  // Add input validation
-  newForm.addEventListener('input', function(e) {
-    validateField(e.target);
-    updateSubmitButton();
-  });
-  
-  // Add file validation
-  const fileInput = newForm.querySelector('#fileUpload');
-  if (fileInput) {
-    fileInput.addEventListener('change', function() {
-      validateFiles(this);
-      updateSubmitButton();
+// ================= FORM INITIALIZATION =================
+function initValidationListeners() {
+  const parcelForm = document.getElementById('parcel-declaration-form');
+  if (parcelForm) {
+    const inputs = parcelForm.querySelectorAll('input, select');
+    
+    inputs.forEach(input => {
+      input.addEventListener('input', () => {
+        switch(input.id) {
+          case 'trackingNumber':
+            validateFieldInRealTime(input);
+            break;
+          case 'nameOnParcel':
+            validateFieldInRealTime(input);
+            break;
+          case 'itemDescription':
+            validateFieldInRealTime(input);
+            break;
+          case 'quantity':
+            validateFieldInRealTime(input);
+            break;
+          case 'price':
+            validateFieldInRealTime(input);
+            break;
+          case 'collectionPoint':
+            validateFieldInRealTime(input);
+            break;
+          case 'itemCategory':
+            validateFieldInRealTime(input);
+            break;
+        }
+        updateSubmitButton();
+      });
     });
-  }
-}
 
-function validateField(field) {
-  const value = field.value.trim();
-  const errorId = field.id + 'Error';
-  const errorElement = document.getElementById(errorId);
-  
-  if (!errorElement) return true;
-  
-  let isValid = true;
-  let message = '';
-  
-  switch(field.id) {
-    case 'trackingNumber':
-      isValid = /^[A-Z0-9-]{5,}$/i.test(value);
-      message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
-      break;
-      
-    case 'nameOnParcel':
-      isValid = value.length >= 2 && value.length <= 100;
-      message = isValid ? '' : '2-100 characters required';
-      break;
-      
-    case 'itemDescription':
-      isValid = value.length >= 3 && value.length <= 500;
-      message = isValid ? '' : '3-500 characters required';
-      break;
-      
-    case 'quantity':
-      const qty = parseInt(value);
-      isValid = !isNaN(qty) && qty >= 1 && qty <= 999;
-      message = isValid ? '' : 'Must be between 1 and 999';
-      break;
-      
-    case 'price':
-      const price = parseFloat(value);
-      isValid = !isNaN(price) && price >= 0 && price <= 99999;
-      message = isValid ? '' : 'Must be between 0 and 99,999';
-      break;
-      
-    case 'collectionPoint':
-    case 'itemCategory':
-      isValid = value !== '';
-      message = isValid ? '' : 'This field is required';
-      break;
-  }
-  
-  // Update UI
-  if (isValid) {
-    field.style.borderColor = '#00C851';
-    errorElement.textContent = '';
-  } else {
-    field.style.borderColor = '#ff4444';
-    errorElement.textContent = message;
-  }
-  
-  return isValid;
-}
-
-function validateFiles(fileInput) {
-  const files = Array.from(fileInput.files);
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
-    if (files.length === 0) {
-      showError('Invoice/document upload is required for this category', 'fileUploadError');
-      return false;
-    }
-  }
-  
-  // Validate each file
-  for (const file of files) {
-    if (file.size > CONFIG.MAX_FILE_SIZE) {
-      showError(`File "${file.name}" exceeds 5MB limit`, 'fileUploadError');
-      fileInput.value = '';
-      return false;
-    }
-    
-    if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-      showError(`File "${file.name}" must be JPG, PNG, or PDF`, 'fileUploadError');
-      fileInput.value = '';
-      return false;
-    }
-  }
-  
-  // Show file count
-  if (files.length > 0) {
-    showError(`${files.length} file(s) selected`, 'fileUploadError');
-  } else {
-    showError('', 'fileUploadError');
-  }
-  
-  return true;
-}
-
-function updateSubmitButton() {
-  const submitBtn = document.getElementById('submitBtn');
-  if (!submitBtn) return;
-  
-  // Check each field's validation state
-  const fields = [
-    'trackingNumber',
-    'nameOnParcel',
-    'itemDescription',
-    'quantity',
-    'price',
-    'collectionPoint',
-    'itemCategory'
-  ];
-  
-  let allValid = true;
-  
-  fields.forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    const parent = field?.parentElement;
-    
-    if (!field) {
-      allValid = false;
-      return;
-    }
-    
-    // Check if field has invalid class or is empty
-    if (parent && parent.classList.contains('invalid')) {
-      allValid = false;
-      return;
-    }
-    
-    // Check field value
-    if (field.tagName === 'SELECT') {
-      if (!field.value) allValid = false;
-    } else if (field.type === 'number') {
-      if (field.value === '') allValid = false;
-    } else {
-      if (!field.value.trim()) allValid = false;
-    }
-  });
-  
-  // Check file requirements for starred categories
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
-    const files = document.getElementById('fileUpload')?.files || [];
-    const fileParent = document.getElementById('fileUpload')?.parentElement;
-    
-    if (files.length === 0 || (fileParent && fileParent.classList.contains('invalid'))) {
-      allValid = false;
-    }
-  }
-  
-  // Update button state
-  submitBtn.disabled = !allValid;
-  
-  // Update button text based on state
-  const submitText = document.getElementById('submitText');
-  if (submitText) {
-    submitText.textContent = allValid ? 'Submit Declaration' : 'Please fix errors above';
-  }
-  
-  // Visual feedback
-  if (allValid) {
-    submitBtn.style.background = 'linear-gradient(135deg, #d4af37, #b8941f)';
-    submitBtn.style.cursor = 'pointer';
-    submitBtn.style.opacity = '1';
-  } else {
-    submitBtn.style.background = '#555';
-    submitBtn.style.cursor = 'not-allowed';
-    submitBtn.style.opacity = '0.7';
-  }
-}
-
-// ================= NEW FUNCTIONS FOR CATEGORY REQUIREMENTS =================
-function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  const fileInput = document.getElementById('fileUpload');
-  const fileHelp = document.getElementById('fileHelp');
-  
-  // UPDATED: Corrected starred categories
-  const starredCategories = [
-    '*Books',
-    '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks',
-    '*Gadgets',
-    '*Oil Ointment',
-    '*Supplement',
-    '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    if (fileInput) fileInput.required = true;
-    if (fileHelp) {
-      fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
-      fileHelp.style.color = '#ff4444';
-    }
-  } else {
-    if (fileInput) fileInput.required = false;
-    if (fileHelp) {
-      fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
-      fileHelp.style.color = '#888';
+    const fileInput = document.getElementById('fileUpload');
+    if(fileInput) {
+      fileInput.addEventListener('change', () => {
+        validateFilesInRealTime();
+        updateSubmitButton();
+      });
     }
   }
 }
 
+// ================= CATEGORY REQUIREMENTS =================
 function setupCategoryChangeListener() {
   const categorySelect = document.getElementById('itemCategory');
   if (categorySelect) {
     categorySelect.addEventListener('change', checkCategoryRequirements);
-  }
-}
-
-// ================= DRAFT SYSTEM =================
-function saveFormAsDraft() {
-  try {
-    const form = document.getElementById('declarationForm');
-    if (!form) return;
-    
-    const formData = new FormData(form);
-    const draft = {};
-    
-    // Convert FormData to object
-    for (let [key, value] of formData.entries()) {
-      if (key !== 'files') {
-        draft[key] = value;
-      }
-    }
-    
-    // Get files info
-    const files = document.getElementById('fileUpload')?.files || [];
-    if (files.length > 0) {
-      draft.filesCount = files.length;
-      draft.filesInfo = Array.from(files).map(file => ({
-        name: file.name,
-        size: file.size,
-        type: file.type
-      }));
-    }
-    
-    // Add timestamp and ID
-    draft.timestamp = new Date().toISOString();
-    draft.id = 'draft_' + Date.now();
-    
-    // Save to localStorage
-    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-    drafts.push(draft);
-    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-    
-    // Show success message
-    showError('Draft saved successfully!', 'draft-message');
-    
-  } catch (error) {
-    console.error('Failed to save draft:', error);
-    showError('Failed to save draft');
-  }
-}
-
-function loadDrafts() {
-  try {
-    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-    const draftCount = document.getElementById('draftCount');
-    const draftsList = document.getElementById('draftsList');
-    
-    if (draftCount) draftCount.textContent = drafts.length;
-    
-    if (draftsList && drafts.length > 0) {
-      let html = '<div class="drafts-container">';
-      drafts.forEach((draft, index) => {
-        html += `
-          <div class="draft-item">
-            <div class="draft-info">
-              <strong>${draft.trackingNumber || 'Untitled'}</strong>
-              <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
-            </div>
-            <div class="draft-actions">
-              <button onclick="loadDraft(${index})" class="small-btn">Load</button>
-              <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
-            </div>
-          </div>
-        `;
-      });
-      html += '</div>';
-      draftsList.innerHTML = html;
-    }
-  } catch (error) {
-    console.error('Failed to load drafts:', error);
-  }
-}
-
-function loadDraft(index) {
-  try {
-    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-    const draft = drafts[index];
-    
-    if (!draft) return;
-    
-    // Populate form fields
-    Object.keys(draft).forEach(key => {
-      if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
-        const field = document.getElementById(key);
-        if (field) field.value = draft[key];
-      }
-    });
-    
-    // Update UI
-    checkCategoryRequirements();
-    updateSubmitButton();
-    
-    showError('Draft loaded!', 'draft-message');
-    
-  } catch (error) {
-    console.error('Failed to load draft:', error);
-    showError('Failed to load draft');
-  }
-}
-
-function deleteDraft(index) {
-  try {
-    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
-    drafts.splice(index, 1);
-    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
-    loadDrafts();
-    showError('Draft deleted', 'draft-message');
-  } catch (error) {
-    console.error('Failed to delete draft:', error);
-    showError('Failed to delete draft');
   }
 }
 
@@ -2639,27 +2455,229 @@ window.deleteDraft = deleteDraft;
 window.retryFailedSubmissions = retryFailedSubmissions;
 window.showRegistration = () => safeRedirect('register.html');
 window.showForgotPassword = () => safeRedirect('forgot-password.html');
+window.clearAllValidationErrors = clearAllValidationErrors;
 
 // Safari-specific functions
-window.isSafariBrowser = isSafariBrowser;
-window.safariFileReaderPolyfill = safariFileReaderPolyfill;
-window.safariFetchEnhancement = safariFetchEnhancement;
+window.isSafariBrowser = () => {
+  const ua = navigator.userAgent;
+  const isSafari = /^((?!chrome|android).)*safari/i.test(ua);
+  const isIOS = /iPad|iPhone|iPod/.test(ua) && !window.MSStream;
+  return isSafari || isIOS;
+};
 
-// Debug function to check validation
+// ================= DEBUG FUNCTIONS =================
 function debugValidation() {
   const priceField = document.getElementById('price');
   const itemDescriptionField = document.getElementById('itemDescription');
   
-  console.log('Price field value:', priceField.value);
-  console.log('Price field type:', typeof priceField.value);
-  console.log('Price parsed:', parseFloat(priceField.value));
-  console.log('Is price 0 valid?', parseFloat(priceField.value) >= 0);
+  console.log('Price field value:', priceField?.value);
+  console.log('Price field type:', typeof priceField?.value);
+  console.log('Price parsed:', parseFloat(priceField?.value || 0));
+  console.log('Is price 0 valid?', parseFloat(priceField?.value || 0) >= 0);
   
-  console.log('Item description value:', itemDescriptionField.value);
-  console.log('Item description length:', itemDescriptionField.value.length);
-  console.log('Is description >= 3?', itemDescriptionField.value.length >= 3);
+  console.log('Item description value:', itemDescriptionField?.value);
+  console.log('Item description length:', itemDescriptionField?.value?.length || 0);
+  console.log('Is description >= 3?', (itemDescriptionField?.value?.length || 0) >= 3);
   
   // Call updateSubmitButton and see what it returns
   const submitBtn = document.getElementById('submitBtn');
-  console.log('Submit button disabled?', submitBtn.disabled);
+  console.log('Submit button disabled?', submitBtn?.disabled);
 }
+
+// ================= NETWORK DETECTION =================
+function updateNetworkStatus() {
+  const statusEl = document.getElementById('networkStatus');
+  if (!statusEl) return;
+  
+  if (navigator.onLine) {
+    statusEl.style.display = 'none';
+  } else {
+    statusEl.style.display = 'block';
+    statusEl.querySelector('.status-icon').textContent = '🔴';
+    statusEl.querySelector('.status-text').textContent = 'Offline - Form will be saved locally';
+  }
+}
+
+// Initialize network status
+window.addEventListener('online', updateNetworkStatus);
+window.addEventListener('offline', updateNetworkStatus);
+
+// ================= SESSION TOKEN MANAGEMENT =================
+function validateSessionToken(token) {
+  // This would typically validate with the backend
+  // For now, we'll just check if it exists
+  return token && token.length > 10;
+}
+
+function refreshSessionToken() {
+  const userData = checkSession();
+  if (!userData) return null;
+  
+  // In a real implementation, this would call the backend to refresh the token
+  // For now, we'll just extend the session in localStorage
+  sessionStorage.setItem('lastActivity', Date.now());
+  localStorage.setItem('lastActivity', Date.now());
+  
+  return userData.sessionToken;
+}
+
+// ================= FORM DATA VALIDATION =================
+function validateFormData(formData) {
+  const errors = [];
+  
+  // Check all required fields
+  if (!formData.trackingNumber || !VALIDATION_RULES.PATTERNS.TRACKING_NUMBER.test(formData.trackingNumber)) {
+    errors.push('Invalid tracking number');
+  }
+  
+  if (!formData.nameOnParcel || formData.nameOnParcel.trim().length < VALIDATION_RULES.LIMITS.NAME_MIN) {
+    errors.push(`Name must be at least ${VALIDATION_RULES.LIMITS.NAME_MIN} characters`);
+  }
+  
+  if (!formData.itemDescription || formData.itemDescription.trim().length < VALIDATION_RULES.LIMITS.DESCRIPTION_MIN) {
+    errors.push(`Description must be at least ${VALIDATION_RULES.LIMITS.DESCRIPTION_MIN} characters`);
+  }
+  
+  const quantity = Number(formData.quantity);
+  if (isNaN(quantity) || quantity < VALIDATION_RULES.LIMITS.QUANTITY_MIN || quantity > VALIDATION_RULES.LIMITS.QUANTITY_MAX) {
+    errors.push(`Quantity must be between ${VALIDATION_RULES.LIMITS.QUANTITY_MIN} and ${VALIDATION_RULES.LIMITS.QUANTITY_MAX}`);
+  }
+  
+  const price = Number(formData.price);
+  if (isNaN(price) || price < VALIDATION_RULES.LIMITS.PRICE_MIN || price > VALIDATION_RULES.LIMITS.PRICE_MAX) {
+    errors.push(`Price must be between ${VALIDATION_RULES.LIMITS.PRICE_MIN} and ${VALIDATION_RULES.LIMITS.PRICE_MAX}`);
+  }
+  
+  if (!formData.collectionPoint) {
+    errors.push('Collection point is required');
+  }
+  
+  if (!formData.itemCategory) {
+    errors.push('Item category is required');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+// ================= FILE VALIDATION =================
+function validateFileUpload(file) {
+  const errors = [];
+  
+  if (!VALIDATION_RULES.ALLOWED_FILE_TYPES.includes(file.type)) {
+    errors.push('File must be JPG, PNG, or PDF');
+  }
+  
+  if (file.size > VALIDATION_RULES.LIMITS.FILE_SIZE_MAX) {
+    errors.push('File size must be less than 5MB');
+  }
+  
+  return {
+    isValid: errors.length === 0,
+    errors: errors
+  };
+}
+
+// ================= FORM STATE MANAGEMENT =================
+function saveFormState() {
+  const form = document.getElementById('declarationForm');
+  if (!form) return;
+  
+  const formData = new FormData(form);
+  const state = {};
+  
+  for (let [key, value] of formData.entries()) {
+    state[key] = value;
+  }
+  
+  // Save files info
+  const files = document.getElementById('fileUpload')?.files || [];
+  if (files.length > 0) {
+    state.filesInfo = Array.from(files).map(file => ({
+      name: file.name,
+      size: file.size,
+      type: file.type
+    }));
+  }
+  
+  localStorage.setItem('formState', JSON.stringify(state));
+  console.log('Form state saved');
+}
+
+function restoreFormState() {
+  const state = localStorage.getItem('formState');
+  if (!state) return;
+  
+  try {
+    const formState = JSON.parse(state);
+    const form = document.getElementById('declarationForm');
+    
+    if (!form) return;
+    
+    // Restore form fields
+    Object.keys(formState).forEach(key => {
+      if (key !== 'filesInfo') {
+        const field = document.getElementById(key);
+        if (field) {
+          field.value = formState[key];
+          
+          // Trigger validation
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(field);
+          }
+        }
+      }
+    });
+    
+    // Note: Cannot restore file inputs due to security restrictions
+    console.log('Form state restored');
+    
+    // Clear saved state
+    localStorage.removeItem('formState');
+    
+  } catch (error) {
+    console.error('Failed to restore form state:', error);
+  }
+}
+
+// Auto-save form state on input
+function setupFormAutoSave() {
+  const form = document.getElementById('declarationForm');
+  if (!form) return;
+  
+  let saveTimeout;
+  
+  form.addEventListener('input', () => {
+    clearTimeout(saveTimeout);
+    saveTimeout = setTimeout(() => {
+      saveFormState();
+    }, 1000);
+  });
+  
+  // Restore on page load
+  restoreFormState();
+}
+
+// ================= SESSION MONITORING =================
+function startSessionMonitor() {
+  // Check session every minute
+  setInterval(() => {
+    const userData = checkSession();
+    if (!userData && !window.location.pathname.includes('login.html')) {
+      console.log('Session expired, redirecting to login');
+      handleLogout();
+    }
+  }, 60000); // Check every minute
+  
+  // Refresh session token every 15 minutes
+  setInterval(() => {
+    refreshSessionToken();
+  }, 900000); // Refresh every 15 minutes
+}
+
+// Start session monitoring
+document.addEventListener('DOMContentLoaded', () => {
+  startSessionMonitor();
+});
