@@ -1,8 +1,7 @@
-//scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbz_GVSQb4SUL3TXD-r_qCpDl4gExQjLeL68D7Tcbp4ZRDJFUhh7rAdZeyRyHFJ-8pKN/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwMFEddZQ_Ge0v2zfMPRVQU8EPs3zJg6ymPYmB2z9BiOS7jF4KlgeXCzXv5PsdKYkj0/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzhtOh6MIFv_AlLESbVnSEpOsuLtF4fnn5-ZEYzxYNTFQtB68l1c8_t5P2f9SVo_hDp/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzPTtH6qCRlriRSiaTT3PJfsZy1Q_WIkG2pJmI7hBR2MDgH5kw913bvhJiA41_mvbh2/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -341,10 +340,7 @@ async function tryPostViaProxy(payload) {
           }
         } catch (e) {
           console.log('Raw response:', xhr.responseText);
-          resolve({ 
-            success: true, 
-            message: 'Submitted successfully (non-JSON response)' 
-          });
+          reject(new Error('Invalid response format from server'));
         }
       } else {
         reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
@@ -642,7 +638,7 @@ async function handleParcelSubmission(e) {
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory') || ''
+        itemCategory: formData.get('itemCategory')?.trim() || '' // Added trim()
       },
       files: []
     };
@@ -673,10 +669,15 @@ async function handleParcelSubmission(e) {
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
+    // UPDATED: Corrected starred categories without spaces
     const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
+      '*Books',
+      '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks',
+      '*Gadgets',
+      '*Oil Ointment',
+      '*Supplement',
+      '*Others'
     ];
 
     if (starredCategories.includes(category)) {
@@ -713,7 +714,8 @@ async function handleParcelSubmission(e) {
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
       filesCount: payload.files.length,
-      price: payload.data.price
+      price: payload.data.price,
+      category: payload.data.itemCategory
     });
     
     const result = await submitParcelData(payload);
@@ -764,6 +766,8 @@ async function handleParcelSubmission(e) {
       errorMessage = '❌ Server error: Could not save your submission. Please try again.';
     } else if (error.message.includes('No payload received')) {
       errorMessage = '❌ Submission data was corrupted. Please try again.';
+    } else if (error.message.includes('already exists in the system')) {
+      errorMessage = '❌ This tracking number has already been submitted. Please use a different tracking number.';
     } else {
       errorMessage = `❌ ${error.message}`;
     }
@@ -774,7 +778,8 @@ async function handleParcelSubmission(e) {
     if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
         !error.message.includes('Price must be') && 
         !error.message.includes('Item description must be') &&
-        !error.message.includes('Invoice/document upload')) {
+        !error.message.includes('Invoice/document upload') &&
+        !error.message.includes('already exists')) {
       setTimeout(() => {
         if (confirm('Would you like to save this form as a draft?')) {
           saveFormAsDraft();
@@ -814,8 +819,8 @@ function showSubmissionSuccess(trackingNumber) {
         "
         title="Close this message"
       >×</button>
-      <div style="font-size: 48px; color: #00C851;">✓</div>
-      <h3 style="color: #00C851; margin: 10px 0;">Submission Successful!</h3>
+      <div style="font-size: 48px; color: #00C851;">⏳</div>
+      <h3 style="color: #00C851; margin: 10px 0;">Submission is processed!</h3>
       <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
       <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
         Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission,<br>if not available please resubmit again.
@@ -1099,10 +1104,16 @@ function runInitialValidation() {
   });
   
   // Validate files if required
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
   if (starredCategories.includes(category)) {
@@ -1289,16 +1300,21 @@ function validateFieldInRealTime(field) {
 
 function validateFilesInRealTime() {
   const fileInput = document.getElementById('fileUpload');
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
   if (!fileInput) return;
   
-  const errorElement = document.getElementById('invoiceFilesError') || 
-                      createErrorMessageElement('invoiceFiles');
+  const errorElement = document.getElementById('invoiceFilesError');
   const parent = fileInput.parentElement;
   
   parent.classList.remove('valid', 'invalid');
@@ -1392,10 +1408,16 @@ function validateFilesInRealTime() {
 }
 
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
   const fileInput = document.getElementById('fileUpload');
@@ -1520,13 +1542,18 @@ function validateCategory(selectElement) {
 }
 
 function validateInvoiceFiles() {
+  // UPDATED: Corrected mandatory categories
   const mandatoryCategories = [
-    '* Books', '* Cosmetics/Skincare/Bodycare',
-    '* Food Beverage/Drinks', '* Gadgets',
-    '* Oil Ointment', '* Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
   const files = document.getElementById('invoiceFiles')?.files || [];
   let isValid = true;
   let errorMessage = '';
@@ -1571,9 +1598,15 @@ function toBase64(file) {
 }
 
 function validateFiles(category, files) {
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
 
   if (starredCategories.includes(category)) {
@@ -1591,12 +1624,17 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value;
+    const category = document.getElementById('itemCategory').value?.trim() || ''; // Added trim()
     
-    // Validate against starred categories
+    // UPDATED: Corrected starred categories
     const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+      '*Books',
+      '*Cosmetics/Skincare/Bodycare',
+      '*Food Beverage/Drinks',
+      '*Gadgets',
+      '*Oil Ointment',
+      '*Supplement',
+      '*Others'
     ];
     
     if (starredCategories.includes(category)) {
@@ -1963,12 +2001,17 @@ function validateField(field) {
 
 function validateFiles(fileInput) {
   const files = Array.from(fileInput.files);
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
   
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
   if (starredCategories.includes(category)) {
@@ -2046,10 +2089,16 @@ function updateSubmitButton() {
   });
   
   // Check file requirements for starred categories
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
   
   if (starredCategories.includes(category)) {
@@ -2084,14 +2133,19 @@ function updateSubmitButton() {
 
 // ================= NEW FUNCTIONS FOR CATEGORY REQUIREMENTS =================
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value || '';
+  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
   const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
   
+  // UPDATED: Corrected starred categories
   const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
+    '*Books',
+    '*Cosmetics/Skincare/Bodycare',
+    '*Food Beverage/Drinks',
+    '*Gadgets',
+    '*Oil Ointment',
+    '*Supplement',
+    '*Others'
   ];
 
   if (starredCategories.includes(category)) {
