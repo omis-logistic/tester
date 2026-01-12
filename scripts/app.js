@@ -205,25 +205,86 @@ function createLoaderElement() {
   return overlay;
 }
 
-function showSuccessMessage() {
-  const messageElement = document.getElementById('message');
-  if (!messageElement) return;
-
-  messageElement.textContent = 'Data is processed!';
-  messageElement.className = 'success';
+// ================= UPDATED SUBMISSION RESULT HANDLER =================
+function showSubmissionResult(result) {
+  const messageElement = document.getElementById('message') || createMessageElement();
+  
+  if (result.success) {
+    // Success case
+    messageElement.innerHTML = `
+      <div style="text-align: center; padding: 20px; position: relative;">
+        <button 
+          id="closeMessageBtn" 
+          style="
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0;
+            transition: all 0.3s ease;
+          "
+          title="Close this message"
+        >×</button>
+        <div style="font-size: 48px; color: #00C851;">✓</div>
+        <h3 style="color: #00C851; margin: 10px 0;">${result.message || 'Submission processed!'}</h3>
+        <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${result.trackingNumber}</strong></p>
+        <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
+          Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission.
+        </p>
+      </div>
+    `;
+  } else {
+    // Error case - show actual error message
+    messageElement.innerHTML = `
+      <div style="text-align: center; padding: 20px; position: relative;">
+        <button 
+          id="closeMessageBtn" 
+          style="
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: #333;
+            color: white;
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            font-size: 18px;
+            line-height: 1;
+            padding: 0;
+            transition: all 0.3s ease;
+          "
+          title="Close this message"
+        >×</button>
+        <div style="font-size: 48px; color: #ff4444;">✗</div>
+        <h3 style="color: #ff4444; margin: 10px 0;">Submission Failed</h3>
+        <p style="margin: 10px 0; color: #fff;">${result.message}</p>
+        <p style="font-size: 0.9em; color: #aaa; margin-top: 15px;">
+          Please correct the error and try again.
+        </p>
+      </div>
+    `;
+  }
+  
+  messageElement.className = result.success ? 'success' : 'error';
   messageElement.style.display = 'block';
-
-  // Add animation effects
-  messageElement.style.animation = 'slideIn 0.5s ease-out';
-  setTimeout(() => {
-    messageElement.style.animation = 'fadeOut 1s ease 2s forwards';
-  }, 2000);
-
-  // Add celebratory animation
-  const confetti = document.createElement('div');
-  confetti.className = 'confetti-effect';
-  document.body.appendChild(confetti);
-  setTimeout(() => confetti.remove(), 3000);
+  
+  // Add close button functionality
+  const closeBtn = document.getElementById('closeMessageBtn');
+  if (closeBtn) {
+    closeBtn.addEventListener('click', function() {
+      messageElement.style.display = 'none';
+    });
+  }
 }
 
 function resetForm() {
@@ -316,7 +377,7 @@ async function tryAllSubmissionMethods(payload) {
   throw new Error('All submission methods failed');
 }
 
-// Update the tryPostViaProxy function to properly handle success:false
+// Method 1: POST via Proxy
 async function tryPostViaProxy(payload) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -613,14 +674,13 @@ function base64ToBlob(base64, mimeType) {
 }
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
-// Update handleParcelSubmission to show better error messages
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
   try {
-    // Get form data (same as before)
+    // Get form data
     const formData = new FormData(form);
     const userData = checkSession();
     
@@ -628,7 +688,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload (same as before)
+    // Build payload
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -639,12 +699,12 @@ async function handleParcelSubmission(e) {
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory')?.trim() || '' // Added trim()
+        itemCategory: formData.get('itemCategory')?.trim() || ''
       },
       files: []
     };
     
-    // Validate required fields (same as before)
+    // Validate required fields
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
       const value = payload.data[field];
@@ -666,11 +726,10 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Handle file uploads (same as before)
+    // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
-    // UPDATED: Corrected starred categories without spaces
     const starredCategories = [
       '*Books',
       '*Cosmetics/Skincare/Bodycare',
@@ -686,7 +745,7 @@ async function handleParcelSubmission(e) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files (same as before)
+      // Process files
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -725,6 +784,7 @@ async function handleParcelSubmission(e) {
     showSubmissionResult(result);
     
     if (result.success) {
+      // Success handling
       resetForm();
       
       // Schedule verification
@@ -733,106 +793,71 @@ async function handleParcelSubmission(e) {
       }, 3000);
       
     } else if (result.savedLocally) {
-      // Show local recovery notice
+      // Failed but saved locally
+      showError('⚠️ Submission failed but data was saved locally. Please try again later or contact support.', 'submission-warning');
       showLocalRecoveryNotice(payload);
+      
+    } else {
+      // Complete failure - show actual error from backend
+      // Note: The error message from backend will already be shown by showSubmissionResult
+      console.error('Submission failed:', result.message);
     }
 
   } catch (error) {
     console.error('Submission error:', error);
     
-    // Show error in message box
+    // Show user-friendly error message
+    let errorMessage = error.message;
+    
+    // Categorize errors for better messaging
+    if (error.message.includes('Price must be')) {
+      errorMessage = '❌ Price must be 0 or greater. 0 is allowed for items with no declared value.';
+    } else if (error.message.includes('Item description must be')) {
+      errorMessage = '❌ Item description must be at least 3 characters.';
+    } else if (error.message.includes('Invoice/document upload')) {
+      errorMessage = '❌ Invoice/document upload is required for starred categories.';
+    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      errorMessage = '⚠️ Network connection issue. Please check your internet and try again.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = '⚠️ Submission timeout. The request took too long. Please try again.';
+    } else if (error.message.includes('Session expired')) {
+      errorMessage = '❌ Session expired. Please login again.';
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
+    } else if (error.message.includes('Submission failed at server')) {
+      errorMessage = '❌ Server error: Could not save your submission. Please try again.';
+    } else if (error.message.includes('No payload received')) {
+      errorMessage = '❌ Submission data was corrupted. Please try again.';
+    } else if (error.message.includes('already exists in the system')) {
+      errorMessage = '❌ This tracking number has already been submitted. Please use a different tracking number.';
+    } else {
+      errorMessage = `❌ ${error.message}`;
+    }
+    
     showSubmissionResult({
       success: false,
-      message: error.message
+      message: errorMessage,
+      trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || ''
     });
+    
+    // Offer to save as draft for network/timeout errors
+    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
+        !error.message.includes('Price must be') && 
+        !error.message.includes('Item description must be') &&
+        !error.message.includes('Invoice/document upload') &&
+        !error.message.includes('already exists')) {
+      setTimeout(() => {
+        if (confirm('Would you like to save this form as a draft?')) {
+          saveFormAsDraft();
+        }
+      }, 1000);
+    }
     
   } finally {
     showLoading(false);
   }
 }
-
-// ================= UPDATED SUCCESS HANDLER =================
-function showSubmissionResult(result) {
-  const messageElement = document.getElementById('message') || createMessageElement();
-  
-  if (result.success) {
-    // Success case
-    messageElement.innerHTML = `
-      <div style="text-align: center; padding: 20px; position: relative;">
-        <button 
-          id="closeMessageBtn" 
-          style="
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
-            padding: 0;
-            transition: all 0.3s ease;
-          "
-          title="Close this message"
-        >×</button>
-        <div style="font-size: 48px; color: #00C851;">✓</div>
-        <h3 style="color: #00C851; margin: 10px 0;">${result.message || 'Submission processed!'}</h3>
-        <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${result.trackingNumber}</strong></p>
-        <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
-          Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission.
-        </p>
-      </div>
-    `;
-  } else {
-    // Error case
-    messageElement.innerHTML = `
-      <div style="text-align: center; padding: 20px; position: relative;">
-        <button 
-          id="closeMessageBtn" 
-          style="
-            position: absolute;
-            top: 10px;
-            right: 10px;
-            background: #333;
-            color: white;
-            border: none;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            cursor: pointer;
-            font-size: 18px;
-            line-height: 1;
-            padding: 0;
-            transition: all 0.3s ease;
-          "
-          title="Close this message"
-        >×</button>
-        <div style="font-size: 48px; color: #ff4444;">✗</div>
-        <h3 style="color: #ff4444; margin: 10px 0;">Submission Failed</h3>
-        <p style="margin: 10px 0; color: #fff;">${result.message}</p>
-        <p style="font-size: 0.9em; color: #aaa; margin-top: 15px;">
-          Please correct the error and try again.
-        </p>
-      </div>
-    `;
-  }
-  
-  messageElement.className = result.success ? 'success' : 'error';
-  messageElement.style.display = 'block';
-  
-  // Add close button functionality
-  const closeBtn = document.getElementById('closeMessageBtn');
-  if (closeBtn) {
-    closeBtn.addEventListener('click', function() {
-      messageElement.style.display = 'none';
-    });
-  }
-}
-
 
 // Show local recovery notice
 function showLocalRecoveryNotice(payload) {
@@ -887,9 +912,16 @@ async function retryFailedSubmissions() {
     showLoading(false);
     
     if (successCount > 0) {
-      alert(`Successfully resubmitted ${successCount} item(s)!`);
+      showSubmissionResult({
+        success: true,
+        message: `Successfully resubmitted ${successCount} item(s)!`,
+        trackingNumber: 'Multiple'
+      });
     } else {
-      alert('Could not resubmit any items. Please try again later.');
+      showSubmissionResult({
+        success: false,
+        message: 'Could not resubmit any items. Please try again later.'
+      });
     }
     
     // Remove recovery notice
@@ -898,7 +930,10 @@ async function retryFailedSubmissions() {
     
   } catch (error) {
     showLoading(false);
-    showError('Failed to retry submissions: ' + error.message);
+    showSubmissionResult({
+      success: false,
+      message: 'Failed to retry submissions: ' + error.message
+    });
   }
 }
 
@@ -929,20 +964,21 @@ function createMessageElement() {
 }
 
 // ================= ENHANCED VERIFICATION =================
-async function verifySubmission(trackingNumber) {
+async function verifySubmissionInSheet(trackingNumber) {
   try {
-    console.log('Verifying submission for:', trackingNumber);
+    console.log('Verifying submission in sheet for:', trackingNumber);
     
     // Use multiple verification methods
     const verificationURLs = [
       `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`,
-      `${CONFIG.GAS_URL}?action=verifyTracking&tracking=${encodeURIComponent(trackingNumber)}`
+      `${CONFIG.GAS_URL}?action=verifyTracking&tracking=${encodeURIComponent(trackingNumber)}&callback=verifyCallback`
     ];
     
     let verificationResult = null;
     
     for (const url of verificationURLs) {
       try {
+        console.log('Trying verification URL:', url);
         const response = await fetch(url, {
           method: 'GET',
           cache: 'no-cache',
@@ -950,8 +986,26 @@ async function verifySubmission(trackingNumber) {
         });
         
         if (response.ok) {
-          verificationResult = await response.json();
-          break;
+          const text = await response.text();
+          console.log('Verification response:', text.substring(0, 200));
+          
+          // Try to parse as JSON
+          try {
+            verificationResult = JSON.parse(text);
+            console.log('Parsed verification result:', verificationResult);
+            break;
+          } catch (parseError) {
+            // Try to parse as JSONP
+            if (text.includes('verifyCallback(')) {
+              const jsonpMatch = text.match(/verifyCallback\((.+)\)/);
+              if (jsonpMatch) {
+                verificationResult = JSON.parse(jsonpMatch[1]);
+                console.log('Parsed JSONP verification result:', verificationResult);
+                break;
+              }
+            }
+            continue;
+          }
         }
       } catch (error) {
         console.warn(`Verification URL failed: ${url}`, error.message);
@@ -960,27 +1014,79 @@ async function verifySubmission(trackingNumber) {
     }
     
     if (verificationResult?.exists) {
-      console.log('Verification successful:', verificationResult);
+      console.log('✅ Verification successful:', verificationResult);
+      return {
+        success: true,
+        verified: true,
+        timestamp: verificationResult.timestamp,
+        message: `Tracking number ${trackingNumber} confirmed in system`
+      };
+    } else {
+      console.log('⚠️ Verification failed or pending:', verificationResult);
+      return {
+        success: false,
+        verified: false,
+        message: verificationResult?.message || `Tracking number ${trackingNumber} not found in system`
+      };
+    }
+    
+  } catch (error) {
+    console.error('Verification check failed:', error.message);
+    return {
+      success: false,
+      verified: false,
+      message: 'Verification service unavailable: ' + error.message
+    };
+  }
+}
+
+async function verifySubmission(trackingNumber) {
+  try {
+    console.log('Verifying submission for:', trackingNumber);
+    
+    const verification = await verifySubmissionInSheet(trackingNumber);
+    
+    const messageElement = document.getElementById('message');
+    if (messageElement && messageElement.style.display === 'block') {
+      // Add verification result to existing message
+      const verificationDiv = document.createElement('div');
+      verificationDiv.style.marginTop = '15px';
+      verificationDiv.style.paddingTop = '15px';
+      verificationDiv.style.borderTop = '1px solid ' + (verification.verified ? '#00C851' : '#ff4444');
       
-      // Show verification success
-      const messageElement = document.getElementById('message');
-      if (messageElement) {
-        messageElement.innerHTML += `
-          <div style="margin-top: 15px; padding-top: 15px; border-top: 1px solid #00C851;">
-            <p style="color: #00C851; font-size: 0.9em;">
-              ✓ Verified in system: ${trackingNumber}
-            </p>
-          </div>
+      if (verification.verified) {
+        verificationDiv.innerHTML = `
+          <p style="color: #00C851; font-size: 0.9em;">
+            ✅ Verified in system: ${trackingNumber}
+          </p>
+          <p style="color: #aaa; font-size: 0.8em; margin-top: 5px;">
+            Timestamp: ${verification.timestamp ? new Date(verification.timestamp).toLocaleString() : 'Not available'}
+          </p>
+        `;
+      } else {
+        verificationDiv.innerHTML = `
+          <p style="color: #ff4444; font-size: 0.9em;">
+            ⚠️ Not verified: ${verification.message}
+          </p>
+          <p style="color: #aaa; font-size: 0.8em; margin-top: 5px;">
+            Please contact support if this issue persists.
+          </p>
         `;
       }
       
-    } else {
-      console.log('Verification pending or failed:', verificationResult);
+      messageElement.querySelector('div').appendChild(verificationDiv);
     }
+    
+    return verification;
     
   } catch (error) {
     console.warn('Verification check failed:', error.message);
     // Don't show error to user - verification is secondary
+    return {
+      success: false,
+      verified: false,
+      message: error.message
+    };
   }
 }
 
@@ -1082,8 +1188,7 @@ function runInitialValidation() {
   });
   
   // Validate files if required
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -1278,8 +1383,7 @@ function validateFieldInRealTime(field) {
 
 function validateFilesInRealTime() {
   const fileInput = document.getElementById('fileUpload');
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -1386,8 +1490,7 @@ function validateFilesInRealTime() {
 }
 
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -1520,7 +1623,6 @@ function validateCategory(selectElement) {
 }
 
 function validateInvoiceFiles() {
-  // UPDATED: Corrected mandatory categories
   const mandatoryCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -1531,7 +1633,7 @@ function validateInvoiceFiles() {
     '*Others'
   ];
   
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const files = document.getElementById('invoiceFiles')?.files || [];
   let isValid = true;
   let errorMessage = '';
@@ -1576,7 +1678,6 @@ function toBase64(file) {
 }
 
 function validateFiles(category, files) {
-  // UPDATED: Corrected starred categories
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -1602,9 +1703,8 @@ function validateFiles(category, files) {
 function handleFileSelection(input) {
   try {
     const files = Array.from(input.files);
-    const category = document.getElementById('itemCategory').value?.trim() || ''; // Added trim()
+    const category = document.getElementById('itemCategory').value?.trim() || '';
     
-    // UPDATED: Corrected starred categories
     const starredCategories = [
       '*Books',
       '*Cosmetics/Skincare/Bodycare',
@@ -1979,9 +2079,8 @@ function validateField(field) {
 
 function validateFiles(fileInput) {
   const files = Array.from(fileInput.files);
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   
-  // UPDATED: Corrected starred categories
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -2067,8 +2166,7 @@ function updateSubmitButton() {
   });
   
   // Check file requirements for starred categories
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
-  // UPDATED: Corrected starred categories
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -2111,11 +2209,10 @@ function updateSubmitButton() {
 
 // ================= NEW FUNCTIONS FOR CATEGORY REQUIREMENTS =================
 function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value?.trim() || ''; // Added trim()
+  const category = document.getElementById('itemCategory')?.value?.trim() || '';
   const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
   
-  // UPDATED: Corrected starred categories
   const starredCategories = [
     '*Books',
     '*Cosmetics/Skincare/Bodycare',
@@ -2585,27 +2682,21 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // ================= HELPER FUNCTIONS FOR MISSING IMPLEMENTATIONS =================
-// These are placeholder functions for methods that might be called elsewhere
-
 function loadBillingDataFromServer(phone) {
-  // This should be implemented to load billing data from server
   console.log('Loading billing data for:', phone);
   return Promise.resolve({ success: false, message: 'Not implemented' });
 }
 
 function checkPaymentStatusForUser(phone) {
-  // This should be implemented to check payment status
   console.log('Checking payment status for:', phone);
   return Promise.resolve({ success: false, paidOrders: [] });
 }
 
 function renderBillingSections(data) {
-  // This should be implemented to render billing data
   console.log('Rendering billing sections:', data);
 }
 
 // ================= EXPORT FUNCTIONS FOR HTML USE =================
-// Make these functions available globally for HTML onclick handlers
 window.handleLogout = handleLogout;
 window.safeRedirect = safeRedirect;
 window.handleRegistration = handleRegistration;
@@ -2642,76 +2733,8 @@ function debugValidation() {
   console.log('Submit button disabled?', submitBtn.disabled);
 }
 
-async function verifySubmissionInSheet(trackingNumber) {
-  try {
-    // Verify via proxy
-    const verifyURL = `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`;
-    const response = await fetch(verifyURL, {
-      method: 'GET',
-      headers: { 'Accept': 'application/json' }
-    });
-    
-    if (!response.ok) {
-      throw new Error('Verification service unavailable');
-    }
-    
-    const result = await response.json();
-    
-    if (result.exists) {
-      console.log('✅ Verification PASSED:', trackingNumber);
-      return {
-        success: true,
-        verified: true,
-        timestamp: result.timestamp,
-        message: `Tracking number ${trackingNumber} confirmed in system`
-      };
-    } else {
-      console.log('⚠️ Verification FAILED:', trackingNumber);
-      return {
-        success: false,
-        verified: false,
-        message: `Tracking number ${trackingNumber} not found in system`
-      };
-    }
-  } catch (error) {
-    console.error('Verification error:', error);
-    return {
-      success: false,
-      verified: false,
-      message: 'Verification service unavailable'
-    };
-  }
-}
-
-// Update the verifySubmission function
-async function verifySubmission(trackingNumber) {
-  const verification = await verifySubmissionInSheet(trackingNumber);
-  
-  const messageElement = document.getElementById('message');
-  if (messageElement && messageElement.style.display === 'block') {
-    // Add verification result to existing message
-    const verificationDiv = document.createElement('div');
-    verificationDiv.style.marginTop = '15px';
-    verificationDiv.style.paddingTop = '15px';
-    verificationDiv.style.borderTop = '1px solid ' + (verification.verified ? '#00C851' : '#ff4444');
-    
-    if (verification.verified) {
-      verificationDiv.innerHTML = `
-        <p style="color: #00C851; font-size: 0.9em;">
-          ✓ Verified in system: ${trackingNumber}
-        </p>
-      `;
-    } else {
-      verificationDiv.innerHTML = `
-        <p style="color: #ff4444; font-size: 0.9em;">
-          ⚠️ Not verified: ${verification.message}
-        </p>
-        <p style="color: #aaa; font-size: 0.8em; margin-top: 5px;">
-          Please contact support if this issue persists.
-        </p>
-      `;
-    }
-    
-    messageElement.querySelector('div').appendChild(verificationDiv);
-  }
-}
+// ================= VERIFICATION CALLBACK (for JSONP) =================
+window.verifyCallback = function(response) {
+  console.log('JSONP verification callback:', response);
+  return response;
+};
