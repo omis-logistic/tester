@@ -282,6 +282,15 @@ async function submitParcelData(payload) {
     
   } catch (error) {
     console.error('All submission methods failed:', error);
+    
+    // Check if error is a duplicate tracking error
+    if (error.message && error.message.includes('already exists in the system')) {
+      return {
+        success: false,
+        message: error.message
+      };
+    }
+    
     throw new Error(`Submission failed: ${error.message}`);
   }
 }
@@ -630,7 +639,7 @@ async function handleParcelSubmission(e) {
   showLoading(true, "Submitting parcel declaration...");
 
   try {
-    // Get form data (same as before)
+    // Get form data
     const formData = new FormData(form);
     const userData = checkSession();
     
@@ -638,7 +647,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload (same as before)
+    // Build payload
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -649,12 +658,12 @@ async function handleParcelSubmission(e) {
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory')?.trim() || '' // Added trim()
+        itemCategory: formData.get('itemCategory')?.trim() || ''
       },
       files: []
     };
     
-    // Validate required fields (same as before)
+    // Validate required fields
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
       const value = payload.data[field];
@@ -676,11 +685,10 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Handle file uploads (same as before)
+    // Handle file uploads
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
-    // UPDATED: Corrected starred categories without spaces
     const starredCategories = [
       '*Books',
       '*Cosmetics/Skincare/Bodycare',
@@ -696,7 +704,7 @@ async function handleParcelSubmission(e) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files (same as before)
+      // Process files
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -731,37 +739,70 @@ async function handleParcelSubmission(e) {
     
     const result = await submitParcelData(payload);
     
-    // FIX: Check both success flag AND message for duplicate errors
+    // FIX: Simplify verification - rely on backend response
     if (result.success) {
-      // FIX: Add verification BEFORE showing success
-      const verification = await verifySubmissionImmediately(payload.data.trackingNumber);
-      
-      if (verification.verified) {
+      // Check if backend already verified
+      if (result.verified === true || result.verified === undefined) {
+        // Backend says it's verified or doesn't provide verification status (assume success)
         showSubmissionSuccess(payload.data.trackingNumber);
         resetForm();
-      } else {
-        throw new Error('Submission failed: Could not verify data was saved. Please check and resubmit.');
+        
+        // Optional: Schedule background verification (non-blocking)
+        setTimeout(() => {
+          verifySubmissionBackground(payload.data.trackingNumber);
+        }, 3000);
+      } else if (result.verified === false) {
+        // Backend submitted but couldn't verify immediately
+        showSubmissionSuccess(payload.data.trackingNumber);
+        resetForm();
+        console.warn('Backend submitted but verification was not immediate');
+        
+        // Schedule verification in background
+        setTimeout(() => {
+          verifySubmissionBackground(payload.data.trackingNumber);
+        }, 3000);
       }
       
     } else if (result.savedLocally) {
-      // ... [existing code]
+      // Failed but saved locally
+      showError('⚠️ Submission failed but data was saved locally. Please try again later or contact support.', 'submission-warning');
+      showLocalRecoveryNotice(payload);
+      
     } else {
-      // This handles cases where result.success is false
+      // Complete failure - show actual error from backend
       throw new Error(result.message || 'Submission failed at server');
     }
 
   } catch (error) {
     console.error('Submission error:', error);
     
-    // FIX: Better error message handling for duplicate tracking
+    // Show user-friendly error message
     let errorMessage = error.message;
     
-    if (error.message.includes('already exists in the system')) {
-      // Extract tracking number from error message
-      const match = error.message.match(/Tracking number "([^"]+)" already exists/);
-      if (match) {
-        errorMessage = `❌ Tracking number "${match[1]}" already exists in the system. Please use a different tracking number.`;
-      }
+    // Categorize errors for better messaging
+    if (error.message.includes('Price must be')) {
+      errorMessage = '❌ Price must be 0 or greater. 0 is allowed for items with no declared value.';
+    } else if (error.message.includes('Item description must be')) {
+      errorMessage = '❌ Item description must be at least 3 characters.';
+    } else if (error.message.includes('Invoice/document upload')) {
+      errorMessage = '❌ Invoice/document upload is required for starred categories.';
+    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
+      errorMessage = '⚠️ Network connection issue. Please check your internet and try again.';
+    } else if (error.message.includes('timeout')) {
+      errorMessage = '⚠️ Submission timeout. The request took too long. Please try again.';
+    } else if (error.message.includes('Session expired')) {
+      errorMessage = '❌ Session expired. Please login again.';
+      setTimeout(() => {
+        handleLogout();
+      }, 2000);
+    } else if (error.message.includes('Submission failed at server')) {
+      errorMessage = '❌ Server error: Could not save your submission. Please try again.';
+    } else if (error.message.includes('No payload received')) {
+      errorMessage = '❌ Submission data was corrupted. Please try again.';
+    } else if (error.message.includes('already exists in the system')) {
+      errorMessage = '❌ This tracking number has already been submitted. Please use a different tracking number.';
+    } else {
+      errorMessage = `❌ ${error.message}`;
     }
     
     showError(errorMessage);
@@ -813,10 +854,72 @@ async function verifySubmissionImmediately(trackingNumber) {
   }
 }
 
+// Background verification (doesn't block user)
+async function verifySubmissionBackground(trackingNumber) {
+  try {
+    console.log('Starting background verification for:', trackingNumber);
+    
+    // Try multiple times with delays
+    const maxAttempts = 5;
+    const delayBetweenAttempts = 2000; // 2 seconds
+    
+    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+      try {
+        // Wait before each attempt (except first)
+        if (attempt > 1) {
+          await new Promise(resolve => setTimeout(resolve, delayBetweenAttempts));
+        }
+        
+        console.log(`Background verification attempt ${attempt} for ${trackingNumber}`);
+        
+        // Use proxy endpoint for verification
+        const url = `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`;
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-cache'
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          
+          if (result.exists === true || result.exists === "true") {
+            console.log(`✓ Background verification SUCCESS for ${trackingNumber} on attempt ${attempt}`);
+            
+            // Optional: Update UI to show verified status
+            updateVerificationStatus(trackingNumber, true);
+            return true;
+          } else if (result.exists === false || result.exists === "false") {
+            console.log(`✗ Background verification: tracking not found yet (attempt ${attempt})`);
+            continue; // Try again
+          }
+        }
+      } catch (attemptError) {
+        console.warn(`Background verification attempt ${attempt} failed:`, attemptError.message);
+        // Continue to next attempt
+      }
+    }
+    
+    console.log(`Background verification failed after ${maxAttempts} attempts for ${trackingNumber}`);
+    updateVerificationStatus(trackingNumber, false);
+    return false;
+    
+  } catch (error) {
+    console.error('Background verification error:', error);
+    return false;
+  }
+}
+
 // ================= ENHANCED SUCCESS HANDLER =================
-function showSubmissionSuccess(trackingNumber) {
+function showSubmissionSuccess(trackingNumber, verificationStatus = 'pending') {
   // Update message element
   const messageElement = document.getElementById('message') || createMessageElement();
+  
+  let verificationText = '';
+  if (verificationStatus === 'verified') {
+    verificationText = '<p style="color: #00C851; margin-top: 10px;">✓ Verified in system</p>';
+  } else if (verificationStatus === 'pending') {
+    verificationText = '<p style="color: #ffbb33; margin-top: 10px;">⏳ Verifying submission...</p>';
+  }
   
   messageElement.innerHTML = `
     <div style="text-align: center; padding: 20px; position: relative;">
@@ -840,11 +943,12 @@ function showSubmissionSuccess(trackingNumber) {
         "
         title="Close this message"
       >×</button>
-      <div style="font-size: 48px; color: #00C851;">⏳</div>
+      <div style="font-size: 48px; color: #00C851;">✓</div>
       <h3 style="color: #00C851; margin: 10px 0;">Submission is processed!</h3>
       <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
+      ${verificationText}
       <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
-        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission,<br>if not available please resubmit again.
+        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission.
       </p>
     </div>
   `;
@@ -867,13 +971,6 @@ function showSubmissionSuccess(trackingNumber) {
   closeBtn.addEventListener('click', function() {
     messageElement.style.display = 'none';
   });
-  
-  // REMOVED: Auto-close timeout - message stays until user closes it
-  // setTimeout(() => {
-  //   if (messageElement.style.display === 'block') {
-  //     messageElement.style.display = 'none';
-  //   }
-  // }, 8000);
 }
 
 
