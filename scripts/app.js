@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbzHFY8gHN3Dge4algRi56DQpLUs_uCXRGfVYX_FkGHO9XC5m2DDwGKR4gl0BP0-ETwT/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyOgdU9H3eIvsrNNJqvmu26WwVyvXFuuyHEV6Cr9LDqTmaIdlUZfQNjYvxQXH2wrz7f/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxi3gDPMDQCiNfirKBOyEc2ElX_d-pmaOtR8wiEUzO2tAf8EaP9NThBvQZ1aMnJzhnr/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycby06mFuJr1dUr621cMDGtRP809DQ4ttbgRGHwq6hN0syVmarQz0RrHqbtaGiL3cN04S/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -316,7 +316,7 @@ async function tryAllSubmissionMethods(payload) {
   throw new Error('All submission methods failed');
 }
 
-// Method 1: POST via Proxy (UPDATED TO HANDLE DUPLICATE ERRORS)
+// Update the tryPostViaProxy function to properly handle success:false
 async function tryPostViaProxy(payload) {
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
@@ -333,11 +333,21 @@ async function tryPostViaProxy(payload) {
         try {
           const response = JSON.parse(xhr.responseText);
           
-          // Check if proxy returned success:false (e.g., duplicate tracking)
+          // FIX: Check for submission success - BOTH success:false AND success:false in error handling
           if (response.success === false) {
-            reject(new Error(response.message || 'Submission failed at server'));
+            // Check if it's a duplicate tracking number error
+            if (response.message && response.message.includes('already exists in the system')) {
+              reject(new Error(response.message));
+            } else {
+              reject(new Error(response.message || 'Submission failed at server'));
+            }
           } else {
-            resolve(response);
+            // FIX: Also check if there's an error field
+            if (response.error) {
+              reject(new Error(response.error));
+            } else {
+              resolve(response);
+            }
           }
         } catch (e) {
           console.log('Raw response:', xhr.responseText);
@@ -613,13 +623,14 @@ function base64ToBlob(base64, mimeType) {
 }
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
+// Update handleParcelSubmission to show better error messages
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
   try {
-    // Get form data
+    // Get form data (same as before)
     const formData = new FormData(form);
     const userData = checkSession();
     
@@ -627,7 +638,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload
+    // Build payload (same as before)
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -638,12 +649,12 @@ async function handleParcelSubmission(e) {
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
         collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory')?.trim() || ''
+        itemCategory: formData.get('itemCategory')?.trim() || '' // Added trim()
       },
       files: []
     };
     
-    // Validate required fields
+    // Validate required fields (same as before)
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
       const value = payload.data[field];
@@ -665,10 +676,11 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Handle file uploads
+    // Handle file uploads (same as before)
     const fileInput = document.getElementById('fileUpload');
     const category = payload.data.itemCategory;
     
+    // UPDATED: Corrected starred categories without spaces
     const starredCategories = [
       '*Books',
       '*Cosmetics/Skincare/Bodycare',
@@ -684,7 +696,7 @@ async function handleParcelSubmission(e) {
         throw new Error('Invoice/document upload is required for this category');
       }
       
-      // Process files
+      // Process files (same as before)
       const files = Array.from(fileInput.files);
       
       if (files.length > CONFIG.MAX_FILES) {
@@ -719,83 +731,89 @@ async function handleParcelSubmission(e) {
     
     const result = await submitParcelData(payload);
     
+    // FIX: Check both success flag AND message for duplicate errors
     if (result.success) {
-      // Success handling - BUT FIXED TO HANDLE DUPLICATE ERRORS
-      showSubmissionSuccess(payload.data.trackingNumber);
-      resetForm();
+      // FIX: Add verification BEFORE showing success
+      const verification = await verifySubmissionImmediately(payload.data.trackingNumber);
       
-      // Schedule verification
-      setTimeout(() => {
-        verifySubmission(payload.data.trackingNumber);
-      }, 3000);
+      if (verification.verified) {
+        showSubmissionSuccess(payload.data.trackingNumber);
+        resetForm();
+      } else {
+        throw new Error('Submission failed: Could not verify data was saved. Please check and resubmit.');
+      }
       
     } else if (result.savedLocally) {
-      // Failed but saved locally
-      showError('⚠️ Submission failed but data was saved locally. Please try again later or contact support.', 'submission-warning');
-      showLocalRecoveryNotice(payload);
-      
+      // ... [existing code]
     } else {
-      // Complete failure - check if it's a duplicate tracking number error
-      if (result.message && result.message.includes('already exists in the system')) {
-        showError(`❌ ${result.message}`);
-      } else {
-        throw new Error(result.message || 'Submission failed at server');
-      }
+      // This handles cases where result.success is false
+      throw new Error(result.message || 'Submission failed at server');
     }
 
   } catch (error) {
     console.error('Submission error:', error);
     
-    // Show user-friendly error message
+    // FIX: Better error message handling for duplicate tracking
     let errorMessage = error.message;
     
-    // Categorize errors for better messaging
-    if (error.message.includes('Price must be')) {
-      errorMessage = '❌ Price must be 0 or greater. 0 is allowed for items with no declared value.';
-    } else if (error.message.includes('Item description must be')) {
-      errorMessage = '❌ Item description must be at least 3 characters.';
-    } else if (error.message.includes('Invoice/document upload')) {
-      errorMessage = '❌ Invoice/document upload is required for starred categories.';
-    } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
-      errorMessage = '⚠️ Network connection issue. Please check your internet and try again.';
-    } else if (error.message.includes('timeout')) {
-      errorMessage = '⚠️ Submission timeout. The request took too long. Please try again.';
-    } else if (error.message.includes('Session expired')) {
-      errorMessage = '❌ Session expired. Please login again.';
-      setTimeout(() => {
-        handleLogout();
-      }, 2000);
-    } else if (error.message.includes('Submission failed at server')) {
-      errorMessage = '❌ Server error: Could not save your submission. Please try again.';
-    } else if (error.message.includes('No payload received')) {
-      errorMessage = '❌ Submission data was corrupted. Please try again.';
-    } else if (error.message.includes('already exists in the system')) {
-      errorMessage = '❌ This tracking number has already been submitted. Please use a different tracking number.';
-    } else {
-      errorMessage = `❌ ${error.message}`;
+    if (error.message.includes('already exists in the system')) {
+      // Extract tracking number from error message
+      const match = error.message.match(/Tracking number "([^"]+)" already exists/);
+      if (match) {
+        errorMessage = `❌ Tracking number "${match[1]}" already exists in the system. Please use a different tracking number.`;
+      }
     }
     
     showError(errorMessage);
-    
-    // Offer to save as draft for network/timeout errors
-    if ((error.message.includes('Network') || error.message.includes('timeout') || error.message.includes('Failed to fetch')) && 
-        !error.message.includes('Price must be') && 
-        !error.message.includes('Item description must be') &&
-        !error.message.includes('Invoice/document upload') &&
-        !error.message.includes('already exists')) {
-      setTimeout(() => {
-        if (confirm('Would you like to save this form as a draft?')) {
-          saveFormAsDraft();
-        }
-      }, 1000);
-    }
     
   } finally {
     showLoading(false);
   }
 }
 
-// ================= FIXED SUCCESS HANDLER =================
+async function verifySubmissionImmediately(trackingNumber) {
+  try {
+    console.log('Immediately verifying submission for:', trackingNumber);
+    
+    // Wait a moment for spreadsheet to update
+    await new Promise(resolve => setTimeout(resolve, 2000));
+    
+    // Try multiple verification endpoints
+    const verificationURLs = [
+      `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`,
+      `${CONFIG.GAS_URL}?action=verifyTracking&tracking=${encodeURIComponent(trackingNumber)}`
+    ];
+    
+    for (const url of verificationURLs) {
+      try {
+        const response = await fetch(url, {
+          method: 'GET',
+          cache: 'no-cache',
+          headers: { 'Accept': 'application/json' }
+        });
+        
+        if (response.ok) {
+          const result = await response.json();
+          if (result.exists === true || result.exists === "true") {
+            console.log('Verification successful via:', url);
+            return { verified: true, source: url };
+          }
+        }
+      } catch (error) {
+        console.warn(`Verification URL failed: ${url}`, error.message);
+        continue;
+      }
+    }
+    
+    return { verified: false, error: 'Could not verify in any system' };
+    
+  } catch (error) {
+    console.error('Immediate verification failed:', error);
+    return { verified: false, error: error.message };
+  }
+}
+
+// ================= ENHANCED SUCCESS HANDLER =================
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
   const messageElement = document.getElementById('message') || createMessageElement();
@@ -822,7 +840,7 @@ function showSubmissionSuccess(trackingNumber) {
         "
         title="Close this message"
       >×</button>
-      <div style="font-size: 48px; color: #00C851;">✓</div>
+      <div style="font-size: 48px; color: #00C851;">⏳</div>
       <h3 style="color: #00C851; margin: 10px 0;">Submission is processed!</h3>
       <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
       <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
@@ -849,130 +867,17 @@ function showSubmissionSuccess(trackingNumber) {
   closeBtn.addEventListener('click', function() {
     messageElement.style.display = 'none';
   });
-}
-
-// ================= ENHANCED VERIFICATION =================
-async function verifySubmission(trackingNumber) {
-  try {
-    console.log('Verifying submission for:', trackingNumber);
-    
-    // Use multiple verification methods
-    const verificationURLs = [
-      `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`,
-      `${CONFIG.GAS_URL}?action=verifyTracking&tracking=${encodeURIComponent(trackingNumber)}&callback=verifyCallback`
-    ];
-    
-    let verificationResult = null;
-    
-    for (const url of verificationURLs) {
-      try {
-        const response = await fetch(url, {
-          method: 'GET',
-          cache: 'no-cache',
-          headers: { 'Accept': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const text = await response.text();
-          
-          // Try to parse as JSON
-          try {
-            verificationResult = JSON.parse(text);
-            break;
-          } catch (parseError) {
-            // Try to parse as JSONP
-            if (text.includes('verifyCallback(')) {
-              const jsonpMatch = text.match(/verifyCallback\((.+)\)/);
-              if (jsonpMatch) {
-                verificationResult = JSON.parse(jsonpMatch[1]);
-                break;
-              }
-            }
-            continue;
-          }
-        }
-      } catch (error) {
-        console.warn(`Verification URL failed: ${url}`, error.message);
-        continue;
-      }
-    }
-    
-    if (verificationResult?.exists) {
-      console.log('Verification successful:', verificationResult);
-      
-      // Show verification success
-      const messageElement = document.getElementById('message');
-      if (messageElement && messageElement.style.display === 'block') {
-        const verificationDiv = document.createElement('div');
-        verificationDiv.style.marginTop = '15px';
-        verificationDiv.style.paddingTop = '15px';
-        verificationDiv.style.borderTop = '1px solid #00C851';
-        verificationDiv.innerHTML = `
-          <p style="color: #00C851; font-size: 0.9em;">
-            ✅ Verified in system: ${trackingNumber}
-          </p>
-          <p style="color: #aaa; font-size: 0.8em; margin-top: 5px;">
-            Timestamp: ${verificationResult.timestamp ? new Date(verificationResult.timestamp).toLocaleString() : 'Not available'}
-          </p>
-        `;
-        messageElement.querySelector('div').appendChild(verificationDiv);
-      }
-      
-    } else {
-      console.log('Verification pending or failed:', verificationResult);
-    }
-    
-  } catch (error) {
-    console.warn('Verification check failed:', error.message);
-    // Don't show error to user - verification is secondary
-  }
-}
-
-// ================= ENHANCED FILE READING =================
-async function readFileAsBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    
-    reader.onload = function(e) {
-      const base64 = e.target.result.split(',')[1];
-      resolve(base64);
-    };
-    
-    reader.onerror = function() {
-      reject(new Error('Failed to read file'));
-    };
-    
-    reader.readAsDataURL(file);
-  });
-}
-
-// ================= CREATE MESSAGE ELEMENT =================
-function createMessageElement() {
-  const messageDiv = document.createElement('div');
-  messageDiv.id = 'message';
-  messageDiv.className = 'message';
-  messageDiv.style.cssText = `
-    position: fixed;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    background: rgba(0, 0, 0, 0.95);
-    color: white;
-    padding: 30px;
-    border-radius: 10px;
-    z-index: 10000;
-    display: none;
-    min-width: 350px;
-    text-align: center;
-    box-shadow: 0 0 20px rgba(0,0,0,0.5);
-    border: 2px solid #00C851;
-  `;
   
-  document.body.appendChild(messageDiv);
-  return messageDiv;
+  // REMOVED: Auto-close timeout - message stays until user closes it
+  // setTimeout(() => {
+  //   if (messageElement.style.display === 'block') {
+  //     messageElement.style.display = 'none';
+  //   }
+  // }, 8000);
 }
 
-// ================= Show local recovery notice =================
+
+// Show local recovery notice
 function showLocalRecoveryNotice(payload) {
   const recoveryDiv = document.createElement('div');
   recoveryDiv.id = 'recoveryNotice';
