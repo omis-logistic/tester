@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxi3gDPMDQCiNfirKBOyEc2ElX_d-pmaOtR8wiEUzO2tAf8EaP9NThBvQZ1aMnJzhnr/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycby06mFuJr1dUr621cMDGtRP809DQ4ttbgRGHwq6hN0syVmarQz0RrHqbtaGiL3cN04S/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbxAsDfBTJ1_Czd5lQH96tO9zsM0WTzb6DcJgv9MQl_i0LZzQVVF3SKTi7d9ULlNiA3B/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbykYzgfTSPy0-0PKHwjH117t5wW2lK4HNi0L-T_Iell0bmvssUT0sXjzvK8TPeaqM5K/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -269,17 +269,23 @@ async function submitParcelData(payload) {
   });
 
   try {
-    // Try proxy first (it handles CORS better)
-    const result = await tryPostViaProxy(payload);
+    // Try FormData approach first (works with files and text)
+    const result = await tryFormDataSubmission(payload);
     
-    if (result && result.success !== false) {
+    if (result.success !== false) {
       return { success: true, ...result };
     }
     
-    // If proxy fails, try direct GAS
+    // If FormData fails, try direct POST to backend
     const directResult = await tryPostViaDirect(payload);
     if (directResult && directResult.success !== false) {
       return { success: true, ...directResult };
+    }
+    
+    // Try proxy as fallback
+    const proxyResult = await tryPostViaProxy(payload);
+    if (proxyResult && proxyResult.success !== false) {
+      return { success: true, ...proxyResult };
     }
     
     throw new Error('All submission methods failed');
@@ -344,47 +350,54 @@ async function tryAllSubmissionMethods(payload) {
 
 // Update the tryPostViaProxy function to properly handle success:false
 async function tryPostViaProxy(payload) {
-  return new Promise((resolve, reject) => {
-    // Use JSONP instead of fetch for CORS compatibility
-    const callbackName = 'callback_' + Date.now();
-    const script = document.createElement('script');
-    
-    // Build URL with JSONP
-    const url = new URL(CONFIG.PROXY_URL);
-    url.searchParams.append('callback', callbackName);
-    url.searchParams.append('payload', JSON.stringify(payload));
-    
-    script.src = url.toString();
-    script.async = true;
-    
-    let timeoutId = setTimeout(() => {
-      cleanup();
-      reject(new Error('Proxy request timeout'));
-    }, 30000);
-    
-    function cleanup() {
-      clearTimeout(timeoutId);
-      delete window[callbackName];
-      if (script.parentNode) {
-        document.head.removeChild(script);
+  return new Promise(async (resolve, reject) => {
+    try {
+      // Use FormData for multipart submission (works better with CORS)
+      const formData = new FormData();
+      
+      // Add the payload as JSON string
+      formData.append('payload', JSON.stringify(payload));
+      
+      // For files, add them to FormData
+      if (payload.files && payload.files.length > 0) {
+        for (let i = 0; i < payload.files.length; i++) {
+          const file = payload.files[i];
+          const blob = base64ToBlob(file.base64, file.type);
+          formData.append(`file${i}`, blob, file.name);
+        }
       }
-    }
-    
-    window[callbackName] = function(response) {
-      cleanup();
-      if (response && response.success !== false) {
-        resolve(response);
+      
+      console.log('Sending to proxy via FormData');
+      
+      // Use fetch with FormData
+      const response = await fetch(CONFIG.PROXY_URL, {
+        method: 'POST',
+        body: formData,
+        // Don't set Content-Type for FormData
+      });
+      
+      if (!response.ok) {
+        throw new Error(`Proxy HTTP error: ${response.status}`);
+      }
+      
+      const result = await response.json();
+      
+      // Check for success
+      if (result.success === false) {
+        // Check if it's a duplicate tracking number error
+        if (result.message && result.message.includes('already exists in the system')) {
+          reject(new Error(result.message));
+        } else {
+          reject(new Error(result.message || 'Submission failed at server'));
+        }
       } else {
-        reject(new Error(response?.message || 'Proxy submission failed'));
+        resolve(result);
       }
-    };
-    
-    script.onerror = function() {
-      cleanup();
-      reject(new Error('Proxy script failed to load'));
-    };
-    
-    document.head.appendChild(script);
+      
+    } catch (error) {
+      console.error('Proxy FormData error:', error);
+      reject(error);
+    }
   });
 }
 
@@ -502,8 +515,12 @@ async function tryJSONPSubmission(payload) {
 async function tryFormDataSubmission(payload) {
   const formData = new FormData();
   
-  // Add JSON data
-  formData.append('data', JSON.stringify(payload.data));
+  // Add JSON data - use the same format backend expects
+  const requestData = {
+    action: 'submitParcelDeclaration',
+    data: payload.data
+  };
+  formData.append('data', JSON.stringify(requestData));
   
   // Add files if they exist
   if (payload.files && payload.files.length > 0) {
@@ -517,14 +534,31 @@ async function tryFormDataSubmission(payload) {
   const response = await fetch(CONFIG.GAS_URL, {
     method: 'POST',
     body: formData,
-    // Don't set Content-Type header for FormData
+    // Don't set Content-Type header for FormData - browser sets it automatically
   });
   
   if (!response.ok) {
     throw new Error(`FormData submission failed: ${response.status}`);
   }
   
-  return await response.json();
+  // Handle JSONP response
+  const responseText = await response.text();
+  
+  try {
+    // Try to parse as JSON
+    return JSON.parse(responseText);
+  } catch (jsonError) {
+    // If it's JSONP, extract the JSON
+    const jsonpMatch = responseText.match(/callback\(({.*})\)/);
+    if (jsonpMatch) {
+      try {
+        return JSON.parse(jsonpMatch[1]);
+      } catch (e) {
+        throw new Error('Invalid JSONP response');
+      }
+    }
+    throw new Error('Invalid response format');
+  }
 }
 
 // Fallback submission with reduced payload
@@ -2671,3 +2705,32 @@ function debugValidation() {
   const submitBtn = document.getElementById('submitBtn');
   console.log('Submit button disabled?', submitBtn.disabled);
 }
+
+async function testConnection() {
+  console.log('Testing connection to backend...');
+  
+  try {
+    // Simple test to see if backend is reachable
+    const testResponse = await fetch(`${CONFIG.GAS_URL}?action=verifyTracking&tracking=TEST`, {
+      method: 'GET'
+    });
+    
+    if (testResponse.ok) {
+      console.log('✓ Backend is reachable');
+      return true;
+    } else {
+      console.log('✗ Backend returned error:', testResponse.status);
+      return false;
+    }
+  } catch (error) {
+    console.log('✗ Cannot connect to backend:', error.message);
+    return false;
+  }
+}
+
+// Call this on page load
+document.addEventListener('DOMContentLoaded', () => {
+  setTimeout(() => {
+    testConnection();
+  }, 1000);
+});
