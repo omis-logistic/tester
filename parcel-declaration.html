@@ -1127,7 +1127,10 @@
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
-      document.getElementById('userPhone').textContent = userData.phone;
+      const userPhoneElement = document.getElementById('userPhone');
+    if (userPhoneElement) {
+      userPhoneElement.textContent = userData.phone;
+    }
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
