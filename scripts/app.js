@@ -1,7 +1,7 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxAsDfBTJ1_Czd5lQH96tO9zsM0WTzb6DcJgv9MQl_i0LZzQVVF3SKTi7d9ULlNiA3B/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzCvjJfNf8kpqjGwdiMJyzUCmaE3Su7_lLzdPE85MJkSlSqihSatRDTEK09GnG2u3_a/exec',
   PROXY_URL: 'https://script.google.com/macros/s/AKfycbykYzgfTSPy0-0PKHwjH117t5wW2lK4HNi0L-T_Iell0bmvssUT0sXjzvK8TPeaqM5K/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
@@ -269,23 +269,31 @@ async function submitParcelData(payload) {
   });
 
   try {
-    // Try FormData approach first (works with files and text)
-    const result = await tryFormDataSubmission(payload);
+    // Try FormData submission first (most reliable)
+    console.log('Trying FormData submission...');
+    const formDataResult = await tryFormDataSubmission(payload);
     
-    if (result.success !== false) {
-      return { success: true, ...result };
+    if (formDataResult && formDataResult.success === true) {
+      console.log('FormData submission successful');
+      return formDataResult;
     }
     
-    // If FormData fails, try direct POST to backend
+    // If FormData fails, try direct submission
+    console.log('FormData failed, trying direct submission...');
     const directResult = await tryPostViaDirect(payload);
-    if (directResult && directResult.success !== false) {
-      return { success: true, ...directResult };
+    
+    if (directResult && directResult.success === true) {
+      console.log('Direct submission successful');
+      return directResult;
     }
     
-    // Try proxy as fallback
+    // If both fail, try proxy as last resort
+    console.log('Direct failed, trying proxy...');
     const proxyResult = await tryPostViaProxy(payload);
-    if (proxyResult && proxyResult.success !== false) {
-      return { success: true, ...proxyResult };
+    
+    if (proxyResult && proxyResult.success === true) {
+      console.log('Proxy submission successful');
+      return proxyResult;
     }
     
     throw new Error('All submission methods failed');
@@ -302,7 +310,8 @@ async function submitParcelData(payload) {
     }
     
     // Try to save locally if network fails
-    if (error.message.includes('Network') || error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
+    if (error.message.includes('Network') || error.message.includes('Failed to fetch') || 
+        error.message.includes('timeout') || error.message.includes('Unsupported content type')) {
       saveFailedSubmission(payload);
       return {
         success: false,
@@ -415,38 +424,47 @@ async function tryPostViaDirect(payload) {
     xhr.onload = function() {
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
-          // Google Apps Script redirects, so check the final response
-          if (xhr.responseText.includes('script.google.com')) {
-            // This might be a redirect, extract the final URL
-            const match = xhr.responseText.match(/src="([^"]+)"/);
-            if (match && match[1]) {
-              // Try to follow the redirect
-              fetch(match[1]).then(res => res.text()).then(text => {
-                try {
-                  const json = JSON.parse(text);
-                  resolve(json);
-                } catch {
-                  resolve({ success: true, message: 'Submitted via redirect' });
+          const responseText = xhr.responseText;
+          
+          // Check if this is a JSONP response
+          if (responseText.startsWith('callback(') || responseText.includes('callback(')) {
+            // Extract JSON from JSONP
+            const jsonMatch = responseText.match(/callback\(({.*})\)/);
+            if (jsonMatch && jsonMatch[1]) {
+              const response = JSON.parse(jsonMatch[1]);
+              
+              // FIX: Check if backend returned success: false
+              if (response.success === false) {
+                // Check if it's a duplicate tracking error
+                if (response.message && response.message.includes('already exists in the system')) {
+                  reject(new Error(response.message));
+                } else {
+                  reject(new Error(response.message || 'Submission failed at server'));
                 }
-              }).catch(() => {
-                resolve({ success: true, message: 'Submitted (redirect followed)' });
-              });
+              } else {
+                resolve(response);
+              }
             } else {
-              resolve({ success: true, message: 'Submitted successfully' });
+              reject(new Error('Invalid JSONP response format'));
             }
           } else {
-            const response = JSON.parse(xhr.responseText);
-            resolve(response);
+            // Try to parse as regular JSON
+            const response = JSON.parse(responseText);
+            
+            // FIX: Check if backend returned success: false
+            if (response.success === false) {
+              reject(new Error(response.message || 'Submission failed at server'));
+            } else {
+              resolve(response);
+            }
           }
         } catch (e) {
-          console.log('Direct GAS raw response:', xhr.responseText.substring(0, 200));
-          resolve({ 
-            success: true, 
-            message: 'Submitted to GAS directly' 
-          });
+          console.error('Error parsing response:', e.message);
+          console.log('Raw response:', xhr.responseText.substring(0, 200));
+          reject(new Error('Invalid response format from server: ' + e.message));
         }
       } else {
-        reject(new Error(`Direct GAS failed: HTTP ${xhr.status}`));
+        reject(new Error(`Direct GAS failed: HTTP ${xhr.status}: ${xhr.statusText}`));
       }
     };
     
@@ -454,7 +472,28 @@ async function tryPostViaDirect(payload) {
       reject(new Error('Direct GAS network error'));
     };
     
-    xhr.send(`action=submitParcelDeclaration&data=${encodeURIComponent(JSON.stringify(payload.data))}`);
+    xhr.ontimeout = function() {
+      reject(new Error('Direct GAS request timeout (30s)'));
+    };
+    
+    // Send as FormData to match backend expectation
+    const formData = new FormData();
+    const requestData = {
+      action: 'submitParcelDeclaration',
+      data: payload.data
+    };
+    formData.append('data', JSON.stringify(requestData));
+    
+    // Add files if they exist
+    if (payload.files && payload.files.length > 0) {
+      for (let i = 0; i < payload.files.length; i++) {
+        const file = payload.files[i];
+        const blob = base64ToBlob(file.base64, file.type);
+        formData.append(`file${i}`, blob, file.name);
+      }
+    }
+    
+    xhr.send(formData);
   });
 }
 
@@ -534,30 +573,45 @@ async function tryFormDataSubmission(payload) {
   const response = await fetch(CONFIG.GAS_URL, {
     method: 'POST',
     body: formData,
-    // Don't set Content-Type header for FormData - browser sets it automatically
   });
   
   if (!response.ok) {
-    throw new Error(`FormData submission failed: ${response.status}`);
+    throw new Error(`FormData submission failed: ${response.status} ${response.statusText}`);
   }
   
   // Handle JSONP response
   const responseText = await response.text();
   
   try {
-    // Try to parse as JSON
-    return JSON.parse(responseText);
-  } catch (jsonError) {
-    // If it's JSONP, extract the JSON
-    const jsonpMatch = responseText.match(/callback\(({.*})\)/);
-    if (jsonpMatch) {
-      try {
-        return JSON.parse(jsonpMatch[1]);
-      } catch (e) {
-        throw new Error('Invalid JSONP response');
+    // Check if this is a JSONP response
+    if (responseText.startsWith('callback(') || responseText.includes('callback(')) {
+      // Extract JSON from JSONP
+      const jsonMatch = responseText.match(/callback\(({.*})\)/);
+      if (jsonMatch && jsonMatch[1]) {
+        const result = JSON.parse(jsonMatch[1]);
+        
+        // FIX: Check if backend returned success: false
+        if (result.success === false) {
+          throw new Error(result.message || 'Submission failed at server');
+        }
+        return result;
+      } else {
+        throw new Error('Invalid JSONP response format');
       }
+    } else {
+      // Try to parse as regular JSON
+      const result = JSON.parse(responseText);
+      
+      // FIX: Check if backend returned success: false
+      if (result.success === false) {
+        throw new Error(result.message || 'Submission failed at server');
+      }
+      return result;
     }
-    throw new Error('Invalid response format');
+  } catch (jsonError) {
+    console.error('Error parsing response:', jsonError);
+    console.log('Raw response:', responseText.substring(0, 200));
+    throw new Error('Invalid response format from server');
   }
 }
 
