@@ -269,19 +269,23 @@ async function submitParcelData(payload) {
   });
 
   try {
-    // Try multiple submission methods in order
-    const results = await tryAllSubmissionMethods(payload);
+    // Try proxy first (it handles CORS better)
+    const result = await tryPostViaProxy(payload);
     
-    if (results.success) {
-      console.log('Data is processed via', results.method);
-      return results;
+    if (result && result.success !== false) {
+      return { success: true, ...result };
     }
     
-    // If all methods fail, try one last attempt with simplified payload
-    return await tryFallbackSubmission(payload);
+    // If proxy fails, try direct GAS
+    const directResult = await tryPostViaDirect(payload);
+    if (directResult && directResult.success !== false) {
+      return { success: true, ...directResult };
+    }
+    
+    throw new Error('All submission methods failed');
     
   } catch (error) {
-    console.error('All submission methods failed:', error);
+    console.error('Submission failed:', error);
     
     // Check if error is a duplicate tracking error
     if (error.message && error.message.includes('already exists in the system')) {
@@ -291,7 +295,20 @@ async function submitParcelData(payload) {
       };
     }
     
-    throw new Error(`Submission failed: ${error.message}`);
+    // Try to save locally if network fails
+    if (error.message.includes('Network') || error.message.includes('Failed to fetch') || error.message.includes('timeout')) {
+      saveFailedSubmission(payload);
+      return {
+        success: false,
+        savedLocally: true,
+        message: 'Network error - data saved locally'
+      };
+    }
+    
+    return {
+      success: false,
+      message: error.message || 'Submission failed'
+    };
   }
 }
 
@@ -328,57 +345,46 @@ async function tryAllSubmissionMethods(payload) {
 // Update the tryPostViaProxy function to properly handle success:false
 async function tryPostViaProxy(payload) {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    const url = CONFIG.PROXY_URL;
+    // Use JSONP instead of fetch for CORS compatibility
+    const callbackName = 'callback_' + Date.now();
+    const script = document.createElement('script');
     
-    xhr.open('POST', url, true);
-    xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded; charset=UTF-8');
+    // Build URL with JSONP
+    const url = new URL(CONFIG.PROXY_URL);
+    url.searchParams.append('callback', callbackName);
+    url.searchParams.append('payload', JSON.stringify(payload));
     
-    xhr.timeout = 30000;
-    xhr.withCredentials = false;
+    script.src = url.toString();
+    script.async = true;
     
-    xhr.onload = function() {
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const response = JSON.parse(xhr.responseText);
-          
-          // FIX: Check for submission success - BOTH success:false AND success:false in error handling
-          if (response.success === false) {
-            // Check if it's a duplicate tracking number error
-            if (response.message && response.message.includes('already exists in the system')) {
-              reject(new Error(response.message));
-            } else {
-              reject(new Error(response.message || 'Submission failed at server'));
-            }
-          } else {
-            // FIX: Also check if there's an error field
-            if (response.error) {
-              reject(new Error(response.error));
-            } else {
-              resolve(response);
-            }
-          }
-        } catch (e) {
-          console.log('Raw response:', xhr.responseText);
-          reject(new Error('Invalid response format from server'));
-        }
+    let timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Proxy request timeout'));
+    }, 30000);
+    
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if (script.parentNode) {
+        document.head.removeChild(script);
+      }
+    }
+    
+    window[callbackName] = function(response) {
+      cleanup();
+      if (response && response.success !== false) {
+        resolve(response);
       } else {
-        reject(new Error(`HTTP ${xhr.status}: ${xhr.statusText}`));
+        reject(new Error(response?.message || 'Proxy submission failed'));
       }
     };
     
-    xhr.onerror = function() {
-      reject(new Error('Network error - proxy request failed'));
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Proxy script failed to load'));
     };
     
-    xhr.ontimeout = function() {
-      reject(new Error('Request timeout (30s)'));
-    };
-    
-    // Send data
-    const data = `payload=${encodeURIComponent(JSON.stringify(payload))}`;
-    console.log('Sending to proxy:', url);
-    xhr.send(data);
+    document.head.appendChild(script);
   });
 }
 
@@ -632,7 +638,6 @@ function base64ToBlob(base64, mimeType) {
 }
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
-// Update handleParcelSubmission to show better error messages
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
@@ -732,36 +737,19 @@ async function handleParcelSubmission(e) {
     // Submit the data
     console.log('Submitting payload:', { 
       trackingNumber: payload.data.trackingNumber,
-      filesCount: payload.files.length,
-      price: payload.data.price,
-      category: payload.data.itemCategory
+      filesCount: payload.files.length
     });
     
     const result = await submitParcelData(payload);
     
-    // FIX: Simplify verification - rely on backend response
+    // SIMPLIFIED: If backend returns success, show success immediately
     if (result.success) {
-      // Check if backend already verified
-      if (result.verified === true || result.verified === undefined) {
-        // Backend says it's verified or doesn't provide verification status (assume success)
-        showSubmissionSuccess(payload.data.trackingNumber);
-        resetForm();
-        
-        // Optional: Schedule background verification (non-blocking)
-        setTimeout(() => {
-          verifySubmissionBackground(payload.data.trackingNumber);
-        }, 3000);
-      } else if (result.verified === false) {
-        // Backend submitted but couldn't verify immediately
-        showSubmissionSuccess(payload.data.trackingNumber);
-        resetForm();
-        console.warn('Backend submitted but verification was not immediate');
-        
-        // Schedule verification in background
-        setTimeout(() => {
-          verifySubmissionBackground(payload.data.trackingNumber);
-        }, 3000);
-      }
+      showSubmissionSuccess(payload.data.trackingNumber);
+      resetForm();
+      
+      // Optional: Non-blocking verification via track-parcel page
+      // Don't do immediate verification due to CORS issues
+      console.log('Submission successful:', result);
       
     } else if (result.savedLocally) {
       // Failed but saved locally
@@ -812,114 +800,10 @@ async function handleParcelSubmission(e) {
   }
 }
 
-async function verifySubmissionImmediately(trackingNumber) {
-  try {
-    console.log('Immediately verifying submission for:', trackingNumber);
-    
-    // Wait a moment for spreadsheet to update
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    // Try multiple verification endpoints
-    const verificationURLs = [
-      `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`,
-      `${CONFIG.GAS_URL}?action=verifyTracking&tracking=${encodeURIComponent(trackingNumber)}`
-    ];
-    
-    for (const url of verificationURLs) {
-      try {
-        const response = await fetch(url, {
-          method: 'GET',
-          cache: 'no-cache',
-          headers: { 'Accept': 'application/json' }
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          if (result.exists === true || result.exists === "true") {
-            console.log('Verification successful via:', url);
-            return { verified: true, source: url };
-          }
-        }
-      } catch (error) {
-        console.warn(`Verification URL failed: ${url}`, error.message);
-        continue;
-      }
-    }
-    
-    return { verified: false, error: 'Could not verify in any system' };
-    
-  } catch (error) {
-    console.error('Immediate verification failed:', error);
-    return { verified: false, error: error.message };
-  }
-}
-
-// Background verification (doesn't block user)
-async function verifySubmissionBackground(trackingNumber) {
-  try {
-    console.log('Starting background verification for:', trackingNumber);
-    
-    // Try multiple times with delays
-    const maxAttempts = 5;
-    const delayBetweenAttempts = 2000; // 2 seconds
-    
-    for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-      try {
-        // Wait before each attempt (except first)
-        if (attempt > 1) {
-          await new Promise(resolve => setTimeout(resolve, delayBetweenAttempts));
-        }
-        
-        console.log(`Background verification attempt ${attempt} for ${trackingNumber}`);
-        
-        // Use proxy endpoint for verification
-        const url = `${CONFIG.PROXY_URL}?tracking=${encodeURIComponent(trackingNumber)}`;
-        const response = await fetch(url, {
-          method: 'GET',
-          cache: 'no-cache'
-        });
-        
-        if (response.ok) {
-          const result = await response.json();
-          
-          if (result.exists === true || result.exists === "true") {
-            console.log(`✓ Background verification SUCCESS for ${trackingNumber} on attempt ${attempt}`);
-            
-            // Optional: Update UI to show verified status
-            updateVerificationStatus(trackingNumber, true);
-            return true;
-          } else if (result.exists === false || result.exists === "false") {
-            console.log(`✗ Background verification: tracking not found yet (attempt ${attempt})`);
-            continue; // Try again
-          }
-        }
-      } catch (attemptError) {
-        console.warn(`Background verification attempt ${attempt} failed:`, attemptError.message);
-        // Continue to next attempt
-      }
-    }
-    
-    console.log(`Background verification failed after ${maxAttempts} attempts for ${trackingNumber}`);
-    updateVerificationStatus(trackingNumber, false);
-    return false;
-    
-  } catch (error) {
-    console.error('Background verification error:', error);
-    return false;
-  }
-}
-
 // ================= ENHANCED SUCCESS HANDLER =================
-function showSubmissionSuccess(trackingNumber, verificationStatus = 'pending') {
+function showSubmissionSuccess(trackingNumber) {
   // Update message element
   const messageElement = document.getElementById('message') || createMessageElement();
-  
-  let verificationText = '';
-  if (verificationStatus === 'verified') {
-    verificationText = '<p style="color: #00C851; margin-top: 10px;">✓ Verified in system</p>';
-  } else if (verificationStatus === 'pending') {
-    verificationText = '<p style="color: #ffbb33; margin-top: 10px;">⏳ Verifying submission...</p>';
-  }
   
   messageElement.innerHTML = `
     <div style="text-align: center; padding: 20px; position: relative;">
@@ -946,9 +830,8 @@ function showSubmissionSuccess(trackingNumber, verificationStatus = 'pending') {
       <div style="font-size: 48px; color: #00C851;">✓</div>
       <h3 style="color: #00C851; margin: 10px 0;">Submission is processed!</h3>
       <p style="margin: 10px 0;">Tracking Number: <strong style="color: #d4af37;">${trackingNumber}</strong></p>
-      ${verificationText}
       <p style="font-size: 0.9em; color: #aaa; margin-top: 15px; line-height: 1.5;">
-        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission.
+        Click <a href="track-parcel.html" style="color: #00C851; text-decoration: underline; font-weight: bold;">HERE</a> to check your submission later.
       </p>
     </div>
   `;
@@ -971,6 +854,13 @@ function showSubmissionSuccess(trackingNumber, verificationStatus = 'pending') {
   closeBtn.addEventListener('click', function() {
     messageElement.style.display = 'none';
   });
+  
+  // Auto-close after 8 seconds
+  setTimeout(() => {
+    if (messageElement.style.display === 'block') {
+      messageElement.style.display = 'none';
+    }
+  }, 8000);
 }
 
 
