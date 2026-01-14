@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycby67kDZJ24khdXLdSQ-0nE0-tjsC7F5LezLfrTpINPp_tYhkATJN-akj3OyclX9sk8N/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbykYzgfTSPy0-0PKHwjH117t5wW2lK4HNi0L-T_Iell0bmvssUT0sXjzvK8TPeaqM5K/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbwSYpceMR9SQVCm7C8VXx57YewRC-XntcwajTFR6sRom_XfRF2J3dWHpg1mGUJ4jyJJ/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbzJ_8RI57K6nJRobGtGwAi1k0j84lh_gs6NNfOmTOizm354F2Ac2tboecsMHNhBIAPR/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -269,37 +269,24 @@ async function submitParcelData(payload) {
   });
 
   try {
-    // If no files, try direct JSON submission first
-    if (!payload.files || payload.files.length === 0) {
-      console.log('No files, trying direct JSON submission...');
-      try {
-        const result = await tryDirectSubmission(payload);
-        if (result && result.success === true) {
-          console.log('Direct JSON submission successful');
-          return result;
-        }
-      } catch (directError) {
-        console.log('Direct JSON failed:', directError.message);
-        // Continue to try other methods
+    // Always try direct JSONP first (no files or with files encoded)
+    console.log('Trying direct JSONP submission...');
+    const directResult = await tryDirectSubmission(payload);
+    
+    if (directResult && directResult.success === true) {
+      console.log('Direct JSONP submission successful');
+      return directResult;
+    }
+    
+    // If direct fails and there are files, try proxy
+    if (payload.files && payload.files.length > 0) {
+      console.log('Direct failed or has files, trying proxy...');
+      const proxyResult = await tryPostViaProxy(payload);
+      
+      if (proxyResult && proxyResult.success === true) {
+        console.log('Proxy submission successful');
+        return proxyResult;
       }
-    }
-    
-    // Try FormData submission (works with or without files)
-    console.log('Trying FormData submission...');
-    const formDataResult = await tryFormDataSubmission(payload);
-    
-    if (formDataResult && formDataResult.success === true) {
-      console.log('FormData submission successful');
-      return formDataResult;
-    }
-    
-    // If both fail, try proxy
-    console.log('FormData failed, trying proxy...');
-    const proxyResult = await tryPostViaProxy(payload);
-    
-    if (proxyResult && proxyResult.success === true) {
-      console.log('Proxy submission successful');
-      return proxyResult;
     }
     
     throw new Error('All submission methods failed');
@@ -317,7 +304,7 @@ async function submitParcelData(payload) {
     
     // Try to save locally if network fails
     if (error.message.includes('Network') || error.message.includes('Failed to fetch') || 
-        error.message.includes('timeout') || error.message.includes('Unsupported content type')) {
+        error.message.includes('timeout') || error.message.includes('script failed to load')) {
       saveFailedSubmission(payload);
       return {
         success: false,
@@ -365,54 +352,52 @@ async function tryAllSubmissionMethods(payload) {
 
 // Update the tryPostViaProxy function to properly handle success:false
 async function tryPostViaProxy(payload) {
-  return new Promise(async (resolve, reject) => {
-    try {
-      // Use FormData for multipart submission (works better with CORS)
-      const formData = new FormData();
-      
-      // Add the payload as JSON string
-      formData.append('payload', JSON.stringify(payload));
-      
-      // For files, add them to FormData
-      if (payload.files && payload.files.length > 0) {
-        for (let i = 0; i < payload.files.length; i++) {
-          const file = payload.files[i];
-          const blob = base64ToBlob(file.base64, file.type);
-          formData.append(`file${i}`, blob, file.name);
-        }
+  return new Promise((resolve, reject) => {
+    const callbackName = 'callback_' + Date.now();
+    const script = document.createElement('script');
+    
+    // Build URL for proxy with JSONP
+    const url = new URL(CONFIG.PROXY_URL);
+    url.searchParams.append('callback', callbackName);
+    url.searchParams.append('payload', JSON.stringify(payload));
+    
+    script.src = url.toString();
+    script.async = true;
+    
+    let timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Proxy submission timeout (30s)'));
+    }, 30000);
+    
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if (script.parentNode) {
+        document.head.removeChild(script);
       }
-      
-      console.log('Sending to proxy via FormData');
-      
-      // Use fetch with FormData
-      const response = await fetch(CONFIG.PROXY_URL, {
-        method: 'POST',
-        body: formData,
-        // Don't set Content-Type for FormData
-      });
-      
-      if (!response.ok) {
-        throw new Error(`Proxy HTTP error: ${response.status}`);
-      }
-      
-      const result = await response.json();
-      
-      // Check for success
-      if (result.success === false) {
-        // Check if it's a duplicate tracking number error
-        if (result.message && result.message.includes('already exists in the system')) {
-          reject(new Error(result.message));
-        } else {
-          reject(new Error(result.message || 'Submission failed at server'));
-        }
-      } else {
-        resolve(result);
-      }
-      
-    } catch (error) {
-      console.error('Proxy FormData error:', error);
-      reject(error);
     }
+    
+    window[callbackName] = function(response) {
+      cleanup();
+      if (response && response.success === true) {
+        resolve(response);
+      } else {
+        // Check for duplicate tracking error
+        if (response.message && response.message.includes('already exists in the system')) {
+          reject(new Error(response.message));
+        } else {
+          reject(new Error(response?.message || 'Proxy submission failed'));
+        }
+      }
+    };
+    
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Proxy submission script failed to load'));
+    };
+    
+    console.log('Sending to proxy via JSONP:', url.toString());
+    document.head.appendChild(script);
   });
 }
 
@@ -558,56 +543,76 @@ async function tryJSONPSubmission(payload) {
 
 // Method 4: FormData Submission (for modern browsers)
 async function tryFormDataSubmission(payload) {
+  console.log('FormData submission called with:', {
+    hasFiles: !!(payload.files && payload.files.length > 0),
+    fileCount: payload.files?.length || 0,
+    trackingNumber: payload.data.trackingNumber
+  });
+
+  // If no files, use the simpler direct JSONP method
+  if (!payload.files || payload.files.length === 0) {
+    console.log('No files, using direct JSONP method');
+    return tryDirectSubmission(payload);
+  }
+  
+  // If we have files, we need to use a different approach
+  // Since JSONP can't handle files well, we'll use the proxy with multipart handling
   return new Promise((resolve, reject) => {
     const xhr = new XMLHttpRequest();
-    const url = CONFIG.GAS_URL;
+    const url = CONFIG.PROXY_URL;
     
     xhr.open('POST', url, true);
-    // Don't set Content-Type header for FormData - browser sets it automatically
+    // Don't set Content-Type for FormData - browser sets it automatically
     
-    xhr.timeout = 30000;
+    xhr.timeout = 45000; // 45 seconds for file uploads
     
     xhr.onload = function() {
       console.log('FormData XHR response status:', xhr.status);
-      console.log('FormData XHR response text:', xhr.responseText.substring(0, 200));
+      console.log('FormData XHR response (first 500 chars):', 
+        xhr.responseText ? xhr.responseText.substring(0, 500) : 'No response');
       
       if (xhr.status >= 200 && xhr.status < 300) {
         try {
           const responseText = xhr.responseText;
           
-          // Check if this is a JSONP response
-          if (responseText.startsWith('callback(') || responseText.includes('callback(')) {
-            // Extract JSON from JSONP
-            const jsonMatch = responseText.match(/callback\(({.*})\)/);
-            if (jsonMatch && jsonMatch[1]) {
-              const result = JSON.parse(jsonMatch[1]);
-              
-              if (result.success === false) {
-                // Check for duplicate tracking error
-                if (result.message && result.message.includes('already exists in the system')) {
-                  reject(new Error(result.message));
+          // Try to parse as JSON
+          try {
+            const result = JSON.parse(responseText);
+            if (result.success === true) {
+              resolve(result);
+            } else {
+              // Check for duplicate tracking error
+              if (result.message && result.message.includes('already exists in the system')) {
+                reject(new Error(result.message));
+              } else {
+                reject(new Error(result.message || 'FormData submission failed'));
+              }
+            }
+          } catch (jsonError) {
+            // If not JSON, check if it's JSONP
+            if (responseText.startsWith('callback(') || responseText.includes('callback(')) {
+              const jsonMatch = responseText.match(/callback\(({.*})\)/);
+              if (jsonMatch && jsonMatch[1]) {
+                const result = JSON.parse(jsonMatch[1]);
+                if (result.success === true) {
+                  resolve(result);
                 } else {
-                  reject(new Error(result.message || 'Submission failed at server'));
+                  if (result.message && result.message.includes('already exists in the system')) {
+                    reject(new Error(result.message));
+                  } else {
+                    reject(new Error(result.message || 'FormData submission failed'));
+                  }
                 }
               } else {
-                resolve(result);
+                reject(new Error('Invalid JSONP response format from proxy'));
               }
             } else {
-              reject(new Error('Invalid JSONP response format'));
-            }
-          } else {
-            // Try to parse as regular JSON
-            const result = JSON.parse(responseText);
-            if (result.success === false) {
-              reject(new Error(result.message || 'Submission failed at server'));
-            } else {
-              resolve(result);
+              reject(new Error('Invalid response format from proxy'));
             }
           }
-        } catch (jsonError) {
-          console.error('Error parsing response:', jsonError);
-          console.log('Raw response:', xhr.responseText.substring(0, 200));
-          reject(new Error('Invalid response format from server: ' + jsonError.message));
+        } catch (error) {
+          console.error('Error processing FormData response:', error);
+          reject(new Error('Error processing server response: ' + error.message));
         }
       } else {
         reject(new Error(`FormData submission failed: HTTP ${xhr.status}: ${xhr.statusText}`));
@@ -615,36 +620,60 @@ async function tryFormDataSubmission(payload) {
     };
     
     xhr.onerror = function() {
-      reject(new Error('FormData network error'));
+      reject(new Error('FormData network error - cannot connect to server'));
     };
     
     xhr.ontimeout = function() {
-      reject(new Error('FormData request timeout (30s)'));
+      reject(new Error('FormData request timeout (45s) - file upload may be too large'));
     };
     
+    // Create FormData object
     const formData = new FormData();
+    
+    // Add the payload as JSON
     const requestData = {
       action: 'submitParcelDeclaration',
       data: payload.data
     };
-    console.log('FormData requestData:', JSON.stringify(requestData));
     formData.append('data', JSON.stringify(requestData));
     
-    // Add files if they exist
+    // Add files to FormData
     if (payload.files && payload.files.length > 0) {
-      console.log('Adding files to FormData:', payload.files.length);
+      console.log('Adding', payload.files.length, 'files to FormData');
       for (let i = 0; i < payload.files.length; i++) {
         const file = payload.files[i];
-        const blob = base64ToBlob(file.base64, file.type);
-        formData.append(`file${i}`, blob, file.name);
+        try {
+          // Convert base64 to blob
+          const byteCharacters = atob(file.base64);
+          const byteArrays = [];
+          
+          for (let offset = 0; offset < byteCharacters.length; offset += 512) {
+            const slice = byteCharacters.slice(offset, offset + 512);
+            const byteNumbers = new Array(slice.length);
+            
+            for (let j = 0; j < slice.length; j++) {
+              byteNumbers[j] = slice.charCodeAt(j);
+            }
+            
+            const byteArray = new Uint8Array(byteNumbers);
+            byteArrays.push(byteArray);
+          }
+          
+          const blob = new Blob(byteArrays, { type: file.type });
+          formData.append(`file${i}`, blob, file.name);
+          console.log('Added file:', file.name, 'size:', blob.size);
+        } catch (fileError) {
+          console.error('Error adding file to FormData:', file.name, fileError);
+          reject(new Error(`Error processing file ${file.name}: ${fileError.message}`));
+          return;
+        }
       }
     }
     
-    console.log('Sending FormData to:', url);
+    console.log('Sending FormData to proxy:', url);
     xhr.send(formData);
   });
 }
-
 // Fallback submission with reduced payload
 async function tryFallbackSubmission(payload) {
   console.log('Trying fallback submission...');
@@ -710,77 +739,58 @@ async function tryFallbackSubmission(payload) {
 
 async function tryDirectSubmission(payload) {
   return new Promise((resolve, reject) => {
-    const xhr = new XMLHttpRequest();
-    const url = CONFIG.GAS_URL;
+    const callbackName = 'callback_' + Date.now();
+    const script = document.createElement('script');
     
-    xhr.open('POST', url, true);
-    xhr.setRequestHeader('Content-Type', 'application/json; charset=UTF-8');
+    // Build URL with JSONP parameters
+    const url = new URL(CONFIG.GAS_URL);
+    url.searchParams.append('callback', callbackName);
+    url.searchParams.append('action', 'submitParcelDeclaration');
+    url.searchParams.append('data', JSON.stringify(payload.data));
     
-    xhr.timeout = 30000;
+    // Add phone from session if needed
+    const userData = checkSession();
+    if (userData?.phone) {
+      url.searchParams.append('phone', userData.phone);
+    }
     
-    xhr.onload = function() {
-      console.log('Direct XHR response status:', xhr.status);
-      console.log('Direct XHR response text:', xhr.responseText.substring(0, 200));
-      
-      if (xhr.status >= 200 && xhr.status < 300) {
-        try {
-          const responseText = xhr.responseText;
-          
-          // Check if this is a JSONP response
-          if (responseText.startsWith('callback(') || responseText.includes('callback(')) {
-            // Extract JSON from JSONP
-            const jsonMatch = responseText.match(/callback\(({.*})\)/);
-            if (jsonMatch && jsonMatch[1]) {
-              const result = JSON.parse(jsonMatch[1]);
-              
-              if (result.success === false) {
-                // Check for duplicate tracking error
-                if (result.message && result.message.includes('already exists in the system')) {
-                  reject(new Error(result.message));
-                } else {
-                  reject(new Error(result.message || 'Submission failed at server'));
-                }
-              } else {
-                resolve(result);
-              }
-            } else {
-              reject(new Error('Invalid JSONP response format'));
-            }
-          } else {
-            // Try to parse as regular JSON
-            const result = JSON.parse(responseText);
-            if (result.success === false) {
-              reject(new Error(result.message || 'Submission failed at server'));
-            } else {
-              resolve(result);
-            }
-          }
-        } catch (jsonError) {
-          console.error('Error parsing response:', jsonError);
-          console.log('Raw response:', xhr.responseText.substring(0, 200));
-          reject(new Error('Invalid response format from server: ' + jsonError.message));
-        }
+    script.src = url.toString();
+    script.async = true;
+    
+    let timeoutId = setTimeout(() => {
+      cleanup();
+      reject(new Error('Direct submission timeout (30s)'));
+    }, 30000);
+    
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if (script.parentNode) {
+        document.head.removeChild(script);
+      }
+    }
+    
+    window[callbackName] = function(response) {
+      cleanup();
+      if (response && response.success === true) {
+        resolve(response);
       } else {
-        reject(new Error(`Direct submission failed: HTTP ${xhr.status}: ${xhr.statusText}`));
+        // Check for duplicate tracking error
+        if (response.message && response.message.includes('already exists in the system')) {
+          reject(new Error(response.message));
+        } else {
+          reject(new Error(response?.message || 'Direct submission failed'));
+        }
       }
     };
     
-    xhr.onerror = function() {
-      reject(new Error('Direct network error'));
+    script.onerror = function() {
+      cleanup();
+      reject(new Error('Direct submission script failed to load'));
     };
     
-    xhr.ontimeout = function() {
-      reject(new Error('Direct request timeout (30s)'));
-    };
-    
-    // Send as JSON (no files in this method)
-    const requestData = {
-      action: 'submitParcelDeclaration',
-      data: payload.data
-    };
-    
-    console.log('Sending direct JSON to:', url, requestData);
-    xhr.send(JSON.stringify(requestData));
+    console.log('Sending direct JSONP to:', url.toString());
+    document.head.appendChild(script);
   });
 }
 
@@ -2869,23 +2879,46 @@ function debugValidation() {
 async function testConnection() {
   console.log('Testing connection to backend...');
   
-  try {
-    // Simple test to see if backend is reachable
-    const testResponse = await fetch(`${CONFIG.GAS_URL}?action=verifyTracking&tracking=TEST`, {
-      method: 'GET'
-    });
+  return new Promise((resolve) => {
+    const callbackName = 'testCallback_' + Date.now();
+    const script = document.createElement('script');
     
-    if (testResponse.ok) {
-      console.log('✓ Backend is reachable');
-      return true;
-    } else {
-      console.log('✗ Backend returned error:', testResponse.status);
-      return false;
+    const url = new URL(CONFIG.GAS_URL);
+    url.searchParams.append('callback', callbackName);
+    url.searchParams.append('action', 'verifyTracking');
+    url.searchParams.append('tracking', 'TEST123');
+    
+    script.src = url.toString();
+    script.async = true;
+    
+    let timeoutId = setTimeout(() => {
+      cleanup();
+      console.log('✗ Backend test timeout');
+      resolve(false);
+    }, 10000);
+    
+    function cleanup() {
+      clearTimeout(timeoutId);
+      delete window[callbackName];
+      if (script.parentNode) {
+        document.head.removeChild(script);
+      }
     }
-  } catch (error) {
-    console.log('✗ Cannot connect to backend:', error.message);
-    return false;
-  }
+    
+    window[callbackName] = function(response) {
+      cleanup();
+      console.log('✓ Backend is reachable');
+      resolve(true);
+    };
+    
+    script.onerror = function() {
+      cleanup();
+      console.log('✗ Cannot connect to backend');
+      resolve(false);
+    };
+    
+    document.head.appendChild(script);
+  });
 }
 
 // Call this on page load
