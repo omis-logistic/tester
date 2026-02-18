@@ -616,14 +616,13 @@ function base64ToBlob(base64, mimeType) {
 }
 
 // ================= UPDATED PARCEL SUBMISSION HANDLER =================
-// Update handleParcelSubmission to show better error messages
 async function handleParcelSubmission(e) {
   e.preventDefault();
   const form = e.target;
   showLoading(true, "Submitting parcel declaration...");
 
   try {
-    // Get form data (same as before)
+    // Get form data
     const formData = new FormData(form);
     const userData = checkSession();
     
@@ -631,7 +630,7 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload (same as before)
+    // Build payload
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
@@ -647,7 +646,7 @@ async function handleParcelSubmission(e) {
       files: []
     };
     
-    // Validate required fields (same as before)
+    // Validate required fields
     const requiredFields = ['trackingNumber', 'nameOnParcel', 'itemDescription', 'quantity', 'price', 'collectionPoint', 'itemCategory'];
     for (const field of requiredFields) {
       const value = payload.data[field];
@@ -669,44 +668,33 @@ async function handleParcelSubmission(e) {
       }
     }
 
-    // Handle file uploads (same as before)
+    // ===== FILE UPLOAD VALIDATION – NOW MANDATORY FOR ALL CATEGORIES =====
     const fileInput = document.getElementById('fileUpload');
-    const category = payload.data.itemCategory;
+    if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
+      throw new Error('Invoice/document upload is required');
+    }
     
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare',
-      '*Food Beverage/Drinks', '*Gadgets',
-      '*Oil Ointment', '*Supplement', '*Others'
-    ];
+    // Process files
+    const files = Array.from(fileInput.files);
+    if (files.length > CONFIG.MAX_FILES) {
+      throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
+    }
 
-    if (starredCategories.includes(category)) {
-      if (!fileInput || !fileInput.files || fileInput.files.length === 0) {
-        throw new Error('Invoice/document upload is required for this category');
+    for (const file of files) {
+      if (file.size > CONFIG.MAX_FILE_SIZE) {
+        throw new Error(`File "${file.name}" exceeds 5MB limit`);
       }
       
-      // Process files (same as before)
-      const files = Array.from(fileInput.files);
+      if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
+        throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
+      }
       
-      if (files.length > CONFIG.MAX_FILES) {
-        throw new Error(`Maximum ${CONFIG.MAX_FILES} files allowed`);
-      }
-
-      for (const file of files) {
-        if (file.size > CONFIG.MAX_FILE_SIZE) {
-          throw new Error(`File "${file.name}" exceeds 5MB limit`);
-        }
-        
-        if (!CONFIG.ALLOWED_FILE_TYPES.includes(file.type)) {
-          throw new Error(`File "${file.name}" must be JPG, PNG, or PDF`);
-        }
-        
-        const base64Data = await readFileAsBase64(file);
-        payload.files.push({
-          name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
-          type: file.type,
-          base64: base64Data
-        });
-      }
+      const base64Data = await readFileAsBase64(file);
+      payload.files.push({
+        name: file.name.replace(/[^a-zA-Z0-9._-]/g, '_'),
+        type: file.type,
+        base64: base64Data
+      });
     }
 
     // Submit the data
@@ -744,13 +732,12 @@ async function handleParcelSubmission(e) {
     // Show user-friendly error message
     let errorMessage = error.message;
     
-    // Categorize errors for better messaging
     if (error.message.includes('Price must be')) {
       errorMessage = '❌ Price must be 0 or greater. 0 is allowed for items with no declared value.';
     } else if (error.message.includes('Item description must be')) {
       errorMessage = '❌ Item description must be at least 3 characters.';
     } else if (error.message.includes('Invoice/document upload')) {
-      errorMessage = '❌ Invoice/document upload is required for starred categories.';
+      errorMessage = '❌ Invoice/document upload is required.';
     } else if (error.message.includes('Network') || error.message.includes('Failed to fetch')) {
       errorMessage = '⚠️ Network connection issue. Please check your internet and try again.';
     } else if (error.message.includes('timeout')) {
@@ -849,7 +836,6 @@ function showSubmissionSuccess(trackingNumber) {
   //   }
   // }, 8000);
 }
-
 
 // Show local recovery notice
 function showLocalRecoveryNotice(payload) {
@@ -1098,14 +1084,9 @@ function runInitialValidation() {
     updateFieldValidationState(fieldElement, isValid, message);
   });
   
-  // Validate files if required
+  // Validate files if a category is selected
   const category = document.getElementById('itemCategory')?.value || '';
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
+  if (category) {
     const files = document.getElementById('fileUpload')?.files || [];
     if (files.length === 0) {
       const fileInput = document.getElementById('fileUpload');
@@ -1287,159 +1268,108 @@ function validateFieldInRealTime(field) {
   }
 }
 
+// ===== UPDATED FILE VALIDATION – ALWAYS REQUIRED WHEN CATEGORY SELECTED =====
 function validateFilesInRealTime() {
   const fileInput = document.getElementById('fileUpload');
   const category = document.getElementById('itemCategory')?.value || '';
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
   
   if (!fileInput) return;
   
-  const errorElement = document.getElementById('invoiceFilesError') || 
-                      createErrorMessageElement('invoiceFiles');
+  const errorElement = document.getElementById('invoiceFilesError');
   const parent = fileInput.parentElement;
   
   parent.classList.remove('valid', 'invalid');
+
+  // If no category selected yet, show info but don't require files
+  if (!category) {
+    errorElement.textContent = 'Select a category to enable file upload';
+    errorElement.style.color = '#888';
+    parent.classList.remove('invalid');
+    fileInput.style.borderColor = '#444';
+    updateSubmitButton();
+    return;
+  }
+
+  // Category is selected – files are mandatory
+  const files = fileInput.files;
   
-  if (starredCategories.includes(category)) {
-    const files = fileInput.files;
+  if (files.length === 0) {
+    errorElement.textContent = 'Required: At least 1 invoice/document required';
+    errorElement.style.color = '#ff4444';
+    errorElement.style.display = 'block';
+    parent.classList.add('invalid');
+    fileInput.style.borderColor = '#ff4444';
+  } else {
+    // Validate each file
+    let allValid = true;
+    const MAX_SIZE = 5 * 1024 * 1024;
     
-    if (files.length === 0) {
-      errorElement.textContent = 'Required: At least 1 invoice/document required';
-      errorElement.style.color = '#ff4444';
-      errorElement.style.display = 'block';
-      parent.classList.add('invalid');
-      fileInput.style.borderColor = '#ff4444';
-    } else {
-      // Validate each file
-      let allValid = true;
-      const MAX_SIZE = 5 * 1024 * 1024;
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
       
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        if (!allowedTypes.includes(file.type)) {
-          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-          allValid = false;
-          break;
-        }
-        
-        if (file.size > MAX_SIZE) {
-          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-          allValid = false;
-          break;
-        }
+      if (!allowedTypes.includes(file.type)) {
+        errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+        allValid = false;
+        break;
       }
       
-      if (allValid) {
-        errorElement.textContent = `${files.length} file(s) selected`;
-        errorElement.style.color = '#00C851';
-        parent.classList.add('valid');
-        fileInput.style.borderColor = '#00C851';
-      } else {
-        errorElement.style.color = '#ff4444';
-        parent.classList.add('invalid');
-        fileInput.style.borderColor = '#ff4444';
+      if (file.size > MAX_SIZE) {
+        errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+        allValid = false;
+        break;
       }
     }
-  } else {
-    // Not required, but validate if files are uploaded
-    const files = fileInput.files;
-    if (files.length > 0) {
-      // Validate each file
-      let allValid = true;
-      const MAX_SIZE = 5 * 1024 * 1024;
-      
-      for (let i = 0; i < files.length; i++) {
-        const file = files[i];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
-        if (!allowedTypes.includes(file.type)) {
-          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-          allValid = false;
-          break;
-        }
-        
-        if (file.size > MAX_SIZE) {
-          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-          allValid = false;
-          break;
-        }
-      }
-      
-      if (allValid) {
-        errorElement.textContent = `${files.length} file(s) selected (optional)`;
-        errorElement.style.color = '#888';
-        parent.classList.add('valid');
-        fileInput.style.borderColor = '#00C851';
-      } else {
-        errorElement.style.color = '#ff4444';
-        parent.classList.add('invalid');
-        fileInput.style.borderColor = '#ff4444';
-      }
+    
+    if (allValid) {
+      errorElement.textContent = `${files.length} file(s) selected`;
+      errorElement.style.color = '#00C851';
+      parent.classList.add('valid');
+      fileInput.style.borderColor = '#00C851';
     } else {
-      errorElement.textContent = 'Optional: Upload invoice/documents if available';
-      errorElement.style.color = '#888';
-      errorElement.style.display = 'block';
-      fileInput.style.borderColor = '#444';
+      errorElement.style.color = '#ff4444';
+      parent.classList.add('invalid');
+      fileInput.style.borderColor = '#ff4444';
     }
   }
   
   updateSubmitButton();
 }
 
+// ===== UPDATED CATEGORY REQUIREMENTS – ALWAYS REQUIRES FILES =====
 function checkCategoryRequirements() {
   const category = document.getElementById('itemCategory')?.value || '';
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
-  
   const fileInput = document.getElementById('fileUpload');
   const fileHelp = document.getElementById('fileHelp');
   const fileRequirement = document.getElementById('fileRequirement');
   
   if (!fileInput || !fileHelp) return;
-  
-  if (starredCategories.includes(category)) {
-    // Show as required
+
+  // If a category is selected, files become mandatory
+  if (category) {
+    fileInput.required = true;
     if (fileRequirement) {
       fileRequirement.textContent = 'Required: ';
       fileRequirement.style.color = '#ff4444';
     }
+    fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
     fileHelp.style.color = '#ff4444';
     fileHelp.style.fontWeight = 'bold';
-    
-    // Validate immediately
-    setTimeout(() => {
-      validateFilesInRealTime();
-    }, 100);
   } else {
-    // Show as optional
+    fileInput.required = false;
     if (fileRequirement) {
-      fileRequirement.textContent = 'Optional: ';
-      fileRequirement.style.color = '#888';
+      fileRequirement.textContent = '';
     }
+    fileHelp.innerHTML = 'Select a category to enable file upload';
     fileHelp.style.color = '#888';
     fileHelp.style.fontWeight = 'normal';
-    
-    // Clear any error state
-    const errorElement = document.getElementById('invoiceFilesError');
-    const parent = fileInput.parentElement;
-    
-    if (errorElement) {
-      errorElement.textContent = 'Optional: Upload invoice/documents if available';
-      errorElement.style.color = '#888';
-    }
-    
-    parent.classList.remove('invalid');
-    fileInput.style.borderColor = '#444';
   }
-  
-  updateSubmitButton();
+
+  // Trigger validation
+  setTimeout(() => {
+    validateFilesInRealTime();
+    updateSubmitButton();
+  }, 100);
 }
 
 function validateTrackingNumberInput(inputElement) {
@@ -1455,20 +1385,12 @@ function validateTrackingNumber(value) {
   }
 }
 
+// ===== UPDATED CATEGORY VALIDATION – NEW LIST =====
 function validateItemCategory(category) {
   const validCategories = [
-    'Accessories/Jewellery', 'Baby Appliances', 'Bag', 'Car Parts/Accessories',
-    'Carpets/Mat', 'Clothing', 'Computer Accessories', 'Cordless', 'Decorations',
-    'Disposable Pad/Mask', 'Electrical Appliances', 'Fabric', 'Fashion Accessories',
-    'Fishing kits/Accessories', 'Footware Shoes/Slippers', 'Game/Console/Board',
-    'Hand Tools', 'Handphone Casing', 'Headgear', 'Home Fitting/Furniture',
-    'Kitchenware', 'LED/Lamp', 'Matters/Bedding', 'Mix Item', 'Motor Part/Accessories',
-    '*Others', 'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
-    'Rubber', 'Seluar', 'Socks', 'Sport Equipment', 'Stationery', 'Stickers',
-    'Storage', 'Telkong', 'Toys', 'Tudong', 'Tumbler', 'Underwear',
-    'Watch & Accessories', 'Wire, Adapter & Plug',
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement'
+    'Apparels', 'Bags', 'Car Parts/Accessories', 'Cosmetics', 'Electrical Goods',
+    'Footwear', 'Food', 'Furniture', 'Gadgets', 'Kitchenware', 'Plastics',
+    'Stationery', 'Supplement', 'Others'
   ];
   
   if (!validCategories.includes(category)) {
@@ -1515,27 +1437,20 @@ function validateCategory(selectElement) {
   const value = selectElement?.value || '';
   const isValid = value !== '';
   showError(isValid ? '' : 'Please select item category', 'itemCategoryError');
-  if(isValid) checkInvoiceRequirements();
+  if(isValid) checkCategoryRequirements();  // Now always requires files
   return isValid;
 }
 
 function validateInvoiceFiles() {
-  const mandatoryCategories = [
-    '* Books', '* Cosmetics/Skincare/Bodycare',
-    '* Food Beverage/Drinks', '* Gadgets',
-    '* Oil Ointment', '* Supplement', '*Others'
-  ];
-  
   const category = document.getElementById('itemCategory')?.value || '';
   const files = document.getElementById('invoiceFiles')?.files || [];
   let isValid = true;
   let errorMessage = '';
 
-  if(files.length > 3) {
+  if (files.length > 3) {
     errorMessage = 'Maximum 3 files allowed';
     isValid = false;
-  }
-  else if(mandatoryCategories.includes(category)) {
+  } else if (category) {  // Any selected category requires files
     isValid = files.length > 0;
     errorMessage = isValid ? '' : 'At least 1 invoice required';
   }
@@ -1571,15 +1486,9 @@ function toBase64(file) {
 }
 
 function validateFiles(category, files) {
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    if (files.length < 1) throw new Error('At least 1 file required');
-    if (files.length > 3) throw new Error('Maximum 3 files allowed');
-  }
+  // Always require at least one file
+  if (files.length < 1) throw new Error('At least 1 file required');
+  if (files.length > 3) throw new Error('Maximum 3 files allowed');
 
   files.forEach(file => {
     if (file.size > CONFIG.MAX_FILE_SIZE) {
@@ -1593,16 +1502,9 @@ function handleFileSelection(input) {
     const files = Array.from(input.files);
     const category = document.getElementById('itemCategory').value;
     
-    // Validate against starred categories
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(category)) {
-      if (files.length < 1) throw new Error('At least 1 file required');
-      if (files.length > 3) throw new Error('Max 3 files allowed');
-    }
+    // Always require at least one file (category must be selected)
+    if (files.length < 1) throw new Error('At least 1 file required');
+    if (files.length > 3) throw new Error('Max 3 files allowed');
 
     // Validate individual files
     files.forEach(file => {
@@ -1965,17 +1867,10 @@ function validateFiles(fileInput) {
   const files = Array.from(fileInput.files);
   const category = document.getElementById('itemCategory')?.value || '';
   
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
-    if (files.length === 0) {
-      showError('Invoice/document upload is required for this category', 'fileUploadError');
-      return false;
-    }
+  // Always require files when category is selected
+  if (category && files.length === 0) {
+    showError('Invoice/document upload is required', 'fileUploadError');
+    return false;
   }
   
   // Validate each file
@@ -2003,6 +1898,7 @@ function validateFiles(fileInput) {
   return true;
 }
 
+// ===== UPDATED SUBMIT BUTTON VALIDATION – ALWAYS CHECK FILES =====
 function updateSubmitButton() {
   const submitBtn = document.getElementById('submitBtn');
   if (!submitBtn) return;
@@ -2045,20 +1941,18 @@ function updateSubmitButton() {
     }
   });
   
-  // Check file requirements for starred categories
+  // Check file requirements – required if category is selected
   const category = document.getElementById('itemCategory')?.value || '';
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-  ];
-  
-  if (starredCategories.includes(category)) {
+  if (category) {
     const files = document.getElementById('fileUpload')?.files || [];
     const fileParent = document.getElementById('fileUpload')?.parentElement;
     
     if (files.length === 0 || (fileParent && fileParent.classList.contains('invalid'))) {
       allValid = false;
     }
+  } else {
+    // No category selected yet – can't be valid
+    allValid = false;
   }
   
   // Update button state
@@ -2079,40 +1973,6 @@ function updateSubmitButton() {
     submitBtn.style.background = '#555';
     submitBtn.style.cursor = 'not-allowed';
     submitBtn.style.opacity = '0.7';
-  }
-}
-
-// ================= NEW FUNCTIONS FOR CATEGORY REQUIREMENTS =================
-function checkCategoryRequirements() {
-  const category = document.getElementById('itemCategory')?.value || '';
-  const fileInput = document.getElementById('fileUpload');
-  const fileHelp = document.getElementById('fileHelp');
-  
-  const starredCategories = [
-    '*Books', '*Cosmetics/Skincare/Bodycare',
-    '*Food Beverage/Drinks', '*Gadgets',
-    '*Oil Ointment', '*Supplement', '*Others'
-  ];
-
-  if (starredCategories.includes(category)) {
-    if (fileInput) fileInput.required = true;
-    if (fileHelp) {
-      fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
-      fileHelp.style.color = '#ff4444';
-    }
-  } else {
-    if (fileInput) fileInput.required = false;
-    if (fileHelp) {
-      fileHelp.innerHTML = 'Optional: JPEG, PNG, PDF (Max 5MB each)';
-      fileHelp.style.color = '#888';
-    }
-  }
-}
-
-function setupCategoryChangeListener() {
-  const categorySelect = document.getElementById('itemCategory');
-  if (categorySelect) {
-    categorySelect.addEventListener('change', checkCategoryRequirements);
   }
 }
 
