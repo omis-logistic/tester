@@ -141,8 +141,8 @@
       <div class="input-group">
         <input type="tel" 
                id="phone" 
-               placeholder="Phone Number"
-               pattern="^(673\d{7,}|60\d{9,})$" 
+               placeholder="Phone Number or User ID"
+               pattern="^(673\d{7,}|60\d{9,}|Z\d{4})$" 
                required>
       </div>
       
@@ -172,7 +172,7 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // EXACT Mark 1 login implementation with improved spinner
+    // EXACT Mark 1 login implementation with improved spinner and user ID support
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const spinner = document.getElementById('loginSpinner');
@@ -186,11 +186,15 @@
       spinner.style.display = 'inline-block';
       loginText.textContent = 'Processing...';
 
-      const phone = document.getElementById('phone').value.trim();
+      const identifier = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
 
-      if (!validatePhone(phone)) {
-        showError('Invalid phone number format');
+      // Validate format – phone or user ID
+      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
+      const userIdRegex = /^Z\d{4}$/;
+      
+      if (!phoneRegex.test(identifier) && !userIdRegex.test(identifier)) {
+        showError('Invalid phone number or user ID format');
         resetLoginButton(btn, spinner, loginText, originalText);
         return;
       }
@@ -200,7 +204,7 @@
       
       // EXACTLY like Mark 1 - with crossorigin attribute
       script.crossOrigin = 'anonymous';
-      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(identifier)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
       window[callbackName] = (response) => {
         // Restore button state
@@ -208,10 +212,13 @@
 
         if (response.success) {
           console.log('TempPassword flag:', response.tempPassword);
+          console.log('User ID:', response.userID);
+          
           sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
-            tempPassword: response.tempPassword
+            tempPassword: response.tempPassword,
+            userID: response.userID   // Store user ID for later use
           }));
           localStorage.setItem('lastActivity', Date.now());
           
@@ -271,10 +278,11 @@
       safeRedirect('forgot-password.html');
     }
 
-    // EXACT Mark 1 validation function
-    function validatePhone(phone) {
-      const regex = /^(673\d{7,}|60\d{9,})$/;
-      return regex.test(phone);
+    // EXACT Mark 1 validation function (updated to allow user ID)
+    function validateIdentifier(identifier) {
+      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
+      const userIdRegex = /^Z\d{4}$/;
+      return phoneRegex.test(identifier) || userIdRegex.test(identifier);
     }
 
     // EXACT Mark 1 error display
