@@ -443,7 +443,7 @@
         <select id="collectionPoint" name="collectionPoint" required>
           <option value="">-- Select Collection Point --</option>
           <option value="Rimba">Rimba</option>
-          <option value="Bengkurong">Bengkurong</option>
+          <option value="Sengkurong">Sengkurong</option>
         </select>
         <span id="collectionPointError" class="validation-message"></span>
       </div>
@@ -617,8 +617,9 @@
       { id: 'itemDescription', name: 'Item Description', type: 'description' },
       { id: 'quantity', name: 'Quantity', type: 'quantity' },
       { id: 'price', name: 'Price', type: 'price' },
-      { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
-      { id: 'itemCategory', name: 'Item Category', type: 'select' }
+      { id: 'itemCategory', name: 'Item Category', type: 'select' },
+      { id: 'collectionPoint', name: 'Collection Point', type: 'select' }
+      
     ];
     
     fieldsToValidate.forEach(field => {
@@ -764,8 +765,9 @@
       'itemDescription',
       'quantity',
       'price',
-      'collectionPoint',
-      'itemCategory'
+      'itemCategory',
+      'collectionPoint'
+      
     ];
     
     fields.forEach(fieldId => {
