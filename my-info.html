@@ -78,6 +78,11 @@
   <div class="container my-info-page">
     <h1>My Information</h1>
     
+    <!-- NEW: User ID field above phone -->
+    <div class="input-group">
+      <input type="text" id="infoUserID" placeholder="User ID" readonly>
+    </div>
+    
     <div class="input-group">
       <input type="tel" id="infoPhone" placeholder="Phone Number" readonly>
     </div>
@@ -181,7 +186,8 @@
         return;
       }
 
-      // Initialize user info
+      // Initialize user info – added userID
+      document.getElementById('infoUserID').value = userData.userID || 'Not assigned';
       document.getElementById('infoPhone').value = userData.phone || '';
       document.getElementById('currentEmail').textContent = userData.email || '';
 
@@ -334,6 +340,17 @@
       `;
       document.body.prepend(errorDiv);
       return errorDiv;
+    }
+
+    // Password and email validation helpers (already in app.js, but keep for completeness)
+    function validatePassword(password) {
+      const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
+      return regex.test(password);
+    }
+
+    function validateEmail(email) {
+      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return regex.test(email);
     }
   </script>
 </body>
