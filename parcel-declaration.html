@@ -6,7 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Parcel Declaration - ZA RIZQ Enterprise</title>
+  <title>Parcel Declaration - ZA RIZQI Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Safari-specific fixes */
@@ -448,7 +448,7 @@
         <span id="collectionPointError" class="validation-message"></span>
       </div>
 
-      <!-- Item Category – NEW LIST -->
+      <!-- ========== UPDATED ITEM CATEGORY (NEW LIST) ========== -->
       <div class="input-group">
         <label for="itemCategory" class="required">Item Category:</label>
         <select id="itemCategory" name="itemCategory" required>
@@ -526,7 +526,7 @@
       <h3>📋 Important Notes:</h3>
       <ul>
         <li>Ensure tracking number matches your shipment exactly</li>
-        <li>File upload is mandatory for all categories</li>
+        <li>File upload is now mandatory for all categories</li>
         <li>You can save as draft and return later</li>
         <li>Submit once per parcel/shipment</li>
       </ul>
@@ -595,16 +595,15 @@
 
 <script src="scripts/app.js"></script>
 <script>
-  // ========== REAL-TIME VALIDATION SYSTEM (UPDATED FOR MANDATORY FILES) ==========
+  // ========== UPDATED REAL-TIME VALIDATION SYSTEM ==========
+  // (All starred‑category logic removed; files are mandatory when a category is selected)
+  
   function initRealTimeValidation() {
     console.log('Initializing real-time validation...');
     
-    // Run initial validation on page load
     setTimeout(() => {
       console.log('Running initial page load validation...');
       runInitialValidation();
-      
-      // Update validation on every input
       setupRealTimeValidationListeners();
     }, 100);
   }
@@ -622,7 +621,6 @@
       { id: 'itemCategory', name: 'Item Category', type: 'select' }
     ];
     
-    // Validate each field
     fieldsToValidate.forEach(field => {
       const fieldElement = document.getElementById(field.id);
       const errorElement = document.getElementById(field.id + 'Error') || 
@@ -660,11 +658,10 @@
           break;
       }
       
-      // Update UI
       updateFieldValidationState(fieldElement, isValid, message);
     });
     
-    // Validate files – mandatory when a category is selected
+    // Validate files if a category is selected (mandatory)
     const category = document.getElementById('itemCategory')?.value || '';
     if (category) {
       const files = document.getElementById('fileUpload')?.files || [];
@@ -682,9 +679,7 @@
       }
     }
     
-    // Update submit button
     updateSubmitButton();
-    
     return true;
   }
 
@@ -733,7 +728,6 @@
     const errorElement = document.getElementById(fieldElement.id + 'Error');
     const parent = fieldElement.parentElement;
     
-    // Remove existing validation classes
     parent.classList.remove('valid', 'invalid');
     
     if (isValid) {
@@ -753,7 +747,6 @@
       }
     }
     
-    // CLEAN styling - remove all special backgrounds and borders
     if (errorElement) {
       errorElement.style.backgroundColor = 'transparent';
       errorElement.style.border = 'none';
@@ -781,7 +774,6 @@
         field.addEventListener('input', () => validateFieldInRealTime(field));
         field.addEventListener('change', () => validateFieldInRealTime(field));
         
-        // For select fields, validate on change
         if (field.tagName === 'SELECT') {
           field.addEventListener('change', () => {
             validateFieldInRealTime(field);
@@ -791,7 +783,6 @@
       }
     });
     
-    // File upload validation
     const fileUpload = document.getElementById('fileUpload');
     if (fileUpload) {
       fileUpload.addEventListener('change', validateFilesInRealTime);
@@ -834,7 +825,6 @@
     updateFieldValidationState(field, isValid, message);
     updateSubmitButton();
     
-    // If this is the category field, also check file requirements
     if (field.id === 'itemCategory') {
       setTimeout(() => {
         checkCategoryRequirements();
@@ -842,7 +832,7 @@
     }
   }
 
-  // ===== UPDATED FILE VALIDATION – ALWAYS REQUIRED WHEN CATEGORY SELECTED =====
+  // ===== UPDATED FILE VALIDATION – MANDATORY WHEN CATEGORY SELECTED =====
   function validateFilesInRealTime() {
     const fileInput = document.getElementById('fileUpload');
     const category = document.getElementById('itemCategory')?.value || '';
@@ -854,7 +844,6 @@
     
     parent.classList.remove('valid', 'invalid');
 
-    // If no category selected yet, show info but don't require files
     if (!category) {
       errorElement.textContent = 'Select a category to enable file upload';
       errorElement.style.color = '#888';
@@ -864,7 +853,6 @@
       return;
     }
 
-    // Category is selected – files are mandatory
     const files = fileInput.files;
     
     if (files.length === 0) {
@@ -874,20 +862,17 @@
       parent.classList.add('invalid');
       fileInput.style.borderColor = '#ff4444';
     } else {
-      // Validate each file
       let allValid = true;
       const MAX_SIZE = 5 * 1024 * 1024;
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
       
       for (let i = 0; i < files.length; i++) {
         const file = files[i];
-        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-        
         if (!allowedTypes.includes(file.type)) {
           errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
           allValid = false;
           break;
         }
-        
         if (file.size > MAX_SIZE) {
           errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
           allValid = false;
@@ -919,7 +904,6 @@
     
     if (!fileInput || !fileHelp) return;
 
-    // If a category is selected, files become mandatory
     if (category) {
       fileInput.required = true;
       if (fileRequirement) {
@@ -939,18 +923,17 @@
       fileHelp.style.fontWeight = 'normal';
     }
 
-    // Trigger validation
     setTimeout(() => {
       validateFilesInRealTime();
       updateSubmitButton();
     }, 100);
   }
 
+  // ===== UPDATED SUBMIT BUTTON – CHECK FILES IF CATEGORY SELECTED =====
   function updateSubmitButton() {
     const submitBtn = document.getElementById('submitBtn');
     if (!submitBtn) return;
     
-    // Check each field's validation state
     const fields = [
       'trackingNumber',
       'nameOnParcel',
@@ -972,13 +955,11 @@
         return;
       }
       
-      // Check if field has invalid class or is empty
       if (parent && parent.classList.contains('invalid')) {
         allValid = false;
         return;
       }
       
-      // Check field value
       if (field.tagName === 'SELECT') {
         if (!field.value) allValid = false;
       } else if (field.type === 'number') {
@@ -988,7 +969,6 @@
       }
     });
     
-    // Check file requirements – required if category is selected
     const category = document.getElementById('itemCategory')?.value || '';
     if (category) {
       const files = document.getElementById('fileUpload')?.files || [];
@@ -998,20 +978,16 @@
         allValid = false;
       }
     } else {
-      // No category selected yet – can't be valid
       allValid = false;
     }
     
-    // Update button state
     submitBtn.disabled = !allValid;
     
-    // Update button text based on state
     const submitText = document.getElementById('submitText');
     if (submitText) {
       submitText.textContent = allValid ? 'Submit Declaration' : 'Please fix errors above';
     }
     
-    // Visual feedback
     if (allValid) {
       submitBtn.style.background = 'linear-gradient(135deg, #d4af37, #b8941f)';
       submitBtn.style.cursor = 'pointer';
@@ -1024,43 +1000,28 @@
   }
 
   // ========== FORM-SPECIFIC FUNCTIONS ==========
-  
-  // Form-specific initialization
   document.addEventListener('DOMContentLoaded', function() {
-    // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
       document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
-      // Redirect to login if no session
       window.location.href = 'login.html';
       return;
     }
 
-    // Load saved drafts
     loadDrafts();
-
-    // Initialize file upload preview
     const fileInput = document.getElementById('fileUpload');
     if (fileInput) {
       fileInput.addEventListener('change', handleFileSelection);
     }
 
-    // Initialize real-time validation system FIRST
     initRealTimeValidation();
-    
-    // Set up individual field validators
     setupFieldValidations();
-
-    // Check category requirements on load
     checkCategoryRequirements();
   });
 
   function setupFieldValidations() {
-    // These are handled by the real-time validation system
-    // Just ensure event listeners are set up
-    
     const fields = [
       'trackingNumber',
       'nameOnParcel',
@@ -1074,11 +1035,9 @@
     fields.forEach(fieldId => {
       const field = document.getElementById(fieldId);
       if (field) {
-        // Clear existing listeners by cloning
         const newField = field.cloneNode(true);
         field.parentNode.replaceChild(newField, field);
         
-        // Add new listeners
         newField.addEventListener('input', () => {
           if (typeof validateFieldInRealTime === 'function') {
             validateFieldInRealTime(newField);
@@ -1093,13 +1052,11 @@
     });
   }
 
-  // Handle file selection
   function handleFileSelection(event) {
     const fileInput = event.target;
     const files = fileInput.files;
     const errorEl = document.getElementById('invoiceFilesError');
     
-    // Reset error message
     if (errorEl) errorEl.textContent = '';
     
     if (files.length === 0) {
@@ -1107,22 +1064,19 @@
       return;
     }
     
-    // Validate files
-    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    const MAX_SIZE = 5 * 1024 * 1024;
     let hasError = false;
     
     for (let i = 0; i < files.length; i++) {
       const file = files[i];
-      
-      // Check file type
       const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      
       if (!allowedTypes.includes(file.type)) {
         errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
         hasError = true;
         break;
       }
       
-      // Check file size
       if (file.size > MAX_SIZE) {
         errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
         hasError = true;
@@ -1137,20 +1091,17 @@
     updateSubmitButton();
   }
 
-  // Save form as draft
   function saveDraft() {
     const form = document.getElementById('declarationForm');
     const formData = new FormData(form);
     const draft = {};
     
-    // Convert FormData to object
     for (let [key, value] of formData.entries()) {
       if (key !== 'files') {
         draft[key] = value;
       }
     }
     
-    // Get files info
     const files = document.getElementById('fileUpload')?.files || [];
     if (files.length > 0) {
       draft.filesCount = files.length;
@@ -1161,21 +1112,17 @@
       }));
     }
     
-    // Add timestamp
     draft.timestamp = new Date().toISOString();
     draft.id = 'draft_' + Date.now();
     
-    // Save to localStorage
     const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
     drafts.push(draft);
     localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
     
-    // Show success message
     showMessage('Draft saved successfully!', 'success');
     loadDrafts();
   }
 
-  // Load saved drafts
   function loadDrafts() {
     const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
     const draftCount = document.getElementById('draftCount');
@@ -1209,24 +1156,19 @@
     }
   }
 
-  // Load draft into form - FIXED VERSION
   function loadDraftFromList(index) {
     const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
     const draft = drafts[index];
     
     if (!draft) return;
     
-    // Clear all validation errors first
     clearAllValidationErrors();
     
-    // Populate form fields
     Object.keys(draft).forEach(key => {
       if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
         const field = document.getElementById(key);
         if (field) {
           field.value = draft[key];
-          
-          // Trigger validation for each field after setting value
           if (typeof validateFieldInRealTime === 'function') {
             validateFieldInRealTime(field);
           }
@@ -1234,7 +1176,6 @@
       }
     });
     
-    // Update UI
     if (typeof checkCategoryRequirements === 'function') {
       checkCategoryRequirements();
     }
@@ -1246,7 +1187,6 @@
     showMessage('Draft loaded!', 'success');
   }
 
-  // Clear all validation errors
   function clearAllValidationErrors() {
     const errorElements = document.querySelectorAll('.validation-message');
     errorElements.forEach(element => {
@@ -1255,14 +1195,12 @@
       element.style.color = '';
     });
     
-    // Clear field borders
     const fields = document.querySelectorAll('input, select, textarea');
     fields.forEach(field => {
       field.style.borderColor = '';
       field.parentElement.classList.remove('invalid', 'valid');
     });
     
-    // Clear file upload error
     const fileError = document.getElementById('invoiceFilesError');
     if (fileError) {
       fileError.textContent = 'Required: At least 1 invoice/document required';
@@ -1271,7 +1209,6 @@
     }
   }
 
-  // Delete draft
   function deleteDraft(index) {
     const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
     drafts.splice(index, 1);
@@ -1280,7 +1217,6 @@
     showMessage('Draft deleted', 'info');
   }
 
-  // Toggle drafts visibility
   function toggleDrafts() {
     const draftsList = document.getElementById('draftsList');
     if (draftsList.style.display === 'none') {
@@ -1290,12 +1226,10 @@
     }
   }
 
-  // Show message
   function showMessage(text, type = 'info') {
     const messageEl = document.getElementById('statusMessage');
     const errorEl = document.getElementById('errorMessage');
     
-    // Clear any existing error messages
     if (errorEl) {
       errorEl.style.display = 'none';
       errorEl.textContent = '';
@@ -1312,12 +1246,10 @@
     }, 5000);
   }
 
-  // Show error
   function showError(text) {
     const messageEl = document.getElementById('statusMessage');
     const errorEl = document.getElementById('errorMessage');
     
-    // Clear any existing success messages
     if (messageEl) {
       messageEl.style.display = 'none';
       messageEl.textContent = '';
@@ -1333,7 +1265,6 @@
     }, 5000);
   }
 
-  // Make functions available globally
   window.loadDrafts = loadDrafts;
   window.loadDraftFromList = loadDraftFromList;
   window.deleteDraft = deleteDraft;
