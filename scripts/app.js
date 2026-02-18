@@ -9,6 +9,17 @@ const CONFIG = {
   MAX_FILES: 3
 };
 
+// ================= HELPER: TRACKING NUMBER CLEANING =================
+function cleanTrackingNumber(rawTracking) {
+  if (!rawTracking) return '';
+  let cleaned = rawTracking.trim().toUpperCase();
+  const spxIndex = cleaned.indexOf('SPXLM');
+  if (spxIndex !== -1) {
+    cleaned = cleaned.substring(0, spxIndex);
+  }
+  return cleaned;
+}
+
 // ================= VIEWPORT MANAGEMENT =================
 function detectViewMode() {
   const isMobile = (
@@ -489,9 +500,8 @@ async function tryFallbackSubmission(payload) {
       itemDescription: payload.data.itemDescription,
       quantity: payload.data.quantity,
       price: payload.data.price,
-      itemCategory: payload.data.itemCategory,
-      collectionPoint: payload.data.collectionPoint
-      
+      collectionPoint: payload.data.collectionPoint,
+      itemCategory: payload.data.itemCategory
     }
   };
   
@@ -601,20 +611,19 @@ async function handleParcelSubmission(e) {
       throw new Error('Session expired. Please login again.');
     }
 
-    // Build payload
+    // Build payload – now includes userID and cleaned tracking number
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
-        userID: userData.userID,
-        trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || '',
+        userID: userData.userID,                                   // <-- ADDED
+        trackingNumber: cleanTrackingNumber(formData.get('trackingNumber')), // <-- CLEANED
         nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
         phoneNumber: userData.phone,
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
-        itemCategory: formData.get('itemCategory') || '',
-        collectionPoint: formData.get('collectionPoint') || ''
-        
+        collectionPoint: formData.get('collectionPoint') || '',
+        itemCategory: formData.get('itemCategory') || ''
       },
       files: []
     };
@@ -747,33 +756,6 @@ async function handleParcelSubmission(e) {
   }
 }
 
-function cleanTrackingNumber(rawTracking) {
-  if (!rawTracking) return '';
-  let cleaned = rawTracking.trim().toUpperCase();
-  const spxIndex = cleaned.indexOf('SPXLM');
-  if (spxIndex !== -1) {
-    cleaned = cleaned.substring(0, spxIndex); // keep everything before SPXLM
-  }
-  return cleaned;
-}
-
-// Then use it when building payload.data.trackingNumber
-const payload = {
-  action: 'submitParcelDeclaration',
-  data: {
-    userID: userData.userID,
-    trackingNumber: cleanTrackingNumber(formData.get('trackingNumber')), // <-- CHANGED
-    nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
-    phoneNumber: userData.phone,
-    itemDescription: formData.get('itemDescription')?.trim() || '',
-    quantity: Number(formData.get('quantity')) || 1,
-    price: Number(formData.get('price')) || 0,
-    itemCategory: formData.get('itemCategory') || '',
-    collectionPoint: formData.get('collectionPoint') || ''
-  },
-  files: []
-};
-
 // ================= ENHANCED SUCCESS HANDLER =================
 function showSubmissionSuccess(trackingNumber) {
   // Update message element
@@ -830,11 +812,6 @@ function showSubmissionSuccess(trackingNumber) {
   });
   
   // REMOVED: Auto-close timeout - message stays until user closes it
-  // setTimeout(() => {
-  //   if (messageElement.style.display === 'block') {
-  //     messageElement.style.display = 'none';
-  //   }
-  // }, 8000);
 }
 
 // Show local recovery notice
@@ -1038,9 +1015,8 @@ function runInitialValidation() {
     { id: 'itemDescription', name: 'Item Description', type: 'description' },
     { id: 'quantity', name: 'Quantity', type: 'quantity' },
     { id: 'price', name: 'Price', type: 'price' },
-    { id: 'itemCategory', name: 'Item Category', type: 'select' },
-    { id: 'collectionPoint', name: 'Collection Point', type: 'select' }
-    
+    { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
+    { id: 'itemCategory', name: 'Item Category', type: 'select' }
   ];
   
   // Validate each field
@@ -1198,9 +1174,8 @@ function setupRealTimeValidationListeners() {
     'itemDescription',
     'quantity',
     'price',
-    'itemCategory',
-    'collectionPoint'
-    
+    'collectionPoint',
+    'itemCategory'
   ];
   
   fields.forEach(fieldId => {
