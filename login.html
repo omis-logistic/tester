@@ -172,7 +172,7 @@
 
   <script src="scripts/app.js"></script>
   <script>
-    // EXACT Mark 1 login implementation with improved spinner and user ID support
+    // EXACT Mark 1 login implementation with improved spinner
     function handleLogin() {
       const btn = document.getElementById('loginBtn');
       const spinner = document.getElementById('loginSpinner');
@@ -189,11 +189,11 @@
       const identifier = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
 
-      // Validate format – phone or user ID
+      // Validate: either phone format or user ID (Z followed by 4 digits)
       const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIdRegex = /^Z\d{4}$/;
+      const userIDRegex = /^Z\d{4}$/i;
       
-      if (!phoneRegex.test(identifier) && !userIdRegex.test(identifier)) {
+      if (!phoneRegex.test(identifier) && !userIDRegex.test(identifier)) {
         showError('Invalid phone number or user ID format');
         resetLoginButton(btn, spinner, loginText, originalText);
         return;
@@ -212,13 +212,11 @@
 
         if (response.success) {
           console.log('TempPassword flag:', response.tempPassword);
-          console.log('User ID:', response.userID);
-          
           sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
             tempPassword: response.tempPassword,
-            userID: response.userID   // Store user ID for later use
+            userID: response.userID   // include user ID for later use
           }));
           localStorage.setItem('lastActivity', Date.now());
           
@@ -270,6 +268,12 @@
       }
     });
     
+    // ======== NEW: Auto-capitalize user ID ========
+    document.getElementById('phone').addEventListener('input', function(e) {
+      // Convert to uppercase as the user types (helps with user ID)
+      this.value = this.value.toUpperCase();
+    });
+    
     function showRegistration() {
       safeRedirect('register.html');
     }
@@ -278,11 +282,11 @@
       safeRedirect('forgot-password.html');
     }
 
-    // EXACT Mark 1 validation function (updated to allow user ID)
-    function validateIdentifier(identifier) {
+    // EXACT Mark 1 validation function (updated to accept user ID)
+    function validatePhone(phone) {
       const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIdRegex = /^Z\d{4}$/;
-      return phoneRegex.test(identifier) || userIdRegex.test(identifier);
+      const userIDRegex = /^Z\d{4}$/i;
+      return phoneRegex.test(phone) || userIDRegex.test(phone);
     }
 
     // EXACT Mark 1 error display
