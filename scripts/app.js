@@ -483,6 +483,7 @@ async function tryFallbackSubmission(payload) {
   const minimalPayload = {
     action: 'submitParcelDeclaration',
     data: {
+      userID: userData.userID,
       trackingNumber: payload.data.trackingNumber,
       nameOnParcel: payload.data.nameOnParcel,
       phoneNumber: payload.data.phoneNumber,
@@ -604,6 +605,7 @@ async function handleParcelSubmission(e) {
     const payload = {
       action: 'submitParcelDeclaration',
       data: {
+        userID: userData.userID,
         trackingNumber: formData.get('trackingNumber')?.trim().toUpperCase() || '',
         nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
         phoneNumber: userData.phone,
