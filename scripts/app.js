@@ -150,11 +150,13 @@ async function callAPI(action, payload) {
   }
 }
 
+// ================= UPDATED LOADING FUNCTION – USES GLOBAL SPINNER =================
 function showLoading(show = true, message = 'Processing...') {
-  const loader = document.getElementById('loadingOverlay');
+  // Use the global spinner overlay from the HTML
+  const loader = document.getElementById('globalSpinnerOverlay');
   if (!loader) return;
 
-  const textElement = loader.querySelector('.loading-text');
+  const textElement = loader.querySelector('.global-loading-text');
   if (textElement) {
     textElement.textContent = message;
   }
@@ -171,39 +173,7 @@ function showLoading(show = true, message = 'Processing...') {
   }
 }
 
-function createLoaderElement() {
-  const overlay = document.createElement('div');
-  overlay.id = 'loadingOverlay';
-  overlay.innerHTML = `
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Processing Submission...</div>
-  `;
-  
-  // Add styles directly for reliability
-  overlay.style.cssText = `
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background: rgba(0,0,0,0.85);
-    display: none;
-    justify-content: center;
-    align-items: center;
-    z-index: 9999;
-    flex-direction: column;
-    gap: 1rem;
-  `;
-  
-  const text = overlay.querySelector('.loading-text');
-  if (text) {
-    text.style.color = 'var(--gold)';
-    text.style.fontSize = '1.2rem';
-  }
-  
-  document.body.appendChild(overlay);
-  return overlay;
-}
+// ================= (createLoaderElement REMOVED – using existing global spinner) =================
 
 function showSuccessMessage() {
   const messageElement = document.getElementById('message');
@@ -2393,8 +2363,7 @@ document.addEventListener('DOMContentLoaded', () => {
     }
   }
   
-  // Initialize common components
-  createLoaderElement();
+  // ===== REMOVED createLoaderElement() – using existing global spinner =====
   
   // Initialize login page if needed
   if (currentPage === 'login.html') {
