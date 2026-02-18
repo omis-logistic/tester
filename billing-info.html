@@ -724,6 +724,12 @@
           
           paidOrders = response.success ? (response.paidOrders || []) : [];
           console.log('Payment status loaded:', paidOrders.length, 'paid orders');
+          console.log('Paid orders list:', paidOrders);
+          
+          // Also log a few receipt numbers from billing data
+          if (billingData && billingData.length) {
+            console.log('Sample receipt numbers from billing:', billingData.slice(0,5).map(item => item.receipt));
+          }
           
           // Render the data
           renderBillingSections(billingData);
