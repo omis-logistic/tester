@@ -1,8 +1,8 @@
 //scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbxpoO_r-_PRNzP5T2rRfJqelnOZDqOe4FyXVMia2Sg-PSBvX8QMFDxbhdAdLCnjJxz8/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbxr2aPAGmmPi9NYg65FQ9RdqLQkQpIIirOXg4ozlIgktVOEZakly3cH2PI6N7MX6C26/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzpn61uwX3Jntbd3R_5iLX3jH2lhOVrvJQNmJBJjqV5ltdtdNNNWQBKFym_qyWgHJ0/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycby1kjL2Cdu7LfVNLiCWU5jwqqlJxpCCeYNRQuf-1vp41uEud9D_bYdOmRXT98lQ616f/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -483,15 +483,15 @@ async function tryFallbackSubmission(payload) {
   const minimalPayload = {
     action: 'submitParcelDeclaration',
     data: {
-      userID: userData.userID,
       trackingNumber: payload.data.trackingNumber,
       nameOnParcel: payload.data.nameOnParcel,
       phoneNumber: payload.data.phoneNumber,
       itemDescription: payload.data.itemDescription,
       quantity: payload.data.quantity,
       price: payload.data.price,
-      collectionPoint: payload.data.collectionPoint,
-      itemCategory: payload.data.itemCategory
+      itemCategory: payload.data.itemCategory,
+      collectionPoint: payload.data.collectionPoint
+      
     }
   };
   
@@ -612,8 +612,9 @@ async function handleParcelSubmission(e) {
         itemDescription: formData.get('itemDescription')?.trim() || '',
         quantity: Number(formData.get('quantity')) || 1,
         price: Number(formData.get('price')) || 0,
-        collectionPoint: formData.get('collectionPoint') || '',
-        itemCategory: formData.get('itemCategory') || ''
+        itemCategory: formData.get('itemCategory') || '',
+        collectionPoint: formData.get('collectionPoint') || ''
+        
       },
       files: []
     };
@@ -745,6 +746,33 @@ async function handleParcelSubmission(e) {
     showLoading(false);
   }
 }
+
+function cleanTrackingNumber(rawTracking) {
+  if (!rawTracking) return '';
+  let cleaned = rawTracking.trim().toUpperCase();
+  const spxIndex = cleaned.indexOf('SPXLM');
+  if (spxIndex !== -1) {
+    cleaned = cleaned.substring(0, spxIndex); // keep everything before SPXLM
+  }
+  return cleaned;
+}
+
+// Then use it when building payload.data.trackingNumber
+const payload = {
+  action: 'submitParcelDeclaration',
+  data: {
+    userID: userData.userID,
+    trackingNumber: cleanTrackingNumber(formData.get('trackingNumber')), // <-- CHANGED
+    nameOnParcel: formData.get('nameOnParcel')?.trim() || '',
+    phoneNumber: userData.phone,
+    itemDescription: formData.get('itemDescription')?.trim() || '',
+    quantity: Number(formData.get('quantity')) || 1,
+    price: Number(formData.get('price')) || 0,
+    itemCategory: formData.get('itemCategory') || '',
+    collectionPoint: formData.get('collectionPoint') || ''
+  },
+  files: []
+};
 
 // ================= ENHANCED SUCCESS HANDLER =================
 function showSubmissionSuccess(trackingNumber) {
@@ -1010,8 +1038,9 @@ function runInitialValidation() {
     { id: 'itemDescription', name: 'Item Description', type: 'description' },
     { id: 'quantity', name: 'Quantity', type: 'quantity' },
     { id: 'price', name: 'Price', type: 'price' },
-    { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
-    { id: 'itemCategory', name: 'Item Category', type: 'select' }
+    { id: 'itemCategory', name: 'Item Category', type: 'select' },
+    { id: 'collectionPoint', name: 'Collection Point', type: 'select' }
+    
   ];
   
   // Validate each field
@@ -1169,8 +1198,9 @@ function setupRealTimeValidationListeners() {
     'itemDescription',
     'quantity',
     'price',
-    'collectionPoint',
-    'itemCategory'
+    'itemCategory',
+    'collectionPoint'
+    
   ];
   
   fields.forEach(fieldId => {
