@@ -794,7 +794,7 @@
       function renderSection(sectionId, data, isUncollected) {
         const section = document.getElementById(sectionId);
         if (!section) return;
-        
+      
         if (!data.length) {
           section.innerHTML = `
             <div class="empty-state">
@@ -829,9 +829,10 @@
                 const total = item.total || 0;
                 const status = item.status || '';
                 const collectionDate = item.collectionDate || '';
-                
-                const isPaid = paidOrders.includes(receiptNumber);
-                
+      
+                // 🔁 FIX: Case‑insensitive match
+                const isPaid = paidOrders.some(order => order.toUpperCase() === receiptNumber.toUpperCase());
+      
                 return `
                 <tr>
                   <td class="col-receipt">${receiptNumber}</td>
