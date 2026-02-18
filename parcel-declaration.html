@@ -6,7 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Parcel Declaration - Cahaya Az Zahra Enterprise</title>
+  <title>Parcel Declaration - ZA RIZQ Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Safari-specific fixes */
@@ -155,12 +155,12 @@
       transition: opacity 0.3s ease;
       position: relative;
       z-index: 1000;
-      background-color: transparent !important; /* Remove grey box */
-      padding: 2px 0 !important; /* Remove padding */
-      border-radius: 0 !important; /* Remove rounded corners */
-      border-left: none !important; /* Remove red left border */
-      box-shadow: none !important; /* Remove shadow */
-      border: none !important; /* Remove all borders */
+      background-color: transparent !important;
+      padding: 2px 0 !important;
+      border-radius: 0 !important;
+      border-left: none !important;
+      box-shadow: none !important;
+      border: none !important;
     }
     
     .validation-message.success {
@@ -448,67 +448,27 @@
         <span id="collectionPointError" class="validation-message"></span>
       </div>
 
-      <!-- Item Category -->
+      <!-- Item Category – NEW LIST -->
       <div class="input-group">
         <label for="itemCategory" class="required">Item Category:</label>
         <select id="itemCategory" name="itemCategory" required>
           <option value="">-- Select Category --</option>
-          <option value="Accessories/Jewellery">Accessories/Jewellery</option>
-          <option value="Baby Appliances">Baby Appliances</option>
-          <option value="Bag">Bag</option>
+          <option value="Apparels">Apparels</option>
+          <option value="Bags">Bags</option>
           <option value="Car Parts/Accessories">Car Parts/Accessories</option>
-          <option value="Carpets/Mat">Carpets/Mat</option>
-          <option value="Clothing">Clothing</option>
-          <option value="Computer Accessories">Computer Accessories</option>
-          <option value="Cordless">Cordless</option>
-          <option value="Decorations">Decorations</option>
-          <option value="Disposable Pad/Mask">Disposable Pad/Mask</option>
-          <option value="Electrical Appliances">Electrical Appliances</option>
-          <option value="Fabric">Fabric</option>
-          <option value="Fashion Accessories">Fashion Accessories</option>
-          <option value="Fishing kits/Accessories">Fishing kits/Accessories</option>
-          <option value="Footware Shoes/Slippers">Footware Shoes/Slippers</option>
-          <option value="Game/Console/Board">Game/Console/Board</option>
-          <option value="Hand Tools">Hand Tools</option>
-          <option value="Handphone Casing">Handphone Casing</option>
-          <option value="Headgear">Headgear</option>
-          <option value="Home Fitting/Furniture">Home Fitting/Furniture</option>
+          <option value="Cosmetics">Cosmetics</option>
+          <option value="Electrical Goods">Electrical Goods</option>
+          <option value="Footwear">Footwear</option>
+          <option value="Food">Food</option>
+          <option value="Furniture">Furniture</option>
+          <option value="Gadgets">Gadgets</option>
           <option value="Kitchenware">Kitchenware</option>
-          <option value="LED/Lamp">LED/Lamp</option>
-          <option value="Matters/Bedding">Matters/Bedding</option>
-          <option value="Mix Item">Mix Item</option>
-          <option value="Motor Part/Accessories">Motor Part/Accessories</option>
-          <!-- REMOVED: Perfume option if it doesn't exist in backend -->
-          <option value="Phone Accessories">Phone Accessories</option>
-          <option value="Plastic Article">Plastic Article</option>
-          <option value="RC Parts/Accessories">RC Parts/Accessories</option>
-          <option value="Rubber">Rubber</option>
-          <option value="Seluar">Seluar</option>
-          <option value="Socks">Socks</option>
-          <option value="Sport Equipment">Sport Equipment</option>
+          <option value="Plastics">Plastics</option>
           <option value="Stationery">Stationery</option>
-          <option value="Stickers">Stickers</option>
-          <option value="Storage">Storage</option>
-          <option value="Telkong">Telkong</option>
-          <option value="Toys">Toys</option>
-          <option value="Tudong">Tudong</option>
-          <option value="Tumbler">Tumbler</option>
-          <option value="Underwear">Underwear</option>
-          <option value="Watch & Accessories">Watch & Accessories</option>
-          <option value="Wire, Adapter & Plug">Wire, Adapter & Plug</option>
-          <!-- Starred Categories (Require Invoice) -->
-          <optgroup label="―― Required Invoice ――">
-            <!-- FIXED: Ensure values match backend exactly (no spaces in value) -->
-            <option value="*Books">* Books</option>
-            <option value="*Cosmetics/Skincare/Bodycare">* Cosmetics/Skincare/Bodycare</option>
-            <option value="*Food Beverage/Drinks">* Food Beverage/Drinks</option>
-            <option value="*Gadgets">* Gadgets</option>
-            <option value="*Oil Ointment">* Oil Ointment</option>
-            <option value="*Supplement">* Supplement</option>
-            <option value="*Others">* Others (with invoice)</option>
-          </optgroup>
+          <option value="Supplement">Supplement</option>
+          <option value="Others">Others</option>
         </select>
-        <small class="form-help">Starred (*) categories require invoice upload</small>
+        <small class="form-help">File upload is required for all categories</small>
         <span id="itemCategoryError" class="validation-message"></span>
       </div>
 
@@ -524,10 +484,10 @@
           style="display: block; width: 100%; padding: 12px; margin-top: 5px;"
         >
         <small id="fileHelp" class="form-text">
-          <span id="fileRequirement">Optional: </span>JPEG, PNG, PDF (Max 5MB each)
+          <span id="fileRequirement">Required: </span>JPEG, PNG, PDF (Max 5MB each)
         </small>
         
-        <span id="invoiceFilesError" class="validation-message" style="color: #888;">Optional: Upload invoice/documents if available</span>
+        <span id="invoiceFilesError" class="validation-message" style="color: #ff4444;">Required: At least 1 invoice/document required</span>
       </div>
 
       <!-- Form Buttons -->
@@ -566,7 +526,7 @@
       <h3>📋 Important Notes:</h3>
       <ul>
         <li>Ensure tracking number matches your shipment exactly</li>
-        <li>For starred (*) categories, invoice upload is mandatory</li>
+        <li>File upload is mandatory for all categories</li>
         <li>You can save as draft and return later</li>
         <li>Submit once per parcel/shipment</li>
       </ul>
@@ -635,7 +595,7 @@
 
 <script src="scripts/app.js"></script>
 <script>
-  // ========== REAL-TIME VALIDATION SYSTEM ==========
+  // ========== REAL-TIME VALIDATION SYSTEM (UPDATED FOR MANDATORY FILES) ==========
   function initRealTimeValidation() {
     console.log('Initializing real-time validation...');
     
@@ -704,14 +664,9 @@
       updateFieldValidationState(fieldElement, isValid, message);
     });
     
-    // Validate files if required
+    // Validate files – mandatory when a category is selected
     const category = document.getElementById('itemCategory')?.value || '';
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(category)) {
+    if (category) {
       const files = document.getElementById('fileUpload')?.files || [];
       if (files.length === 0) {
         const fileInput = document.getElementById('fileUpload');
@@ -887,13 +842,10 @@
     }
   }
 
+  // ===== UPDATED FILE VALIDATION – ALWAYS REQUIRED WHEN CATEGORY SELECTED =====
   function validateFilesInRealTime() {
     const fileInput = document.getElementById('fileUpload');
     const category = document.getElementById('itemCategory')?.value || '';
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
     
     if (!fileInput) return;
     
@@ -901,144 +853,97 @@
     const parent = fileInput.parentElement;
     
     parent.classList.remove('valid', 'invalid');
+
+    // If no category selected yet, show info but don't require files
+    if (!category) {
+      errorElement.textContent = 'Select a category to enable file upload';
+      errorElement.style.color = '#888';
+      parent.classList.remove('invalid');
+      fileInput.style.borderColor = '#444';
+      updateSubmitButton();
+      return;
+    }
+
+    // Category is selected – files are mandatory
+    const files = fileInput.files;
     
-    if (starredCategories.includes(category)) {
-      const files = fileInput.files;
+    if (files.length === 0) {
+      errorElement.textContent = 'Required: At least 1 invoice/document required';
+      errorElement.style.color = '#ff4444';
+      errorElement.style.display = 'block';
+      parent.classList.add('invalid');
+      fileInput.style.borderColor = '#ff4444';
+    } else {
+      // Validate each file
+      let allValid = true;
+      const MAX_SIZE = 5 * 1024 * 1024;
       
-      if (files.length === 0) {
-        errorElement.textContent = 'Required: At least 1 invoice/document required';
-        errorElement.style.color = '#ff4444';
-        errorElement.style.display = 'block';
-        parent.classList.add('invalid');
-        fileInput.style.borderColor = '#ff4444';
-      } else {
-        // Validate each file
-        let allValid = true;
-        const MAX_SIZE = 5 * 1024 * 1024;
+      for (let i = 0; i < files.length; i++) {
+        const file = files[i];
+        const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
         
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-          
-          if (!allowedTypes.includes(file.type)) {
-            errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-            allValid = false;
-            break;
-          }
-          
-          if (file.size > MAX_SIZE) {
-            errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-            allValid = false;
-            break;
-          }
+        if (!allowedTypes.includes(file.type)) {
+          errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+          allValid = false;
+          break;
         }
         
-        if (allValid) {
-          errorElement.textContent = `${files.length} file(s) selected`;
-          errorElement.style.color = '#00C851';
-          parent.classList.add('valid');
-          fileInput.style.borderColor = '#00C851';
-        } else {
-          errorElement.style.color = '#ff4444';
-          parent.classList.add('invalid');
-          fileInput.style.borderColor = '#ff4444';
+        if (file.size > MAX_SIZE) {
+          errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+          allValid = false;
+          break;
         }
       }
-    } else {
-      // Not required, but validate if files are uploaded
-      const files = fileInput.files;
-      if (files.length > 0) {
-        // Validate each file
-        let allValid = true;
-        const MAX_SIZE = 5 * 1024 * 1024;
-        
-        for (let i = 0; i < files.length; i++) {
-          const file = files[i];
-          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
-          
-          if (!allowedTypes.includes(file.type)) {
-            errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
-            allValid = false;
-            break;
-          }
-          
-          if (file.size > MAX_SIZE) {
-            errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
-            allValid = false;
-            break;
-          }
-        }
-        
-        if (allValid) {
-          errorElement.textContent = `${files.length} file(s) selected (optional)`;
-          errorElement.style.color = '#888';
-          parent.classList.add('valid');
-          fileInput.style.borderColor = '#00C851';
-        } else {
-          errorElement.style.color = '#ff4444';
-          parent.classList.add('invalid');
-          fileInput.style.borderColor = '#ff4444';
-        }
+      
+      if (allValid) {
+        errorElement.textContent = `${files.length} file(s) selected`;
+        errorElement.style.color = '#00C851';
+        parent.classList.add('valid');
+        fileInput.style.borderColor = '#00C851';
       } else {
-        errorElement.textContent = 'Optional: Upload invoice/documents if available';
-        errorElement.style.color = '#888';
-        errorElement.style.display = 'block';
-        fileInput.style.borderColor = '#444';
+        errorElement.style.color = '#ff4444';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
       }
     }
     
     updateSubmitButton();
   }
 
+  // ===== UPDATED CATEGORY REQUIREMENTS – ALWAYS REQUIRES FILES =====
   function checkCategoryRequirements() {
     const category = document.getElementById('itemCategory')?.value || '';
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
     const fileInput = document.getElementById('fileUpload');
     const fileHelp = document.getElementById('fileHelp');
     const fileRequirement = document.getElementById('fileRequirement');
     
     if (!fileInput || !fileHelp) return;
-    
-    if (starredCategories.includes(category)) {
-      // Show as required
+
+    // If a category is selected, files become mandatory
+    if (category) {
+      fileInput.required = true;
       if (fileRequirement) {
         fileRequirement.textContent = 'Required: ';
         fileRequirement.style.color = '#ff4444';
       }
+      fileHelp.innerHTML = 'Required: JPEG, PNG, PDF (Max 5MB each)';
       fileHelp.style.color = '#ff4444';
       fileHelp.style.fontWeight = 'bold';
-      
-      // Validate immediately
-      setTimeout(() => {
-        validateFilesInRealTime();
-      }, 100);
     } else {
-      // Show as optional
+      fileInput.required = false;
       if (fileRequirement) {
-        fileRequirement.textContent = 'Optional: ';
-        fileRequirement.style.color = '#888';
+        fileRequirement.textContent = '';
       }
+      fileHelp.innerHTML = 'Select a category to enable file upload';
       fileHelp.style.color = '#888';
       fileHelp.style.fontWeight = 'normal';
-      
-      // Clear any error state
-      const errorElement = document.getElementById('invoiceFilesError');
-      const parent = fileInput.parentElement;
-      
-      if (errorElement) {
-        errorElement.textContent = 'Optional: Upload invoice/documents if available';
-        errorElement.style.color = '#888';
-      }
-      
-      parent.classList.remove('invalid');
-      fileInput.style.borderColor = '#444';
     }
-    
-    updateSubmitButton();
+
+    // Trigger validation
+    setTimeout(() => {
+      validateFilesInRealTime();
+      updateSubmitButton();
+    }, 100);
   }
 
   function updateSubmitButton() {
@@ -1083,20 +988,18 @@
       }
     });
     
-    // Check file requirements for starred categories
+    // Check file requirements – required if category is selected
     const category = document.getElementById('itemCategory')?.value || '';
-    const starredCategories = [
-      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
-    ];
-    
-    if (starredCategories.includes(category)) {
+    if (category) {
       const files = document.getElementById('fileUpload')?.files || [];
       const fileParent = document.getElementById('fileUpload')?.parentElement;
       
       if (files.length === 0 || (fileParent && fileParent.classList.contains('invalid'))) {
         allValid = false;
       }
+    } else {
+      // No category selected yet – can't be valid
+      allValid = false;
     }
     
     // Update button state
@@ -1127,10 +1030,7 @@
     // Check session and set user info
     const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
     if (userData.phone) {
-      const userPhoneElement = document.getElementById('userPhone');
-    if (userPhoneElement) {
-      userPhoneElement.textContent = userData.phone;
-    }
+      document.getElementById('userPhone').textContent = userData.phone;
       document.getElementById('phone').value = userData.phone;
     } else {
       // Redirect to login if no session
@@ -1365,8 +1265,8 @@
     // Clear file upload error
     const fileError = document.getElementById('invoiceFilesError');
     if (fileError) {
-      fileError.textContent = 'Optional: Upload invoice/documents if available';
-      fileError.style.color = '#888';
+      fileError.textContent = 'Required: At least 1 invoice/document required';
+      fileError.style.color = '#ff4444';
       fileError.style.display = 'block';
     }
   }
