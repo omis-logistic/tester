@@ -520,13 +520,16 @@
         container.innerHTML = '<div class="empty-state">No invoice data found</div>';
         return;
       }
-
+    
       const formattedDate = formatBillingDate(paymentData.timestamp);
       const formattedPrice = formatCurrencyBND(paymentData.price);
+      
+      // Use billing data if available, otherwise fallback to payment data or defaults
       const trackingDetails = billingData?.trackingDetails || 'No tracking details available';
       const location = billingData?.location || 'N/A';
       const code = billingData?.code || paymentData.code || 'N/A';
-
+      const name = paymentData.name || billingData?.name || 'N/A';
+    
       container.innerHTML = `
         <div class="invoice-content">
           <div class="detail-grid">
@@ -554,7 +557,7 @@
               <h3>Customer Information</h3>
               <div class="detail-item">
                 <span class="detail-label">Customer Name:</span>
-                <span class="detail-value">${paymentData.name || 'N/A'}</span>
+                <span class="detail-value">${name}</span>
               </div>
               <div class="detail-item">
                 <span class="detail-label">Payment Status:</span>
