@@ -1194,38 +1194,32 @@ function updateFieldValidationState(fieldElement, isValid, message) {
 }
 
 function setupRealTimeValidationListeners() {
-  console.log('Setting up real-time validation listeners...');
-  
-  const fields = [
-    'trackingNumber',
-    'nameOnParcel', 
-    'itemDescription',
-    'quantity',
-    'price',
-    'collectionPoint',
-    'itemCategory'
-  ];
-  
-  fields.forEach(fieldId => {
-    const field = document.getElementById(fieldId);
-    if (field) {
-      field.addEventListener('input', () => validateFieldInRealTime(field));
-      field.addEventListener('change', () => validateFieldInRealTime(field));
-      
-      // For select fields, validate on change
-      if (field.tagName === 'SELECT') {
-        field.addEventListener('change', () => {
-          validateFieldInRealTime(field);
-          checkCategoryRequirements(); // Also check file requirements
-        });
-      }
+  const form = document.getElementById('declarationForm');
+  if (!form) return;
+
+  // Listen for input events on the whole form
+  form.addEventListener('input', function(e) {
+    const field = e.target;
+    // Only validate fields that matter
+    if (field.id && ['trackingNumber', 'nameOnParcel', 'itemDescription', 
+                     'quantity', 'price', 'collectionPoint', 'itemCategory'].includes(field.id)) {
+      validateFieldInRealTime(field);
     }
   });
-  
-  // File upload validation
-  const fileUpload = document.getElementById('fileUpload');
-  if (fileUpload) {
-    fileUpload.addEventListener('change', validateFilesInRealTime);
+
+  // Also listen for change events (for selects and file inputs)
+  form.addEventListener('change', function(e) {
+    const field = e.target;
+    if (field.id && ['trackingNumber', 'nameOnParcel', 'itemDescription', 
+                     'quantity', 'price', 'collectionPoint', 'itemCategory'].includes(field.id)) {
+      validateFieldInRealTime(field);
+    }
+  });
+
+  // File input still needs its own listener (it's not part of the form events)
+  const fileInput = document.getElementById('fileUpload');
+  if (fileInput) {
+    fileInput.addEventListener('change', validateFilesInRealTime);
   }
 }
 
