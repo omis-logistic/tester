@@ -207,6 +207,32 @@ function showSuccessMessage() {
   setTimeout(() => confetti.remove(), 3000);
 }
 
+function clearValidationState() {
+  // Clear all validation messages
+  document.querySelectorAll('.validation-message').forEach(el => {
+    el.textContent = '';
+    el.style.display = 'none';
+    el.style.color = ''; // reset to default
+  });
+
+  // Remove validation classes from input groups
+  document.querySelectorAll('.input-group').forEach(group => {
+    group.classList.remove('valid', 'invalid');
+  });
+
+  // Reset input borders to default
+  document.querySelectorAll('input, select, textarea').forEach(field => {
+    field.style.borderColor = ''; // let CSS handle default
+  });
+
+  // Special handling for file input error
+  const fileError = document.getElementById('invoiceFilesError');
+  if (fileError) {
+    fileError.textContent = ''; // will be set by checkCategoryRequirements
+    fileError.style.display = 'none';
+  }
+}
+
 function resetForm() {
   const form = document.getElementById('declarationForm');
   if (!form) return;
@@ -222,23 +248,25 @@ function resetForm() {
     }
   });
 
-  // Preserve phone number styling
+  // Preserve phone styling (optional)
   const phoneField = document.getElementById('phone');
   if (phoneField) {
     phoneField.style.backgroundColor = '#2a2a2a';
     phoneField.style.color = '#ffffff';
   }
 
-  // Trigger validation after reset
-  setTimeout(() => {
-    if (typeof runInitialValidation === 'function') {
-      runInitialValidation();
-    }
-    // Also check category requirements
-    if (typeof checkCategoryRequirements === 'function') {
-      checkCategoryRequirements();
-    }
-  }, 100);
+  // Reset validation UI without marking fields as errors
+  clearValidationState();
+
+  // Re-run category requirements to update file help text (now empty category)
+  if (typeof checkCategoryRequirements === 'function') {
+    checkCategoryRequirements();
+  }
+
+  // Update submit button state (should be disabled because fields are empty)
+  if (typeof updateSubmitButton === 'function') {
+    updateSubmitButton();
+  }
 }
 
 // ================= ENHANCED SUBMISSION SYSTEM =================
