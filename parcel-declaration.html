@@ -1019,40 +1019,8 @@
     }
 
     initRealTimeValidation();
-    setupFieldValidations();
     checkCategoryRequirements();
   });
-
-  function setupFieldValidations() {
-    const fields = [
-      'trackingNumber',
-      'nameOnParcel',
-      'itemDescription',
-      'quantity',
-      'price',
-      'collectionPoint',
-      'itemCategory'
-    ];
-    
-    fields.forEach(fieldId => {
-      const field = document.getElementById(fieldId);
-      if (field) {
-        const newField = field.cloneNode(true);
-        field.parentNode.replaceChild(newField, field);
-        
-        newField.addEventListener('input', () => {
-          if (typeof validateFieldInRealTime === 'function') {
-            validateFieldInRealTime(newField);
-          }
-        });
-        newField.addEventListener('change', () => {
-          if (typeof validateFieldInRealTime === 'function') {
-            validateFieldInRealTime(newField);
-          }
-        });
-      }
-    });
-  }
 
   function handleFileSelection(event) {
     const fileInput = event.target;
