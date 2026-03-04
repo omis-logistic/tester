@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Login - ZA RIZQ Enterprise</title>
+  <title>Login - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Mobile-first styles */
@@ -135,15 +135,14 @@
 </head>
 <body>
   <div class="login-page">
-    <h1 class="login-header">ZA RIZQ ENTERPRISE</h1>
+    <h1 class="login-header">CAHAYA AZ ZAHRA ENTERPRISE</h1>
     
     <div class="login-container">
       <div class="input-group">
-        <input type="text" 
+        <input type="tel" 
                id="phone" 
-               placeholder="Phone Number or User ID"
-               pattern="^(673\d{7,}|60\d{9,}|Z\d{4})$" 
-               inputmode="text"
+               placeholder="Phone Number"
+               pattern="^(673\d{7,}|60\d{9,})$" 
                required>
       </div>
       
@@ -187,15 +186,11 @@
       spinner.style.display = 'inline-block';
       loginText.textContent = 'Processing...';
 
-      const identifier = document.getElementById('phone').value.trim();
+      const phone = document.getElementById('phone').value.trim();
       const password = document.getElementById('password').value;
 
-      // Validate: either phone format or user ID (Z followed by 4 digits)
-      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIDRegex = /^Z\d{4}$/i;
-      
-      if (!phoneRegex.test(identifier) && !userIDRegex.test(identifier)) {
-        showError('Invalid phone number or user ID format');
+      if (!validatePhone(phone)) {
+        showError('Invalid phone number format');
         resetLoginButton(btn, spinner, loginText, originalText);
         return;
       }
@@ -205,7 +200,7 @@
       
       // EXACTLY like Mark 1 - with crossorigin attribute
       script.crossOrigin = 'anonymous';
-      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(identifier)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
+      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
       window[callbackName] = (response) => {
         // Restore button state
@@ -216,8 +211,7 @@
           sessionStorage.setItem('userData', JSON.stringify({
             phone: response.phone,
             email: response.email,
-            tempPassword: response.tempPassword,
-            userID: response.userID   // include user ID for later use
+            tempPassword: response.tempPassword
           }));
           localStorage.setItem('lastActivity', Date.now());
           
@@ -269,12 +263,6 @@
       }
     });
     
-    // ======== NEW: Auto-capitalize user ID ========
-    document.getElementById('phone').addEventListener('input', function(e) {
-      // Convert to uppercase as the user types (helps with user ID)
-      this.value = this.value.toUpperCase();
-    });
-    
     function showRegistration() {
       safeRedirect('register.html');
     }
@@ -283,11 +271,10 @@
       safeRedirect('forgot-password.html');
     }
 
-    // EXACT Mark 1 validation function (updated to accept user ID)
+    // EXACT Mark 1 validation function
     function validatePhone(phone) {
-      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIDRegex = /^Z\d{4}$/i;
-      return phoneRegex.test(phone) || userIDRegex.test(phone);
+      const regex = /^(673\d{7,}|60\d{9,})$/;
+      return regex.test(phone);
     }
 
     // EXACT Mark 1 error display
