@@ -6,7 +6,7 @@
   <meta name="format-detection" content="telephone=no">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <title>Parcel Declaration - ZA RIZQI Enterprise</title>
+  <title>Parcel Declaration - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Safari-specific fixes */
@@ -186,7 +186,7 @@
       background-color: rgba(0, 200, 81, 0.05) !important;
     }
     
-    /* Clean form help text - NO grey boxes or borders */
+    /* Clean form help text */
     .form-help {
       color: #888 !important;
       font-size: 0.85em !important;
@@ -307,6 +307,83 @@
       color: #888;
       text-align: center;
       padding: 20px;
+    }
+
+    /* ===== SUCCESS MODAL STYLES ===== */
+    .modal {
+      display: none;
+      position: fixed;
+      z-index: 10000;
+      left: 0;
+      top: 0;
+      width: 100%;
+      height: 100%;
+      overflow: auto;
+      background-color: rgba(0,0,0,0.8);
+      backdrop-filter: blur(5px);
+    }
+
+    .modal-content {
+      background-color: var(--dark-bg);
+      margin: 15% auto;
+      padding: 2rem;
+      border: 2px solid var(--gold);
+      border-radius: 10px;
+      width: 90%;
+      max-width: 500px;
+      color: var(--text-light);
+      position: relative;
+      box-shadow: 0 0 30px var(--gold);
+      animation: fadeIn 0.3s ease-out;
+    }
+
+    .close-modal {
+      color: #aaa;
+      float: right;
+      font-size: 28px;
+      font-weight: bold;
+      cursor: pointer;
+      position: absolute;
+      right: 15px;
+      top: 10px;
+      transition: color 0.3s;
+    }
+
+    .close-modal:hover,
+    .close-modal:focus {
+      color: var(--gold);
+      text-decoration: none;
+    }
+
+    #modalTrackingNumber {
+      font-weight: bold;
+      color: var(--gold);
+      font-size: 1.2em;
+      word-break: break-all;
+    }
+
+    .modal-close-btn {
+      margin-top: 20px;
+      width: 100%;
+      background: var(--gold);
+      color: var(--dark-bg);
+      border: none;
+      padding: 12px;
+      font-weight: bold;
+      border-radius: 5px;
+      cursor: pointer;
+      transition: opacity 0.3s;
+    }
+
+    .modal-close-btn:hover {
+      opacity: 0.9;
+    }
+
+    #modalTrackLink {
+      color: var(--gold);
+      text-decoration: underline;
+      font-weight: bold;
+      cursor: pointer;
     }
   </style>
 </head>
@@ -443,32 +520,71 @@
         <select id="collectionPoint" name="collectionPoint" required>
           <option value="">-- Select Collection Point --</option>
           <option value="Rimba">Rimba</option>
-          <option value="Sengkurong">Sengkurong</option>
+          <option value="Bengkurong">Bengkurong</option>
         </select>
         <span id="collectionPointError" class="validation-message"></span>
       </div>
 
-      <!-- ========== UPDATED ITEM CATEGORY (NEW LIST) ========== -->
+      <!-- Item Category -->
       <div class="input-group">
         <label for="itemCategory" class="required">Item Category:</label>
         <select id="itemCategory" name="itemCategory" required>
           <option value="">-- Select Category --</option>
-          <option value="Apparels">Apparels</option>
-          <option value="Bags">Bags</option>
+          <option value="Accessories/Jewellery">Accessories/Jewellery</option>
+          <option value="Baby Appliances">Baby Appliances</option>
+          <option value="Bag">Bag</option>
           <option value="Car Parts/Accessories">Car Parts/Accessories</option>
-          <option value="Cosmetics">Cosmetics</option>
-          <option value="Electrical Goods">Electrical Goods</option>
-          <option value="Footwear">Footwear</option>
-          <option value="Food">Food</option>
-          <option value="Furniture">Furniture</option>
-          <option value="Gadgets">Gadgets</option>
+          <option value="Carpets/Mat">Carpets/Mat</option>
+          <option value="Clothing">Clothing</option>
+          <option value="Computer Accessories">Computer Accessories</option>
+          <option value="Cordless">Cordless</option>
+          <option value="Decorations">Decorations</option>
+          <option value="Disposable Pad/Mask">Disposable Pad/Mask</option>
+          <option value="Electrical Appliances">Electrical Appliances</option>
+          <option value="Fabric">Fabric</option>
+          <option value="Fashion Accessories">Fashion Accessories</option>
+          <option value="Fishing kits/Accessories">Fishing kits/Accessories</option>
+          <option value="Footware Shoes/Slippers">Footware Shoes/Slippers</option>
+          <option value="Game/Console/Board">Game/Console/Board</option>
+          <option value="Hand Tools">Hand Tools</option>
+          <option value="Handphone Casing">Handphone Casing</option>
+          <option value="Headgear">Headgear</option>
+          <option value="Home Fitting/Furniture">Home Fitting/Furniture</option>
           <option value="Kitchenware">Kitchenware</option>
-          <option value="Plastics">Plastics</option>
+          <option value="LED/Lamp">LED/Lamp</option>
+          <option value="Matters/Bedding">Matters/Bedding</option>
+          <option value="Mix Item">Mix Item</option>
+          <option value="Motor Part/Accessories">Motor Part/Accessories</option>
+          <option value="Perfume">Perfume</option>
+          <option value="Phone Accessories">Phone Accessories</option>
+          <option value="Plastic Article">Plastic Article</option>
+          <option value="RC Parts/Accessories">RC Parts/Accessories</option>
+          <option value="Rubber">Rubber</option>
+          <option value="Seluar">Seluar</option>
+          <option value="Socks">Socks</option>
+          <option value="Sport Equipment">Sport Equipment</option>
           <option value="Stationery">Stationery</option>
-          <option value="Supplement">Supplement</option>
-          <option value="Others">Others</option>
+          <option value="Stickers">Stickers</option>
+          <option value="Storage">Storage</option>
+          <option value="Telkong">Telkong</option>
+          <option value="Toys">Toys</option>
+          <option value="Tudong">Tudong</option>
+          <option value="Tumbler">Tumbler</option>
+          <option value="Underwear">Underwear</option>
+          <option value="Watch & Accessories">Watch & Accessories</option>
+          <option value="Wire, Adapter & Plug">Wire, Adapter & Plug</option>
+          <!-- Starred Categories (Require Invoice) -->
+          <optgroup label="―― Required Invoice ――">
+            <option value="*Books">* Books</option>
+            <option value="*Cosmetics/Skincare/Bodycare">* Cosmetics/Skincare/Bodycare</option>
+            <option value="*Food Beverage/Drinks">* Food Beverage/Drinks</option>
+            <option value="*Gadgets">* Gadgets</option>
+            <option value="*Oil Ointment">* Oil Ointment</option>
+            <option value="*Supplement">* Supplement</option>
+            <option value="*Others">* Others (with invoice)</option>
+          </optgroup>
         </select>
-        <small class="form-help">File upload is required for all categories</small>
+        <small class="form-help">Starred (*) categories require invoice upload</small>
         <span id="itemCategoryError" class="validation-message"></span>
       </div>
 
@@ -484,10 +600,10 @@
           style="display: block; width: 100%; padding: 12px; margin-top: 5px;"
         >
         <small id="fileHelp" class="form-text">
-          <span id="fileRequirement">Required: </span>JPEG, PNG, PDF (Max 5MB each)
+          <span id="fileRequirement">Optional: </span>JPEG, PNG, PDF (Max 5MB each)
         </small>
         
-        <span id="invoiceFilesError" class="validation-message" style="color: #ff4444;">Required: At least 1 invoice/document required</span>
+        <span id="invoiceFilesError" class="validation-message" style="color: #888;">Optional: Upload invoice/documents if available</span>
       </div>
 
       <!-- Form Buttons -->
@@ -526,7 +642,7 @@
       <h3>📋 Important Notes:</h3>
       <ul>
         <li>Ensure tracking number matches your shipment exactly</li>
-        <li>File upload is now mandatory for all categories</li>
+        <li>For starred (*) categories, invoice upload is mandatory</li>
         <li>You can save as draft and return later</li>
         <li>Submit once per parcel/shipment</li>
       </ul>
@@ -541,7 +657,24 @@
     </div>
   </div>
 
-<!-- Safari-specific script initialization (kept for compatibility) -->
+  <!-- Success Modal -->
+  <div id="successModal" class="modal" style="display: none;">
+    <div class="modal-content">
+      <span class="close-modal">&times;</span>
+      <h2 style="color: var(--gold);">✅ Data is submitted</h2>
+      <p>Your parcel declaration has been processed.</p>
+      <p><strong>Tracking Number:</strong></p>
+      <p id="modalTrackingNumber" style="font-size: 1.4rem;"></p>
+      <p>
+        <a href="#" id="modalTrackLink" target="_blank" style="color: var(--gold); font-weight: bold;">
+          Click HERE to check your submission
+        </a>, if not available please resubmit again.
+      </p>
+      <button class="modal-close-btn gold-button">Close</button>
+    </div>
+  </div>
+
+<!-- Safari-specific script initialization -->
 <script>
   // Detect Safari browser
   function isSafari() {
@@ -593,13 +726,927 @@
   updateNetworkStatus();
 </script>
 
-<!-- Load the main application script (contains all validation, submission, draft logic) -->
 <script src="scripts/app.js"></script>
+<script>
+  // ========== REAL-TIME VALIDATION SYSTEM ==========
+  function initRealTimeValidation() {
+    console.log('Initializing real-time validation...');
+    
+    // Run initial validation on page load
+    setTimeout(() => {
+      console.log('Running initial page load validation...');
+      runInitialValidation();
+      
+      // Update validation on every input
+      setupRealTimeValidationListeners();
+    }, 100);
+  }
 
-<!-- 
-  The large inline validation script block has been removed.
-  All real-time validation is now handled by app.js via event delegation.
-  This ensures error messages appear correctly even after form reset.
--->
+  function runInitialValidation() {
+    console.log('Running initial validation for all fields...');
+    
+    const fieldsToValidate = [
+      { id: 'trackingNumber', name: 'Tracking Number', type: 'tracking' },
+      { id: 'nameOnParcel', name: 'Name on Parcel', type: 'name' },
+      { id: 'itemDescription', name: 'Item Description', type: 'description' },
+      { id: 'quantity', name: 'Quantity', type: 'quantity' },
+      { id: 'price', name: 'Price', type: 'price' },
+      { id: 'collectionPoint', name: 'Collection Point', type: 'select' },
+      { id: 'itemCategory', name: 'Item Category', type: 'select' }
+    ];
+    
+    // Validate each field
+    fieldsToValidate.forEach(field => {
+      const fieldElement = document.getElementById(field.id);
+      // Skip if element not found
+      if (!fieldElement) return;
+      
+      const errorElement = document.getElementById(field.id + 'Error') || 
+                          createErrorMessageElement(field.id);
+      
+      let isValid = false;
+      let message = '';
+      
+      switch(field.type) {
+        case 'tracking':
+          isValid = validateTrackingNumberOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
+          break;
+        case 'name':
+          isValid = validateNameOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Minimum 2 characters required';
+          break;
+        case 'description':
+          isValid = validateDescriptionOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Minimum 3 characters required';
+          break;
+        case 'quantity':
+          isValid = validateQuantityOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Must be between 1 and 999';
+          break;
+        case 'price':
+          isValid = validatePriceOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Price must be 0 or greater (0 is allowed)';
+          break;
+        case 'select':
+          isValid = validateSelectOnLoad(fieldElement.value);
+          message = isValid ? '' : 'Please select an option';
+          break;
+      }
+      
+      // Update UI
+      updateFieldValidationState(fieldElement, isValid, message);
+    });
+    
+    // Validate files if required
+    const category = document.getElementById('itemCategory')?.value || '';
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      const files = document.getElementById('fileUpload')?.files || [];
+      if (files.length === 0) {
+        const fileInput = document.getElementById('fileUpload');
+        const fileError = document.getElementById('invoiceFilesError');
+        
+        if (fileInput && fileError) {
+          fileError.textContent = 'Required: At least 1 invoice/document required';
+          fileError.style.color = '#ff4444';
+          fileError.style.display = 'block';
+          fileInput.style.borderColor = '#ff4444';
+          fileInput.parentElement.classList.add('invalid');
+        }
+      }
+    }
+    
+    // Update submit button
+    updateSubmitButton();
+    
+    return true;
+  }
+
+  function validateTrackingNumberOnLoad(value) {
+    return value && /^[A-Za-z0-9\-]{5,}$/.test(value.trim());
+  }
+
+  function validateNameOnLoad(value) {
+    return value && value.trim().length >= 2;
+  }
+
+  function validateDescriptionOnLoad(value) {
+    return value && value.trim().length >= 3;
+  }
+
+  function validateQuantityOnLoad(value) {
+    const num = parseInt(value);
+    return !isNaN(num) && num >= 1 && num <= 999;
+  }
+
+  function validatePriceOnLoad(value) {
+    if (value === '') return false;
+    const num = parseFloat(value);
+    return !isNaN(num) && num >= 0;
+  }
+
+  function validateSelectOnLoad(value) {
+    return value && value !== '';
+  }
+
+  function createErrorMessageElement(fieldId) {
+    const errorSpan = document.createElement('span');
+    errorSpan.id = fieldId + 'Error';
+    errorSpan.className = 'validation-message';
+    
+    const fieldElement = document.getElementById(fieldId);
+    const parent = fieldElement?.parentElement;
+    if (fieldElement && parent) {
+      parent.appendChild(errorSpan);
+    }
+    
+    return errorSpan;
+  }
+
+  function updateFieldValidationState(fieldElement, isValid, message) {
+    const errorElement = document.getElementById(fieldElement.id + 'Error');
+    const parent = fieldElement.parentElement;
+    
+    // Remove existing validation classes
+    parent.classList.remove('valid', 'invalid');
+    
+    if (isValid) {
+      parent.classList.add('valid');
+      if (errorElement) {
+        errorElement.textContent = '';
+        errorElement.style.display = 'none';
+        fieldElement.style.borderColor = '#444';
+      }
+    } else {
+      parent.classList.add('invalid');
+      if (errorElement) {
+        errorElement.textContent = message;
+        errorElement.style.color = '#ff4444';
+        errorElement.style.display = 'block';
+        fieldElement.style.borderColor = '#ff4444';
+      }
+    }
+    
+    // CLEAN styling
+    if (errorElement) {
+      errorElement.style.backgroundColor = 'transparent';
+      errorElement.style.border = 'none';
+      errorElement.style.boxShadow = 'none';
+      errorElement.style.padding = '2px 0';
+    }
+  }
+
+  function setupRealTimeValidationListeners() {
+    console.log('Setting up real-time validation listeners...');
+    
+    const fields = [
+      'trackingNumber',
+      'nameOnParcel', 
+      'itemDescription',
+      'quantity',
+      'price',
+      'collectionPoint',
+      'itemCategory'
+    ];
+    
+    fields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        field.addEventListener('input', () => validateFieldInRealTime(field));
+        field.addEventListener('change', () => validateFieldInRealTime(field));
+        
+        // For select fields, validate on change
+        if (field.tagName === 'SELECT') {
+          field.addEventListener('change', () => {
+            validateFieldInRealTime(field);
+            checkCategoryRequirements();
+          });
+        }
+      }
+    });
+    
+    // File upload validation
+    const fileUpload = document.getElementById('fileUpload');
+    if (fileUpload) {
+      fileUpload.addEventListener('change', validateFilesInRealTime);
+    }
+  }
+
+  function validateFieldInRealTime(field) {
+    const value = field.value;
+    let isValid = false;
+    let message = '';
+    
+    switch(field.id) {
+      case 'trackingNumber':
+        isValid = validateTrackingNumberOnLoad(value);
+        message = isValid ? '' : 'Minimum 5 alphanumeric characters or hyphens';
+        break;
+      case 'nameOnParcel':
+        isValid = validateNameOnLoad(value);
+        message = isValid ? '' : 'Minimum 2 characters required';
+        break;
+      case 'itemDescription':
+        isValid = validateDescriptionOnLoad(value);
+        message = isValid ? '' : 'Minimum 3 characters required';
+        break;
+      case 'quantity':
+        isValid = validateQuantityOnLoad(value);
+        message = isValid ? '' : 'Must be between 1 and 999';
+        break;
+      case 'price':
+        isValid = validatePriceOnLoad(value);
+        message = isValid ? '' : 'Price must be 0 or greater (0 is allowed)';
+        break;
+      case 'collectionPoint':
+      case 'itemCategory':
+        isValid = validateSelectOnLoad(value);
+        message = isValid ? '' : 'Please select an option';
+        break;
+    }
+    
+    updateFieldValidationState(field, isValid, message);
+    updateSubmitButton();
+    
+    // If this is the category field, also check file requirements
+    if (field.id === 'itemCategory') {
+      setTimeout(() => {
+        checkCategoryRequirements();
+      }, 100);
+    }
+  }
+
+    function validateFilesInRealTime() {
+        const fileInput = document.getElementById('fileUpload');
+        const category = document.getElementById('itemCategory')?.value || '';
+        const starredCategories = [
+          '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+          '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+        ];
+        
+        if (!fileInput) return;
+        
+        const errorElement = document.getElementById('invoiceFilesError');
+        // ✅ ADD THIS NULL CHECK
+        if (!errorElement) return;
+        
+        const parent = fileInput.parentElement;
+        
+        parent.classList.remove('valid', 'invalid');
+    
+    if (starredCategories.includes(category)) {
+      const files = fileInput.files;
+      
+      if (files.length === 0) {
+        errorElement.textContent = 'Required: At least 1 invoice/document required';
+        errorElement.style.color = '#ff4444';
+        errorElement.style.display = 'block';
+        parent.classList.add('invalid');
+        fileInput.style.borderColor = '#ff4444';
+      } else {
+        // Validate each file
+        let allValid = true;
+        const MAX_SIZE = 5 * 1024 * 1024;
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          
+          if (!allowedTypes.includes(file.type)) {
+            errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+            allValid = false;
+            break;
+          }
+          
+          if (file.size > MAX_SIZE) {
+            errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+            allValid = false;
+            break;
+          }
+        }
+        
+        if (allValid) {
+          errorElement.textContent = `${files.length} file(s) selected`;
+          errorElement.style.color = '#00C851';
+          parent.classList.add('valid');
+          fileInput.style.borderColor = '#00C851';
+        } else {
+          errorElement.style.color = '#ff4444';
+          parent.classList.add('invalid');
+          fileInput.style.borderColor = '#ff4444';
+        }
+      }
+    } else {
+      // Not required, but validate if files are uploaded
+      const files = fileInput.files;
+      if (files.length > 0) {
+        // Validate each file
+        let allValid = true;
+        const MAX_SIZE = 5 * 1024 * 1024;
+        
+        for (let i = 0; i < files.length; i++) {
+          const file = files[i];
+          const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+          
+          if (!allowedTypes.includes(file.type)) {
+            errorElement.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+            allValid = false;
+            break;
+          }
+          
+          if (file.size > MAX_SIZE) {
+            errorElement.textContent = `File "${file.name}" exceeds 5MB limit`;
+            allValid = false;
+            break;
+          }
+        }
+        
+        if (allValid) {
+          errorElement.textContent = `${files.length} file(s) selected (optional)`;
+          errorElement.style.color = '#888';
+          parent.classList.add('valid');
+          fileInput.style.borderColor = '#00C851';
+        } else {
+          errorElement.style.color = '#ff4444';
+          parent.classList.add('invalid');
+          fileInput.style.borderColor = '#ff4444';
+        }
+      } else {
+        errorElement.textContent = 'Optional: Upload invoice/documents if available';
+        errorElement.style.color = '#888';
+        errorElement.style.display = 'block';
+        fileInput.style.borderColor = '#444';
+      }
+    }
+    
+    updateSubmitButton();
+  }
+
+  function checkCategoryRequirements() {
+    const category = document.getElementById('itemCategory')?.value || '';
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    const fileInput = document.getElementById('fileUpload');
+    const fileHelp = document.getElementById('fileHelp');
+    const fileRequirement = document.getElementById('fileRequirement');
+    
+    if (!fileInput || !fileHelp) return;
+    
+    if (starredCategories.includes(category)) {
+      // Show as required
+      if (fileRequirement) {
+        fileRequirement.textContent = 'Required: ';
+        fileRequirement.style.color = '#ff4444';
+      }
+      fileHelp.style.color = '#ff4444';
+      fileHelp.style.fontWeight = 'bold';
+      
+      // Validate immediately
+      setTimeout(() => {
+        validateFilesInRealTime();
+      }, 100);
+    } else {
+      // Show as optional
+      if (fileRequirement) {
+        fileRequirement.textContent = 'Optional: ';
+        fileRequirement.style.color = '#888';
+      }
+      fileHelp.style.color = '#888';
+      fileHelp.style.fontWeight = 'normal';
+      
+      // Clear any error state
+      const errorElement = document.getElementById('invoiceFilesError');
+      const parent = fileInput.parentElement;
+      
+      if (errorElement) {
+        errorElement.textContent = 'Optional: Upload invoice/documents if available';
+        errorElement.style.color = '#888';
+      }
+      
+      parent.classList.remove('invalid');
+      fileInput.style.borderColor = '#444';
+    }
+    
+    updateSubmitButton();
+  }
+
+  function updateSubmitButton() {
+    const submitBtn = document.getElementById('submitBtn');
+    if (!submitBtn) return;
+    
+    // Check each field's validation state
+    const fields = [
+      'trackingNumber',
+      'nameOnParcel',
+      'itemDescription',
+      'quantity',
+      'price',
+      'collectionPoint',
+      'itemCategory'
+    ];
+    
+    let allValid = true;
+    
+    fields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      const parent = field?.parentElement;
+      
+      if (!field) {
+        allValid = false;
+        return;
+      }
+      
+      // Check if field has invalid class or is empty
+      if (parent && parent.classList.contains('invalid')) {
+        allValid = false;
+        return;
+      }
+      
+      // Check field value
+      if (field.tagName === 'SELECT') {
+        if (!field.value) allValid = false;
+      } else if (field.type === 'number') {
+        if (field.value === '') allValid = false;
+      } else {
+        if (!field.value.trim()) allValid = false;
+      }
+    });
+    
+    // Check file requirements for starred categories
+    const category = document.getElementById('itemCategory')?.value || '';
+    const starredCategories = [
+      '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
+      '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
+    ];
+    
+    if (starredCategories.includes(category)) {
+      const files = document.getElementById('fileUpload')?.files || [];
+      const fileParent = document.getElementById('fileUpload')?.parentElement;
+      
+      if (files.length === 0 || (fileParent && fileParent.classList.contains('invalid'))) {
+        allValid = false;
+      }
+    }
+    
+    // Update button state
+    submitBtn.disabled = !allValid;
+    
+    // Update button text based on state
+    const submitText = document.getElementById('submitText');
+    if (submitText) {
+      submitText.textContent = allValid ? 'Submit Declaration' : 'Please fix errors above';
+    }
+    
+    // Visual feedback
+    if (allValid) {
+      submitBtn.style.background = 'linear-gradient(135deg, #d4af37, #b8941f)';
+      submitBtn.style.cursor = 'pointer';
+      submitBtn.style.opacity = '1';
+    } else {
+      submitBtn.style.background = '#555';
+      submitBtn.style.cursor = 'not-allowed';
+      submitBtn.style.opacity = '0.7';
+    }
+  }
+
+  // ========== FORM-SPECIFIC FUNCTIONS ==========
+  
+  // Form-specific initialization
+  document.addEventListener('DOMContentLoaded', function() {
+    // Check session and set user info
+    const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+    if (userData.phone) {
+      const phoneField = document.getElementById('phone');
+      if (phoneField) phoneField.value = userData.phone;
+    } else {
+      // Redirect to login if no session
+      window.location.href = 'login.html';
+      return;
+    }
+
+    // Load saved drafts
+    loadDrafts();
+
+    // Initialize file upload preview
+    const fileInput = document.getElementById('fileUpload');
+    if (fileInput) {
+      fileInput.addEventListener('change', handleFileSelection);
+    }
+
+    // Initialize real-time validation system
+    initRealTimeValidation();
+    
+    // Set up individual field validators
+    setupFieldValidations();
+
+    // Check category requirements on load
+    checkCategoryRequirements();
+
+    // === MODAL CLOSE HANDLERS ===
+    const modal = document.getElementById('successModal');
+    if (modal) {
+      const closeBtn = modal.querySelector('.close-modal');
+      const closeButton = modal.querySelector('.modal-close-btn');
+      
+      closeBtn.onclick = closeSuccessModal;
+      closeButton.onclick = closeSuccessModal;
+      
+      window.onclick = function(event) {
+        if (event.target == modal) {
+          closeSuccessModal();
+        }
+      };
+    }
+  });
+
+  function setupFieldValidations() {
+    // These are handled by the real-time validation system
+    const fields = [
+      'trackingNumber',
+      'nameOnParcel',
+      'itemDescription',
+      'quantity',
+      'price',
+      'collectionPoint',
+      'itemCategory'
+    ];
+    
+    fields.forEach(fieldId => {
+      const field = document.getElementById(fieldId);
+      if (field) {
+        // Clear existing listeners by cloning
+        const newField = field.cloneNode(true);
+        field.parentNode.replaceChild(newField, field);
+        
+        // Add new listeners
+        newField.addEventListener('input', () => {
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(newField);
+          }
+        });
+        newField.addEventListener('change', () => {
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(newField);
+          }
+        });
+      }
+    });
+  }
+
+  // Handle file selection
+  function handleFileSelection(event) {
+    const fileInput = event.target;
+    const files = fileInput.files;
+    const errorEl = document.getElementById('invoiceFilesError');
+    
+    // Reset error message
+    if (errorEl) errorEl.textContent = '';
+    
+    if (files.length === 0) {
+      updateSubmitButton();
+      return;
+    }
+    
+    // Validate files
+    const MAX_SIZE = 5 * 1024 * 1024; // 5MB
+    let hasError = false;
+    
+    for (let i = 0; i < files.length; i++) {
+      const file = files[i];
+      
+      // Check file type
+      const allowedTypes = ['image/jpeg', 'image/png', 'application/pdf'];
+      if (!allowedTypes.includes(file.type)) {
+        errorEl.textContent = `File "${file.name}" must be JPG, PNG, or PDF`;
+        hasError = true;
+        break;
+      }
+      
+      // Check file size
+      if (file.size > MAX_SIZE) {
+        errorEl.textContent = `File "${file.name}" exceeds 5MB limit`;
+        hasError = true;
+        break;
+      }
+    }
+    
+    if (hasError) {
+      fileInput.value = '';
+    }
+    
+    updateSubmitButton();
+  }
+
+  // Save form as draft
+  function saveDraft() {
+    const form = document.getElementById('declarationForm');
+    const formData = new FormData(form);
+    const draft = {};
+    
+    // Convert FormData to object
+    for (let [key, value] of formData.entries()) {
+      if (key !== 'files') {
+        draft[key] = value;
+      }
+    }
+    
+    // Get files info
+    const files = document.getElementById('fileUpload')?.files || [];
+    if (files.length > 0) {
+      draft.filesCount = files.length;
+      draft.filesInfo = Array.from(files).map(file => ({
+        name: file.name,
+        size: file.size,
+        type: file.type
+      }));
+    }
+    
+    // Add timestamp
+    draft.timestamp = new Date().toISOString();
+    draft.id = 'draft_' + Date.now();
+    
+    // Save to localStorage
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.push(draft);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    
+    // Show success message
+    showMessage('Draft saved successfully!', 'success');
+    loadDrafts();
+  }
+
+  // Load saved drafts
+  function loadDrafts() {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draftCount = document.getElementById('draftCount');
+    const draftsList = document.getElementById('draftsList');
+    
+    if (draftCount) draftCount.textContent = drafts.length;
+    
+    if (draftsList) {
+      if (drafts.length === 0) {
+        draftsList.innerHTML = '<p class="empty-drafts">No saved drafts</p>';
+        return;
+      }
+      
+      let html = '<div class="drafts-container">';
+      drafts.forEach((draft, index) => {
+        html += `
+          <div class="draft-item">
+            <div class="draft-info">
+              <strong>${draft.trackingNumber || 'Untitled'}</strong>
+              <small>${new Date(draft.timestamp).toLocaleDateString()}</small>
+            </div>
+            <div class="draft-actions">
+              <button onclick="loadDraftFromList(${index})" class="small-btn">Load</button>
+              <button onclick="deleteDraft(${index})" class="small-btn delete">Delete</button>
+            </div>
+          </div>
+        `;
+      });
+      html += '</div>';
+      draftsList.innerHTML = html;
+    }
+  }
+
+  // Load draft into form
+  function loadDraftFromList(index) {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    const draft = drafts[index];
+    
+    if (!draft) return;
+    
+    // Clear all validation errors first
+    clearAllValidationErrors();
+    
+    // Populate form fields
+    Object.keys(draft).forEach(key => {
+      if (key !== 'timestamp' && key !== 'id' && key !== 'filesCount' && key !== 'filesInfo') {
+        const field = document.getElementById(key);
+        if (field) {
+          field.value = draft[key];
+          
+          // Trigger validation for each field after setting value
+          if (typeof validateFieldInRealTime === 'function') {
+            validateFieldInRealTime(field);
+          }
+        }
+      }
+    });
+    
+    // Update UI
+    if (typeof checkCategoryRequirements === 'function') {
+      checkCategoryRequirements();
+    }
+    
+    if (typeof updateSubmitButton === 'function') {
+      updateSubmitButton();
+    }
+    
+    showMessage('Draft loaded!', 'success');
+  }
+
+  // Clear all validation errors
+  function clearAllValidationErrors() {
+    const errorElements = document.querySelectorAll('.validation-message');
+    errorElements.forEach(element => {
+      if (element) {
+        element.textContent = '';
+        element.style.display = 'none';
+        element.style.color = '';
+      }
+    });
+    
+    // Clear field borders
+    const fields = document.querySelectorAll('input, select, textarea');
+    fields.forEach(field => {
+      if (field) {
+        field.style.borderColor = '';
+        const parent = field.parentElement;
+        if (parent) {
+          parent.classList.remove('invalid', 'valid');
+        }
+      }
+    });
+    
+    // Clear file upload error
+    const fileError = document.getElementById('invoiceFilesError');
+    if (fileError) {
+      fileError.textContent = 'Optional: Upload invoice/documents if available';
+      fileError.style.color = '#888';
+      fileError.style.display = 'block';
+    }
+  }
+
+  // Delete draft
+  function deleteDraft(index) {
+    const drafts = JSON.parse(localStorage.getItem('parcelDrafts') || '[]');
+    drafts.splice(index, 1);
+    localStorage.setItem('parcelDrafts', JSON.stringify(drafts));
+    loadDrafts();
+    showMessage('Draft deleted', 'info');
+  }
+
+  // Toggle drafts visibility
+  function toggleDrafts() {
+    const draftsList = document.getElementById('draftsList');
+    if (draftsList) {
+      if (draftsList.style.display === 'none') {
+        draftsList.style.display = 'block';
+      } else {
+        draftsList.style.display = 'none';
+      }
+    }
+  }
+
+  // Show message
+  function showMessage(text, type = 'info') {
+    const messageEl = document.getElementById('statusMessage');
+    const errorEl = document.getElementById('errorMessage');
+    
+    // Clear any existing error messages
+    if (errorEl) {
+      errorEl.style.display = 'none';
+      errorEl.textContent = '';
+    }
+    
+    if (!messageEl) return;
+    
+    messageEl.textContent = text;
+    messageEl.className = 'message ' + type;
+    messageEl.style.display = 'block';
+    
+    setTimeout(() => {
+      messageEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // Show error
+  function showError(text) {
+    const messageEl = document.getElementById('statusMessage');
+    const errorEl = document.getElementById('errorMessage');
+    
+    // Clear any existing success messages
+    if (messageEl) {
+      messageEl.style.display = 'none';
+      messageEl.textContent = '';
+    }
+    
+    if (!errorEl) return;
+    
+    errorEl.textContent = text;
+    errorEl.style.display = 'block';
+    
+    setTimeout(() => {
+      errorEl.style.display = 'none';
+    }, 5000);
+  }
+
+  // ========== SUCCESS MODAL FUNCTIONS ==========
+  function showSuccessModal(trackingNumber) {
+    const modal = document.getElementById('successModal');
+    const trackingSpan = document.getElementById('modalTrackingNumber');
+    const link = document.getElementById('modalTrackLink');
+    
+    trackingSpan.textContent = trackingNumber;
+    link.href = `track-parcel.html?tracking=${encodeURIComponent(trackingNumber)}`;
+    modal.style.display = 'block';
+  }
+
+  function closeSuccessModal() {
+    document.getElementById('successModal').style.display = 'none';
+  }
+
+  // ========== OVERRIDE THE SUBMISSION HANDLER ==========
+  // Save the original if it exists (from app.js) and replace with enhanced version
+  const originalHandleParcelSubmission = window.handleParcelSubmission;
+
+  window.handleParcelSubmission = async function(e) {
+    e.preventDefault();
+    
+    // Show global loading spinner
+    const spinnerOverlay = document.getElementById('globalSpinnerOverlay');
+    if (spinnerOverlay) spinnerOverlay.style.display = 'flex';
+
+    const form = e.target;
+    try {
+      const formData = new FormData(form);
+      const files = Array.from(formData.getAll('files'));
+      
+      if (files.length === 0) {
+        throw new Error('At least one file is required');
+      }
+      
+      const processedFiles = await Promise.all(
+        files.map(async file => ({
+          name: file.name,
+          type: file.type,
+          data: await readFileAsBase64(file)
+        }))
+      );
+
+      const rawTracking = formData.get('trackingNumber').trim().toUpperCase();
+      const trimmedTracking = trimTrackingNumber(rawTracking);
+
+      const payload = {
+        trackingNumber: trimmedTracking,
+        nameOnParcel: formData.get('nameOnParcel').trim(),
+        phone: document.getElementById('phone').value,
+        itemDescription: formData.get('itemDescription').trim(),
+        quantity: formData.get('quantity'),
+        price: formData.get('price'),
+        collectionPoint: formData.get('collectionPoint'),
+        itemCategory: formData.get('itemCategory'),
+        files: processedFiles,
+        remark: formData.get('remarks')?.trim() || ''
+      };
+
+      const response = await fetch(CONFIG.PROXY_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
+      });
+
+      const result = await response.json();
+      
+      if (result.success) {
+        // Show the success modal with tracking number
+        showSuccessModal(trimmedTracking);
+        
+        // Reset form (except phone)
+        resetForm();
+        
+        // Optionally also show a small inline success message (fallback)
+        showMessage('Submission successful!', 'success');
+      } else {
+        showError(result.error || 'Submission failed. Please try again.');
+      }
+    } catch (error) {
+      console.error('Submission error:', error);
+      showError(error.message || 'An error occurred during submission.');
+    } finally {
+      // Hide global spinner
+      if (spinnerOverlay) spinnerOverlay.style.display = 'none';
+    }
+  };
+
+  // Make functions available globally
+  window.loadDrafts = loadDrafts;
+  window.loadDraftFromList = loadDraftFromList;
+  window.deleteDraft = deleteDraft;
+  window.toggleDrafts = toggleDrafts;
+  window.saveDraft = saveDraft;
+  window.clearAllValidationErrors = clearAllValidationErrors;
+  window.showSuccessModal = showSuccessModal;
+  window.closeSuccessModal = closeSuccessModal;
+</script>
 </body>
 </html>
