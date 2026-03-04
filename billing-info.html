@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Billing Info - ZA RIZQ Enterprise</title>
+  <title>Billing Info - Cahaya Az Zahra Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
   .billing-page { 
@@ -541,40 +541,6 @@
       border: 1px solid #000;
     }
   }
-
-    .loading-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0,0,0,0.85);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      flex-direction: column;
-      gap: 1rem;
-    }
-    
-    .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(197, 160, 71, 0.3);
-      border-top: 5px solid var(--gold);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-    }
-    
-    .loading-text {
-      color: var(--gold);
-      font-size: 1.2rem;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
   </style>
 </head>
 <body>
@@ -724,12 +690,6 @@
           
           paidOrders = response.success ? (response.paidOrders || []) : [];
           console.log('Payment status loaded:', paidOrders.length, 'paid orders');
-          console.log('Paid orders list:', paidOrders);
-          
-          // Also log a few receipt numbers from billing data
-          if (billingData && billingData.length) {
-            console.log('Sample receipt numbers from billing:', billingData.slice(0,5).map(item => item.receipt));
-          }
           
           // Render the data
           renderBillingSections(billingData);
@@ -846,7 +806,7 @@
                       (isPaid ? 
                         `<a href="invoice.html?orderNumber=${receiptNumber}" 
                            class="pay-now-btn">Paid</a>` :
-                        `<a href="https://omis-logistic.github.io/zarizq-paymentgateway/index.html?orderNumber=${receiptNumber}" 
+                        `<a href="https://omis-logistic.github.io/caz-paymentgateway/index.html?orderNumber=${receiptNumber}" 
                            class="pay-now-btn" target="_blank">Pay Now</a>`
                       ) :
                       (isUncollected ? '' : `<span class="status-badge status-completed">${status}</span>`)
@@ -886,19 +846,6 @@
           }, 5000);
         } else {
           alert(message); // Fallback
-        }
-      }
-
-      function showLoading(show = true, message = 'Loading...') {
-        const loader = document.getElementById('loadingOverlay');
-        const text = loader.querySelector('.loading-text');
-        
-        if (text) {
-          text.textContent = message;
-        }
-        
-        if (loader) {
-          loader.style.display = show ? 'flex' : 'none';
         }
       }
     </script>
