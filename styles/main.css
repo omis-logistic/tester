@@ -1,9 +1,9 @@
 /* ======== BASE STYLES ======== */
 :root {
   --dark-bg: #1a1a1a;
-  --gold: #c5a047;
+  --gold: #D16002;  /* Changed to orange */
   --text-light: #ffffff;
-  --hover-gold: #d4af37;
+  --hover-gold: #F8F2ED;  /* Light purple for hover */
   --error-red: #ff4444;
   --success-green: #00C851;
   --modal-bg: #1a1a1a;
@@ -144,6 +144,12 @@ select {
   background-repeat: no-repeat;
   background-position: right 0.7rem top 50%;
   background-size: 0.65em auto;
+}
+
+/* Style for dropdown options (desktop) */
+select option {
+  background-color: #333; /* dark background for the dropdown list */
+  color: #fff;            /* light text */
 }
 
 /* ======== PARCEL DECLARATION SPECIFIC ======== */
@@ -314,26 +320,6 @@ select {
 .status-transit { background: #17a2b8; }
 .status-delivered { background: #28a745; }
 .status-hold { background: #dc3545; }
-
-.uncollected-indicator {
-  background: #ff4444;
-  color: white;
-  border-radius: 50%;
-  width: 20px;
-  height: 20px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 0.8em;
-  margin-left: 8px;
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.1); }
-  100% { transform: scale(1); }
-}
 
 /* ======== MOBILE STYLES ======== */
 @media screen and (max-width: 768px) {
@@ -527,78 +513,4 @@ select {
     box-shadow: none;
     border: none;
   }
-}
-
-/* File input styling for better visibility */
-#fileUpload {
-  display: block !important;
-  width: 100%;
-  padding: 12px;
-  margin-top: 5px;
-  background: #2a2a2a;
-  border: 1px solid var(--gold);
-  border-radius: 5px;
-  color: white;
-  cursor: pointer;
-}
-
-#fileUpload:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
-
-/* File input for mobile */
-body.mobile-view #fileUpload {
-  font-size: 16px;
-  min-height: 44px; /* Minimum touch target size */
-}
-
-/* File input label styling */
-.file-upload-section label {
-  display: block;
-  margin-bottom: 8px;
-  font-weight: bold;
-  color: var(--gold);
-}
-
-/* File help text */
-#fileHelp {
-  display: block;
-  margin-top: 5px;
-  font-size: 0.9em;
-}
-
-/* Success message for files */
-#invoiceFilesError.success {
-  color: #00C851 !important;
-}
-
-/* Error message for files */
-#invoiceFilesError {
-  color: #ff4444;
-  font-size: 0.9em;
-  margin-top: 5px;
-  display: block;
-  min-height: 20px;
-}
-
-/* Fix dropdown option colors for select elements */
-select option {
-  background-color: var(--input-bg) !important;
-  color: var(--text-light) !important;
-  padding: 10px;
-}
-
-select optgroup {
-  background-color: var(--dark-bg) !important;
-  color: var(--gold) !important;
-  font-weight: bold;
-  font-size: 1em;
-  padding: 8px;
-}
-
-select optgroup option {
-  background-color: var(--input-bg) !important;
-  color: var(--text-light) !important;
-  padding-left: 20px;
 }
