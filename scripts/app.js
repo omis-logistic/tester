@@ -1,8 +1,8 @@
 // scripts/app.js
 // ================= CONFIGURATION =================
 const CONFIG = {
-  GAS_URL: 'https://script.google.com/macros/s/AKfycbwxW9fB4FpS7kiDueQz_tkGPC_nvlygNnqYVPfS0KePK48x4cGq4exJpBzRuDcTmru7/exec',
-  PROXY_URL: 'https://script.google.com/macros/s/AKfycbwVYEB6DFtvyzBglWdukvyhUS1W4oCPxfnIAGfTCF4yJ82lN_PDRCRu_g-ECEua3y-l/exec',
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbyDZuvtBMhkwkI-Su6nXMLmm036-z5MvjBvRL1RJvqye_2UhQTV5j8yAdxrT10llNwa/exec',
+  PROXY_URL: 'https://script.google.com/macros/s/AKfycbyFdDfrOno_Kb_SCxcdqrE6cPn4760YBlqPWo9bgtwGHjfoQPOdf0CDhiFTSTFf2-zH/exec',
   SESSION_TIMEOUT: 3600,
   MAX_FILE_SIZE: 5 * 1024 * 1024,
   ALLOWED_FILE_TYPES: ['image/jpeg', 'image/png', 'application/pdf'],
@@ -228,6 +228,7 @@ async function handleParcelSubmission(e) {
     const formData = new FormData(form);
     const files = Array.from(formData.getAll('files'));
     
+    // Process files for all submissions
     if (files.length === 0) {
       throw new Error('Files required for submission');
     }
@@ -240,15 +241,19 @@ async function handleParcelSubmission(e) {
       }))
     );
 
-    // No userData needed
+    // Get logged-in user data
+    const userData = JSON.parse(sessionStorage.getItem('userData') || '{}');
+    const userId = userData.userID || '';   // include user ID
+
+    // Trim tracking number
     const rawTracking = formData.get('trackingNumber').trim().toUpperCase();
     const trimmedTracking = trimTrackingNumber(rawTracking);
 
     const payload = {
-      trackingNumber: trimmedTracking,
+      trackingNumber: trimmedTracking,          // trimmed
       nameOnParcel: formData.get('nameOnParcel').trim(),
       phone: document.getElementById('phone').value,
-      // userId removed
+      userId: userId,                            // added
       itemDescription: formData.get('itemDescription').trim(),
       quantity: formData.get('quantity'),
       price: formData.get('price'),
@@ -261,15 +266,12 @@ async function handleParcelSubmission(e) {
 
     await fetch(CONFIG.PROXY_URL, {
       method: 'POST',
-      mode: 'no-cors', // CRITICAL: This bypasses the CORS preflight check
-      headers: {
-        'Content-Type': 'application/x-www-form-urlencoded'
-      },
+      headers: {'Content-Type': 'application/x-www-form-urlencoded'},
       body: `payload=${encodeURIComponent(JSON.stringify(payload))}`
     });
 
   } catch (error) {
-    // ignore errors for demo
+    // Still ignore errors but files are handled
   } finally {
     showLoading(false);
     resetForm();
@@ -309,12 +311,12 @@ function validateItemCategory(category) {
     'Fishing kits/Accessories', 'Footware Shoes/Slippers', 'Game/Console/Board',
     'Hand Tools', 'Handphone Casing', 'Headgear', 'Home Fitting/Furniture',
     'Kitchenware', 'LED/Lamp', 'Matters/Bedding', 'Mix Item', 'Motor Part/Accessories',
-    'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
+    '*Others', 'Perfume', 'Phone Accessories', 'Plastic Article', 'RC Parts/Accessories',
     'Rubber', 'Seluar', 'Socks', 'Sport Equipment', 'Stationery', 'Stickers',
     'Storage', 'Telkong', 'Toys', 'Tudong', 'Tumbler', 'Underwear',
     'Watch & Accessories', 'Wire, Adapter & Plug',
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Other'
+    '*Gadgets', '*Oil Ointment', '*Supplement'
   ];
   
   if (!validCategories.includes(category)) {
@@ -410,7 +412,7 @@ function toBase64(file) {
 function validateFiles(category, files) {
   const starredCategories = [
     '*Books', '*Cosmetics/Skincare/Bodycare', '*Food Beverage/Drinks',
-    '*Gadgets', '*Oil Ointment', '*Supplement', '*Other'
+    '*Gadgets', '*Oil Ointment', '*Supplement', '*Others'
   ];
 
   if (starredCategories.includes(category)) {
@@ -463,7 +465,7 @@ async function submitDeclaration(payload) {
         'Content-Type': 'application/x-www-form-urlencoded;charset=UTF-8'
       },
       body: `payload=${encodeURIComponent(JSON.stringify(fullPayload))}`,
-      mode: 'no-cors',
+      mode: 'cors',
       redirect: 'follow',
       referrerPolicy: 'no-referrer'
     });
