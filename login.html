@@ -2,7 +2,7 @@
 <html>
 <head>
   <base target="_top">
-  <title>Login - ZA RIZQ Enterprise</title>
+  <title>SAFHANARIZQI ENTERPRISE</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Mobile-first styles */
@@ -39,30 +39,23 @@
       margin: 2rem auto;
     }
 
-    input {
-      background: #333;
-      border: 1px solid var(--gold);
-      color: var(--text-light);
-      font-size: 16px;
-      margin: 1rem 0;
+    input, button {
       width: 100%;
-      padding: 12px;
+      padding: 0.8rem;
+      margin: 0.5rem 0;
+      border: 1px solid var(--gold);
       border-radius: 5px;
-      transition: border-color 0.3s ease;
+      transition: all 0.3s ease;
+      background-color: var(--input-bg);
+      color: var(--text-light);
     }
 
     button {
-      width: 100%;
-      padding: 12px;
-      margin: 0.5rem 0;
-      font-size: 16px;
-      min-height: 44px;
-      transition: all 0.3s ease;
-      position: relative;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 10px;
+      background-color: var(--gold);
+      color: var(--dark-bg);
+      font-weight: bold;
+      cursor: pointer;
+      border: none;
     }
 
     .auth-links {
@@ -78,72 +71,27 @@
       color: var(--gold) !important;
     }
 
-    .secondary-btn:hover {
-      background: var(--gold) !important;
-      color: var(--dark-bg) !important;
-    }
-
-    /* Loading spinner styles */
-    .button-loader {
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid var(--gold);
-      border-radius: 50%;
-      width: 16px;
-      height: 16px;
-      animation: spin 0.8s linear infinite;
-      display: none;
-      vertical-align: middle;
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes fadeIn {
-      from { opacity: 0; transform: translateY(-10px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    /* Mobile-specific adjustments */
     @media (max-width: 768px) {
       h1.login-header {
         font-size: 1.8rem;
-        padding: 0.5rem;
       }
       
       body.mobile-view .login-container {
         padding: 1rem;
       }
-      
-      input {
-        font-size: 16px;
-        padding: 12px;
-      }
-    }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .container {
-      flex: 1;
     }
   </style>
 </head>
 <body>
   <div class="login-page">
-    <h1 class="login-header">ZA RIZQ ENTERPRISE</h1>
+    <h1 class="login-header">SAFHANARIZQI ENTERPRISE</h1>
     
     <div class="login-container">
       <div class="input-group">
-        <input type="text" 
+        <input type="tel" 
                id="phone" 
-               placeholder="Phone Number or User ID"
-               pattern="^(673\d{7,}|60\d{9,}|Z\d{4})$" 
-               inputmode="text"
+               placeholder="Phone Number"
+               pattern="^(673\d{7}|60\d{9,})$" 
                required>
       </div>
       
@@ -155,155 +103,67 @@
       </div>
       <div id="loginError" class="inline-error" style="display: none;"></div>
       <button onclick="handleLogin()" id="loginBtn">
-        <div class="button-loader" id="loginSpinner"></div>
-        <span id="loginText">LOGIN</span>
-      </button>
+  <div class="button-loader"></div>
+  <span class="btn-text">LOGIN</span>
+</button>
       
       <div class="auth-links">
         <button onclick="showRegistration()">CREATE ACCOUNT</button>
         <button class="secondary-btn" onclick="showForgotPassword()">
           FORGOT PASSWORD?
         </button>
-      </div>
+      </div> <!-- Removed Parcel Declaration button from here -->
     </div>
   </div>
 
-  <!-- Error message container -->
-  <div id="error-message" class="error-message" style="display: none;"></div>
-
   <script src="scripts/app.js"></script>
   <script>
-    // ========== NEW: Capture tracking parameter from URL ==========
-    (function captureTrackingParameter() {
-      const urlParams = new URLSearchParams(window.location.search);
-      const tracking = urlParams.get('tracking');
-      if (tracking && tracking.trim() !== '') {
-        // Store for later use after login
-        sessionStorage.setItem('pendingTracking', tracking.trim());
-        sessionStorage.setItem('pendingRedirect', 'parcel-declaration.html');
-        console.log('Tracking parameter captured:', tracking);
-        
-        // Clean the URL (remove ?tracking=xxx) without reloading the page
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, '', cleanUrl);
-      }
-    })();
+  function handleLogin() {
+    const btn = document.getElementById('loginBtn');
+    const originalHtml = btn.innerHTML;
+    
+    // Show loading state
+    btn.innerHTML = '<div class="button-loader"></div> Processing...';
+    btn.disabled = true;
 
-    // ========== MODIFIED: Login handler with post‑login redirect logic ==========
-    function handleLogin() {
-      const btn = document.getElementById('loginBtn');
-      const spinner = document.getElementById('loginSpinner');
-      const loginText = document.getElementById('loginText');
-      
-      // Save original text and disable button
-      const originalText = loginText.textContent;
-      btn.disabled = true;
-      
-      // Show spinner and change text
-      spinner.style.display = 'inline-block';
-      loginText.textContent = 'Processing...';
+    const phone = document.getElementById('phone').value.trim();
+    const password = document.getElementById('password').value;
 
-      const identifier = document.getElementById('phone').value.trim();
-      const password = document.getElementById('password').value;
-
-      // Validate: either phone format or user ID (Z followed by 4 digits)
-      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIDRegex = /^Z\d{4}$/i;
-      
-      if (!phoneRegex.test(identifier) && !userIDRegex.test(identifier)) {
-        showError('Invalid phone number or user ID format');
-        resetLoginButton(btn, spinner, loginText, originalText);
-        return;
-      }
-
-      const callbackName = `jsonp_${Date.now()}`;
-      const script = document.createElement('script');
-      
-      script.crossOrigin = 'anonymous';
-      script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(identifier)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
-
-      window[callbackName] = (response) => {
-        // Restore button state
-        resetLoginButton(btn, spinner, loginText, originalText);
-
-        if (response.success) {
-          console.log('TempPassword flag:', response.tempPassword);
-          sessionStorage.setItem('userData', JSON.stringify({
-            phone: response.phone,
-            email: response.email,
-            tempPassword: response.tempPassword,
-            userID: response.userID
-          }));
-          localStorage.setItem('lastActivity', Date.now());
-          
-          // ========== NEW: Decide redirect URL based on pending tracking ==========
-          let redirectUrl = response.tempPassword 
-            ? 'password-reset.html?force=true' 
-            : 'dashboard.html?fresh=1';
-          
-          const pendingRedirect = sessionStorage.getItem('pendingRedirect');
-          const pendingTracking = sessionStorage.getItem('pendingTracking');
-          
-          if (pendingRedirect === 'parcel-declaration.html' && pendingTracking) {
-            // Store tracking for auto‑fill on the declaration page
-            sessionStorage.setItem('prefillTracking', pendingTracking);
-            redirectUrl = 'parcel-declaration.html';
-            // Clean up temporary storage
-            sessionStorage.removeItem('pendingTracking');
-            sessionStorage.removeItem('pendingRedirect');
-          }
-          
-          window.location.href = redirectUrl;
-        } else {
-          document.getElementById('password').value = '';
-          showError(response.message || 'Authentication failed');
-        }
-        
-        // Cleanup
-        if (script.parentNode) {
-          document.body.removeChild(script);
-        }
-        delete window[callbackName];
-      };
-      
-      // Error handler
-      script.onerror = function() {
-        resetLoginButton(btn, spinner, loginText, originalText);
-        showError('Network error. Please try again.');
-        if (script.parentNode) {
-          document.body.removeChild(script);
-        }
-        delete window[callbackName];
-      };
-      
-      document.body.appendChild(script);
-    }
-
-    // Helper function to reset login button state
-    function resetLoginButton(btn, spinner, textElement, originalText) {
+    if (!validatePhone(phone)) {
+      showError('Invalid phone number format');
+      btn.innerHTML = originalHtml;
       btn.disabled = false;
-      spinner.style.display = 'none';
-      textElement.textContent = originalText;
+      return;
     }
 
-    // Enter key handling
-    document.getElementById('password').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        handleLogin();
-      }
-    });
+    const callbackName = `jsonp_${Date.now()}`;
+    const script = document.createElement('script');
+    script.src = `${CONFIG.GAS_URL}?action=processLogin&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&callback=${callbackName}`;
 
-    document.getElementById('phone').addEventListener('keypress', function(e) {
-      if (e.key === 'Enter') {
-        document.getElementById('password').focus();
+    window[callbackName] = (response) => {
+      // Restore button state
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+
+      if (response.success) {
+        console.log('TempPassword flag:', response.tempPassword);
+        sessionStorage.setItem('userData', JSON.stringify({
+          phone: response.phone,
+          tempPassword: response.tempPassword
+        }));
+        window.location.href = response.tempPassword 
+          ? 'password-reset.html?force=true'
+          : 'dashboard.html?fresh=1';
+      } else {
+        document.getElementById('password').value = '';
+        showError(response.message || 'Authentication failed');
       }
-    });
+      document.body.removeChild(script);
+    };
     
-    // Auto-capitalize user ID
-    document.getElementById('phone').addEventListener('input', function(e) {
-      this.value = this.value.toUpperCase();
-    });
-    
+    document.body.appendChild(script);
+  }
+
     function showRegistration() {
       safeRedirect('register.html');
     }
@@ -312,44 +172,11 @@
       safeRedirect('forgot-password.html');
     }
 
-    // Validation function (accepts user ID)
-    function validatePhone(phone) {
-      const phoneRegex = /^(673\d{7,}|60\d{9,})$/;
-      const userIDRegex = /^Z\d{4}$/i;
-      return phoneRegex.test(phone) || userIDRegex.test(phone);
+  document.getElementById('password').addEventListener('keypress', function(e) {
+    if (e.key === 'Enter') {
+      handleLogin();
     }
-
-    // Error display
-    function showError(message) {
-      const errorDiv = document.getElementById('error-message');
-      if (errorDiv) {
-        errorDiv.textContent = message;
-        errorDiv.style.display = 'block';
-        setTimeout(() => {
-          errorDiv.style.display = 'none';
-        }, 5000);
-      }
-    }
-
-    // Safe redirect function
-    function safeRedirect(path) {
-      try {
-        const basePath = path.split('?')[0].split('#')[0];
-        const allowedPaths = [
-          'login.html', 'register.html', 'dashboard.html',
-          'forgot-password.html', 'password-reset.html',
-          'my-info.html', 'parcel-declaration.html', 'track-parcel.html',
-          'billing-info.html', 'invoice.html'
-        ];
-        if (!allowedPaths.includes(basePath)) {
-          throw new Error('Unauthorized path');
-        }
-        window.location.href = path;
-      } catch (error) {
-        console.error('Redirect error:', error);
-        showError('Navigation failed. Please try again.');
-      }
-    }
+  });
   </script>
 </body>
 </html>
