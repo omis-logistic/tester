@@ -1,297 +1,722 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <title>Register - ZA RIZQ Enterprise</title>
-  <link rel="stylesheet" href="styles/main.css">
-  <style>
-    .registration-page {
-      max-width: 500px;
-      animation: slideUp 0.3s ease-out;
-    }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF69B4">
+    <title>Registration Portal</title>
+    <style>
 
-    .password-rules {
-      font-size: 0.8em;
-      color: var(--gold);
-      margin: 5px 0 10px;
-      opacity: 0.8;
-    }
-
-    .status-message {
-      padding: 12px;
-      margin: 15px 0;
-      border-radius: 5px;
-      text-align: center;
-      font-size: 14px;
-      display: none;
-    }
-
-    .status-message.success {
-      background: rgba(0, 200, 81, 0.1);
-      border: 1px solid #00C851;
-      color: #00C851;
-      display: block;
-    }
-
-    .status-message.error {
-      background: rgba(255, 68, 68, 0.1);
-      border: 1px solid #ff4444;
-      color: #ff4444;
-      display: block;
-    }
-
-    @keyframes slideUp {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    @media (max-width: 480px) {
-      .registration-page {
-        padding: 15px;
-      }
+        /* Added body background */
+        body {
+            background-color: #FF69B4;
+            margin: 0;
+            min-height: 100vh;
+        }
       
-      input {
-        padding: 10px;
-        font-size: 14px;
-      }
+
+        .container { 
+            max-width: 600px; 
+            margin: 20px auto; 
+            padding: 20px; 
+            box-shadow: 0 0 10px rgba(0,0,0,0.1); 
+            font-family: Arial, sans-serif;
+            background: white; /* Added white background for contrast */
+            border-radius: 10px; /* Added rounded corners */
+        }
       
-      button {
-        padding: 10px;
-        font-size: 14px;
-      }
-    }
-    
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
+        .form-group { 
+            margin-bottom: 20px; 
+        }
+        /* Updated text colors for better contrast */
+        label { 
+            display: block; 
+            margin-bottom: 5px; 
+            font-weight: bold; 
+            color: #333; /* Maintained dark gray for readability */
+        }
+      
+        input, button { 
+            width: 100%; 
+            padding: 12px; 
+            margin-top: 5px; 
+            border: 2px solid #ddd; 
+            border-radius: 5px; 
+            box-sizing: border-box;
+            background: #fff; /* Ensure input backgrounds stay white */
+            color: #333; /* Dark text for readability */
+        }
+
+        /* Enhanced button contrast */
+        button { 
+            background: #d81b60; /* Darker pink for contrast */
+            color: white; 
+            border: none; 
+            cursor: pointer; 
+            font-size: 16px;
+            transition: background 0.3s;
+        }
+
+        button:hover { 
+            background: #ad1457; /* Darker hover state */
+        }
+        .error { 
+            color: #ff4444; 
+            margin-top: 10px; 
+            font-size: 0.9em;
+        }
+        .file-input { 
+            padding: 3px; 
+        }
+        .validation-message {
+            font-size: 0.85em;
+            margin-top: 5px;
+            display: block;
+        }
+        .valid { color: #00C851; }
+        .invalid { color: #ff4444; }
+        input:invalid { border-color: #ff4444; }
+        input:valid { border-color: #00C851; }
+        .ic-input {
+            font-family: monospace;
+            letter-spacing: 0.1em;
+        }
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #4285f4;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            display: none;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+
+        .success-message {
+            display: none;
+            color: #00C851;
+            text-align: center;
+            font-size: 1.2em;
+            margin: 20px 0;
+        }
+
+        .hidden {
+            display: none !important;
+        }
+
+        .back-button {
+    display: block; /* Changed from display: none */
+    width: 200px;
+    margin: 20px auto;
+    padding: 10px;
+    background: #4285f4;
+    color: white;
+    text-align: center;
+    text-decoration: none;
+    border-radius: 5px;
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.3s ease, visibility 0.3s ease;
+}
+
+.back-button.visible {
+    opacity: 1;
+    visibility: visible;
+}
+
+.hidden {
+    display: none !important;
+}
+
+.valid { border-color: #00C851 !important; }
+.invalid { border-color: #ff4444 !important; }
+.validation-message.valid { color: #00C851; }
+.validation-message.invalid { color: #ff4444; }
+
+/* Add check/cross indicators */
+#phone {
+    background-image: none;
+    padding-right: 30px;
+    background-position: right 10px center;
+    background-repeat: no-repeat;
+    background-size: 20px;
+}
+#phone.valid {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300C851" width="24" height="24"><path d="M0 0h24v24H0z" fill="none"/><path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/></svg>');
+}
+#phone.invalid {
+    background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%23ff4444" width="24" height="24"><path d="M19 6.41L17.59 5 12 10.59 6.41 5 5 6.41 10.59 12 5 17.59 6.41 19 12 13.41 17.59 19 19 17.59 13.41 12z"/><path d="M0 0h24v24H0z" fill="none"/></svg>');
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+}
+
+.modal-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    width: 90%;
+    max-width: 400px;
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    text-align: center;
+}
+
+.login-btn {
+    background: #4285f4;
+    color: white;
+    border: none;
+    padding: 12px 30px;
+    border-radius: 5px;
+    cursor: pointer;
+    font-size: 16px;
+    margin-top: 20px;
+    transition: background 0.3s;
+}
+
+.login-btn:hover {
+    background: #357abd;
+}
+
+.description-text {
+    display: block;
+    margin-top: 4px;
+    color: #666;
+    font-size: 0.9em;
+}
+
+    /* Updated Login button styles */
+    .login-button {
+        display: block;
+        width: 100%;
+        padding: 12px;
+        background: #FF85B3;
+        color: white;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        font-size: 16px;
+        border: none;
+        cursor: pointer;
+        transition: background 0.3s;
+        box-sizing: border-box; /* Added */
+        margin-top: 0; /* Changed from 10px */
     }
 
-    .container {
-      flex: 1;
+    /* Adjust form-group spacing */
+    .form-group:last-child {
+        margin-bottom: 0; /* Remove bottom margin for last form-group */
     }
-    
-    .button-loader {
-      border: 2px solid #f3f3f3;
-      border-top: 2px solid var(--gold);
-      border-radius: 50%;
-      width: 16px;
-      height: 16px;
-      animation: spin 0.8s linear infinite;
-      display: inline-block;
-      vertical-align: middle;
-      margin-right: 8px;
+      
+    .login-button:hover {
+        background: #FF69B4; /* Slightly darker on hover */
     }
 
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-  </style>
+    #userId:valid,
+    #userId:invalid,
+    #userId.valid,
+    #userId.invalid {
+        border-color: #ddd !important;
+        background-image: none !important;
+}
+    
+    </style>
+    <script src="app.js"></script>
 </head>
 <body>
-  <div class="container registration-page">
-    <h1>New Registration</h1>
-    
-    <div class="input-group">
-      <input type="tel" 
-             id="regPhone" 
-             placeholder="Phone (673/60 format)" 
-             pattern="^(673\d{7,}|60\d{9,})$" 
-             required>
-      <div class="error-message" id="phoneError"></div>
+    <div class="container">
+        <h2>User Registration</h2>
+        <form id="registrationForm" onsubmit="handleRegistration(event)">
+            
+            <!-- Phone Number -->
+            <div class="form-group">
+                <label for="phone">Phone Number:</label>
+                <input type="tel" id="phone" 
+                       pattern="^(673\d{7}|60\d{9,})$"
+                       title="Brunei: 673XXXXXXX | Malaysia: 60XXXXXXXXXX"
+                       required>
+                <span class="validation-message" id="phoneValidation"></span>
+            </div>
+
+            <!-- Password -->
+            <div class="form-group">
+                <label for="password">Create Password:</label>
+                <input type="password" id="password" 
+                       pattern="^(?=.*[A-Z])(?=.*\d).{6,}$"
+                       title="6+ characters with 1 uppercase and 1 number"
+                       required>
+                <span class="validation-message" id="passwordValidation"></span>
+            </div>
+
+            <!-- Confirm Password -->
+            <div class="form-group">
+                <label for="confirmPassword">Confirm Password:</label>
+                <input type="password" id="confirmPassword" required>
+                <span class="validation-message" id="confirmPasswordValidation"></span>
+            </div>
+
+            <!-- Email -->
+            <div class="form-group">
+                <label for="email">Email Address:</label>
+                <input type="email" id="email" required>
+            </div>
+
+            <!-- Confirm Email -->
+            <div class="form-group">
+                <label for="confirmEmail">Confirm Email:</label>
+                <input type="email" id="confirmEmail" required>
+                <span class="validation-message" id="emailValidation"></span>
+            </div>
+
+            <!-- Personal Info -->
+            <div class="form-group">
+                <label for="fullName">Full Name:</label>
+                <input type="text" id="fullName" required>
+            </div>
+
+            <div class="form-group">
+                <label for="address">Mailing Address(Brunei):</label>
+                <input type="text" id="address" required>
+            </div>
+
+            <div class="form-group">
+                <label for="postcode">Postcode:</label>
+                <input type="text" id="postcode" required>
+            </div>
+
+            <!-- IC Number -->
+            <div class="form-group">
+  <label for="icNumber">IC Number:</label>
+  <input type="text" id="icNumber" required
+         pattern="(\d{2}-?\d{6})|(\d{6}-?\d{2}-?\d{4})|(\d{12})|(\d{2}-?\d{4}-?\d{4,6})"
+       title="Acceptable formats: 
+              • 00-123456 
+              • 001234-56-7890 
+              • 001234567890 
+              • 00-1234-567890">
+  <span class="validation-message" id="icError"></span>
+</div>
+
+          <div class="form-group">
+    <label for="userId">User ID (Existing user):</label>
+    <input type="text" id="userId" 
+           pattern="^S\d{4}$"
+           title="Format: S followed by 4 digits (e.g. S0123)">
+    <small class="description-text">Leave it blank for new user - we'll assign one automatically</small>
+    <span class="validation-message" id="userIdValidation"></span>
+</div>
+
+            <!-- Hidden Data Field -->
+            <input type="hidden" id="jsonData" name="data" value="">
+            
+            <div class="form-group">
+                <button type="submit">Register Now</button>
+            </div>
+            <div class="form-group" style="margin-top: 10px;">
+                <a href="login.html" class="login-button">Back to Login</a>
+            </div>
+            <div id="message" class="error"></div>
+        </form>
+
+        <!-- Add loading spinner and success message -->
+        <div id="successModal" class="modal">
+    <div class="modal-content">
+        <span class="close">&times;</span>
+        <h3>🎉 Registration Successful!</h3>
+        <p>Your account has been created successfully.</p>
+        <button onclick="window.location.href='login.html'" class="login-btn">
+            Continue to Login
+        </button>
     </div>
-
-    <div class="input-group">
-      <input type="password" 
-             id="regPassword" 
-             placeholder="Create Password"
-             pattern="^(?=.*[A-Z])(?=.*\d).{6,}$" 
-             required>
-      <div class="password-rules">6+ characters, 1 uppercase, 1 number</div>
-      <div class="error-message" id="passError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="password" 
-             id="regConfirmPass" 
-             placeholder="Confirm Password" 
-             required>
-      <div class="error-message" id="confirmPassError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="email" 
-             id="regEmail" 
-             placeholder="Email Address" 
-             required>
-      <div class="error-message" id="emailError"></div>
-    </div>
-
-    <div class="input-group">
-      <input type="email" 
-             id="regConfirmEmail" 
-             placeholder="Confirm Email" 
-             required>
-      <div class="error-message" id="confirmEmailError"></div>
-    </div>
-
-    <button onclick="handleRegistration()">Register</button>
-    <button class="secondary-btn" onclick="safeRedirect('login.html')" style="margin-top: 10px;">Back to Login</button>
-
-    <div id="registrationStatus" class="status-message"></div>
-  </div>
-
-  <script src="scripts/app.js"></script>
-  <script>
-    function handleRegistration() {
-      const btn = document.querySelector('.registration-page button');
-      const originalText = btn.innerHTML;
-      btn.disabled = true;
-      btn.innerHTML = '<div class="button-loader"></div> Registering...';
-
-      // Clear previous errors
-      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-      const statusElement = document.getElementById('registrationStatus');
-      statusElement.className = '';
-      statusElement.textContent = '';
-
-      // Validate form first
-      if (!validateRegistrationForm()) {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        return;
-      }
-
-      // Get form values
-      const phone = document.getElementById('regPhone').value;
-      const password = document.getElementById('regPassword').value;
-      const email = document.getElementById('regEmail').value;
-
-      // Create JSONP request - EXACT Mark 1 approach
-      const callbackName = `jsonp_${Date.now()}`;
-      const script = document.createElement('script');
-      
-      // Mark 1 approach with crossorigin attribute
-      script.crossOrigin = 'anonymous';
-      script.src = `${CONFIG.GAS_URL}?action=createAccount&phone=${encodeURIComponent(phone)}&password=${encodeURIComponent(password)}&email=${encodeURIComponent(email)}&callback=${callbackName}`;
-
-      window[callbackName] = (response) => {
-        // Cleanup and restore button - EXACT Mark 1 approach
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-
-        // Handle response
-        if (response.success) {
-          statusElement.className = 'status-message success';
-          statusElement.textContent = 'Registration successful! Redirecting...';
-          setTimeout(() => safeRedirect('login.html'), 1500);
-        } else {
-          statusElement.className = 'status-message error';
-          statusElement.textContent = response.message || 'Registration failed';
-        }
+</div>
         
-        // Remove script and cleanup
-        if (script.parentNode) {
-          document.body.removeChild(script);
+        <!-- Add back to login button -->
+        <a href="login.html" class="back-button" id="backButton">Back to Login</a>
+    </div>
+
+    <script>
+const CONFIG = window.CONFIG || {
+  GAS_URL: 'https://script.google.com/macros/s/AKfycbzlwFb8Kp-7bgFW9fd2Y2gIXpxA9xbyXCvstv53HuIOp9n54j8danMBca0mSSL-BO-89g/exec'
+};
+        // Real-time Validations
+        document.getElementById('registrationForm').action = CONFIG.GAS_URL;
+        document.getElementById('phone').addEventListener('input', validatePhoneNumber);
+        document.getElementById('password').addEventListener('input', validatePassword);
+        document.getElementById('confirmPassword').addEventListener('input', validateConfirmPassword);
+        document.getElementById('email').addEventListener('input', validateEmail);
+        document.getElementById('confirmEmail').addEventListener('input', validateEmail);
+        document.getElementById('icNumber').addEventListener('input', validateICNumber);
+
+        // IC Number Auto-Formatting
+        document.getElementById('icNumber').addEventListener('input', function(e) {
+            let value = e.target.value.replace(/-/g, '');
+            if (value.length > 2 && value.length <= 8) {
+                value = value.slice(0,2) + '-' + value.slice(2);
+            } else if (value.length > 8) {
+                value = value.slice(0,6) + '-' + value.slice(6,8) + '-' + value.slice(8,12);
+            }
+            e.target.value = value;
+        });
+
+// ================= PHONE DUPLICATE CHECK =================
+document.getElementById('phone').addEventListener('input', function(e) {
+    const input = e.target;
+    // Remove all non-digit characters
+    let phone = input.value.replace(/\D/g, '');
+    input.value = phone; // Store raw digits without formatting
+    validatePhoneNumber(input);
+});
+
+document.getElementById('userId').addEventListener('input', function(e) {
+    // Auto-format to uppercase
+    e.target.value = e.target.value.toUpperCase();
+    validateUserId();
+});
+
+// Validation States
+let isFormatValid = false;
+let isExistsValid = false;
+
+// Phone Validation Function
+function validatePhoneNumber(input) {
+    const phone = input.value;
+    const validation = document.getElementById('phoneValidation');
+    
+    // Reset states
+    isFormatValid = false;
+    isExistsValid = false;
+    validation.textContent = '';
+    input.classList.remove('valid', 'invalid');
+
+    // Format validation
+    const bruneiRegex = /^673\d{7}$/;
+    const malaysiaRegex = /^60\d{9,10}$/;
+    
+    if (!bruneiRegex.test(phone) && !malaysiaRegex.test(phone)) {
+        validation.textContent = 'Invalid format: Brunei (6731234567) or Malaysia (60123456789)';
+        validation.className = 'validation-message invalid';
+        input.classList.add('invalid');
+        isFormatValid = false;
+        return;
+    }
+    
+    // Format is valid
+    validation.textContent = '✓ Valid format';
+    validation.className = 'validation-message valid';
+    input.classList.add('valid');
+    isFormatValid = true;
+
+    // Trigger existence check
+    checkPhoneExistence(phone);
+}
+
+function checkPhoneExistence(phone) {
+    const validation = document.getElementById('phoneValidation');
+    const input = document.getElementById('phone');
+    
+    clearTimeout(window.phoneCheckTimer);
+    
+    window.phoneCheckTimer = setTimeout(() => {
+        const callbackName = `phoneCheck_${Date.now()}`;
+        const script = document.createElement('script');
+        
+        script.src = `${CONFIG.GAS_URL}?action=checkPhoneExists&phone=${phone}&callback=${callbackName}`;
+        
+        script.onerror = () => {
+            validation.textContent += ' - Service unavailable';
+            validation.className = 'validation-message invalid';
+            input.classList.add('invalid');
+            isExistsValid = false;
+        };
+
+        window[callbackName] = (response) => {
+            if (response.success === false) {
+                validation.textContent = 'System error: ' + (response.message || '');
+                validation.className = 'validation-message invalid';
+                input.classList.add('invalid');
+                isExistsValid = false;
+            } else {
+                if (response.exists) {
+                    validation.textContent = 'Phone number already exists';
+                    validation.className = 'validation-message invalid';
+                    input.classList.add('invalid');
+                    isExistsValid = false;
+                } else {
+                    validation.textContent = '✓ Valid number (not in system)';
+                    validation.className = 'validation-message valid';
+                    input.classList.add('valid');
+                    isExistsValid = true; // THIS IS CRUCIAL
+                }
+            }
+            delete window[callbackName];
+            document.body.removeChild(script);
+        };
+
+        document.body.appendChild(script);
+    }, 500);
+}
+        
+        function validatePassword() {
+            const password = document.getElementById('password');
+            const validation = document.getElementById('passwordValidation');
+            
+            let messages = [];
+            if (password.value.length < 6) messages.push("6+ characters");
+            if (!/[A-Z]/.test(password.value)) messages.push("1 uppercase letter");
+            if (!/\d/.test(password.value)) messages.push("1 number");
+
+            if (messages.length > 0) {
+                validation.textContent = "Requirements missing: " + messages.join(", ");
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Strong password";
+            validation.className = 'validation-message valid';
+            return true;
         }
-        delete window[callbackName];
-      };
 
-      // Error handling - Mark 1 approach
-      script.onerror = function() {
-        btn.disabled = false;
-        btn.innerHTML = originalText;
-        statusElement.className = 'status-message error';
-        statusElement.textContent = 'Network error. Please try again.';
-        if (script.parentNode) {
-          document.body.removeChild(script);
+        function validateConfirmPassword() {
+            const password = document.getElementById('password').value;
+            const confirm = document.getElementById('confirmPassword').value;
+            const validation = document.getElementById('confirmPasswordValidation');
+            
+            if (confirm === '') {
+                validation.textContent = "Please confirm your password";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (password !== confirm) {
+                validation.textContent = "Passwords do not match!";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Passwords match";
+            validation.className = 'validation-message valid';
+            return true;
         }
-        delete window[callbackName];
-      };
 
-      document.body.appendChild(script);
+        function validateEmail() {
+            const email = document.getElementById('email').value;
+            const confirm = document.getElementById('confirmEmail').value;
+            const validation = document.getElementById('emailValidation');
+            
+            if (email !== confirm) {
+                validation.textContent = "Email addresses do not match";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+                validation.textContent = "Invalid email format";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            
+            validation.textContent = "✓ Emails match";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+        function validateICNumber() {
+            const icNumber = document.getElementById('icNumber').value;
+            const validation = document.getElementById('icValidation');
+            const pattern = /^\d{2}-\d{6}$|^\d{6}-\d{2}-\d{4}$/;
+            
+            if (!pattern.test(icNumber)) {
+                validation.textContent = "Invalid format: Use XX-XXXXXX or XXXXXX-XX-XXXX";
+                validation.className = 'validation-message invalid';
+                return false;
+            }
+            validation.textContent = "✓ Valid IC format";
+            validation.className = 'validation-message valid';
+            return true;
+        }
+
+      function validateUserId() {
+    const userIdInput = document.getElementById('userId');
+    const validation = document.getElementById('userIdValidation');
+    
+    if(userIdInput.value === '') {
+        validation.textContent = '';
+        validation.className = '';
+        userIdInput.classList.remove('valid', 'invalid');
+        return true;
+    }
+    
+    if(!/^S\d{4}$/i.test(userIdInput.value)) {
+        validation.textContent = 'Invalid format - must be S followed by 4 digits (e.g. S0123)';
+        validation.className = 'validation-message invalid';
+        userIdInput.classList.add('invalid');
+        return false;
+    }
+    
+    validation.textContent = '✓ Valid User ID format';
+    validation.className = 'validation-message valid';
+    userIdInput.classList.add('valid');
+    return true;
+}
+
+        // Main Validation Function
+        function validateForm() {
+    // Phone validation states check (from previous implementation)
+    if (!isFormatValid || !isExistsValid) {
+        showError('Complete phone validation first!', 'phoneValidation');
+        return false;
     }
 
-    // Real-time validation functions
-    function validatePhone(phone) {
-      const regex = /^(673\d{7,}|60\d{9,})$/;
-      return regex.test(phone);
+    const validations = [
+        validatePhoneNumber(),      // Phone format and existence check
+        validateUserId(),           // New check
+        validatePassword(),         // Password strength check
+        validateConfirmPassword(),  // Password match check
+        validateEmail(),            // Email format and match check
+        validateICNumber()          // IC format validation
+    ];
+
+    return validations.every(validation => validation === true);
+}
+
+        
+// Complete Form Submission Handler
+document.getElementById('registrationForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const form = e.target;
+    const phoneInput = document.getElementById('phone');
+    const validation = document.getElementById('phoneValidation');
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const modal = document.getElementById('successModal');
+    const messageDiv = document.getElementById('message');
+
+    // Block submission if validations fail
+    if (!isFormatValid || !isExistsValid) {
+        validation.textContent = 'Complete phone validation first!';
+        validation.className = 'validation-message invalid';
+        phoneInput.classList.add('invalid');
+        return;
     }
 
-    function validatePassword(password) {
-      const regex = /^(?=.*[A-Z])(?=.*\d).{6,}$/;
-      return regex.test(password);
+    submitBtn.disabled = true;
+    const originalText = submitBtn.innerHTML;
+    submitBtn.innerHTML = '<div class="loader"></div> Submitting...';
+
+    try {
+        // Collect all form data
+        const formData = {
+            action: 'registerUser',
+            userId: document.getElementById('userId').value.toUpperCase(),
+            icNumber: document.getElementById('icNumber').value,
+            phone: phoneInput.value,
+            password: document.getElementById('password').value,
+            email: document.getElementById('email').value.toLowerCase().trim(),
+            fullName: document.getElementById('fullName').value.toUpperCase(),
+            address: document.getElementById('address').value.toUpperCase(),
+            postcode: document.getElementById('postcode').value.toUpperCase()
+
+        };
+
+        // Submit to backend
+        const response = await fetch(CONFIG.GAS_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+            },
+            body: `data=${encodeURIComponent(JSON.stringify(formData))}`
+        });
+
+        // Handle server response
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Server rejected submission');
+        }
+
+        // Show success UI
+        showModal(modal);
+        form.reset();
+
+        // Clear validation states
+        isFormatValid = false;
+        isExistsValid = false;
+        phoneInput.classList.remove('valid');
+
+    } catch (error) {
+        console.log('Submission Error:', error);
+        
+        // Special handling for network errors
+        if (error.message === 'Failed to fetch') {
+            // Assume success if data might have reached server
+            showModal(modal);
+            form.reset();
+        } else {
+            // Show actual error message
+            messageDiv.textContent = error.message;
+            messageDiv.className = 'error-message';
+            messageDiv.style.display = 'block';
+        }
+    } finally {
+        // Cleanup UI
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalText;
+        validation.textContent = '';
+        phoneInput.classList.remove('invalid');
+        
+        // Auto-close modal after 5 seconds
+        setTimeout(() => {
+            if (modal.style.display === 'block') {
+                modal.style.display = 'none';
+                window.location.href = 'login.html';
+            }
+        }, 5000);
     }
+});
 
-    function validateEmail(email) {
-      const regex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-      return regex.test(email);
+
+
+// Modal Control (Required for above)
+function showModal(modal) {
+    modal.style.display = 'block';
+    
+    // Close handlers
+    modal.querySelector('.close').onclick = () => {
+        modal.style.display = 'none';
+        window.location.href = 'login.html';
+    };
+    
+    window.onclick = (e) => {
+        if (e.target === modal) {
+            modal.style.display = 'none';
+            window.location.href = 'login.html';
+        }
+    };
+}
+
+// Error Display Function (Complete)
+function showError(text, targetId = 'message') {
+    const errorElement = document.getElementById(targetId);
+    if (errorElement) {
+        errorElement.textContent = text;
+        errorElement.className = 'validation-message invalid';
+        errorElement.style.display = 'block';
     }
-
-    // EXACT Mark 1 validation function
-    function validateRegistrationForm() {
-      const phone = document.getElementById('regPhone').value;
-      const password = document.getElementById('regPassword').value;
-      const confirmPassword = document.getElementById('regConfirmPass').value;
-      const email = document.getElementById('regEmail').value;
-      const confirmEmail = document.getElementById('regConfirmEmail').value;
-
-      let isValid = true;
-      document.querySelectorAll('.error-message').forEach(el => el.textContent = '');
-
-      if (!validatePhone(phone)) {
-        document.getElementById('phoneError').textContent = 'Invalid phone format';
-        isValid = false;
-      }
-
-      if (!validatePassword(password)) {
-        document.getElementById('passError').textContent = '6+ chars, 1 uppercase, 1 number';
-        isValid = false;
-      }
-
-      if (password !== confirmPassword) {
-        document.getElementById('confirmPassError').textContent = 'Passwords mismatch';
-        isValid = false;
-      }
-
-      if (!validateEmail(email)) {
-        document.getElementById('emailError').textContent = 'Invalid email format';
-        isValid = false;
-      }
-
-      if (email !== confirmEmail) {
-        document.getElementById('confirmEmailError').textContent = 'Emails mismatch';
-        isValid = false;
-      }
-
-      return isValid;
-    }
-
-    document.getElementById('regPhone').addEventListener('input', function() {
-      document.getElementById('phoneError').textContent = 
-        !validatePhone(this.value) ? 'Invalid phone format' : '';
-    });
-
-    document.getElementById('regPassword').addEventListener('input', function() {
-      document.getElementById('passError').textContent = 
-        !validatePassword(this.value) ? '6+ chars, 1 uppercase, 1 number' : '';
-    });
-
-    document.getElementById('regConfirmPass').addEventListener('input', function() {
-      document.getElementById('confirmPassError').textContent = 
-        this.value !== document.getElementById('regPassword').value ? 'Passwords mismatch' : '';
-    });
-
-    document.getElementById('regEmail').addEventListener('input', function() {
-      document.getElementById('emailError').textContent = 
-        !validateEmail(this.value) ? 'Invalid email format' : '';
-    });
-
-    document.getElementById('regConfirmEmail').addEventListener('input', function() {
-      document.getElementById('confirmEmailError').textContent = 
-        this.value !== document.getElementById('regEmail').value ? 'Emails mismatch' : '';
-    });
-  </script>
+}
+        
+    </script>
 </body>
 </html>
