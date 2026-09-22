@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <base target="_top">
-  <title>Dashboard - ZA RIZQ Enterprise</title>
+    <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#FF69B4">
+  <title>Dashboard - Safhanarizqi Enterprise</title>
   <link rel="stylesheet" href="styles/main.css">
   <style>
     /* Dashboard-specific styles */
@@ -15,7 +17,6 @@
       display: grid;
       gap: 20px;
       grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      margin-bottom: 30px;
     }
 
     .thumbnail {
@@ -25,11 +26,6 @@
       cursor: pointer;
       transition: all 0.3s ease;
       border: 1px solid var(--gold);
-      position: relative;
-      min-height: 120px;
-      display: flex;
-      flex-direction: column;
-      justify-content: space-between;
     }
 
     .thumbnail:hover {
@@ -47,369 +43,119 @@
       color: var(--text-light);
       font-size: 0.95em;
       opacity: 0.9;
-      margin: 0;
     }
 
-    /* Billing Thumbnail Special Styles */
-    #billingThumbnail {
-      position: relative;
-      border: 2px solid var(--gold);
-      background: rgba(197, 160, 71, 0.05);
-    }
+/* Welcome Modal Styles */
+.welcome-modal {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 182, 193, 0.95); /* Soft pink overlay */
+  z-index: 1000;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  padding: 20px 10px;
+  backdrop-filter: blur(8px);
+}
 
-    #billingThumbnail::before {
-      content: '';
-      position: absolute;
-      top: -2px;
-      left: -2px;
-      right: -2px;
-      bottom: -2px;
-      border-radius: 12px;
-      background: linear-gradient(45deg, var(--gold), #ffd700, var(--gold));
-      z-index: -1;
-      opacity: 0;
-      transition: opacity 0.3s ease;
-    }
+.welcome-content {
+  background: var(--background-light);
+  border: 2px solid var(--primary-color);
+  border-radius: 15px;
+  max-width: 800px;
+  margin: 20px auto;
+  padding: 25px;
+  color: var(--text-dark);
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(255, 105, 180, 0.15);
+}
 
-    #billingThumbnail.has-uncollected::before {
-      opacity: 1;
-      animation: borderPulse 2s infinite;
-    }
+.gold-text {
+  color: var(--primary-color) !important;
+  font-weight: 600;
+  letter-spacing: 0.5px;
+}
 
-    #billingThumbnail.has-uncollected {
-      background: rgba(255, 215, 0, 0.1);
-      border: 2px solid transparent;
-    }
+.modal-section {
+  margin: 15px 0;
+  padding: 15px 20px;
+  background: var(--background-secondary);
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+}
 
-    /* Pop-out Message Styles */
-    .popout-message {
-      position: absolute;
-      top: -15px;
-      right: -15px;
-      background: linear-gradient(135deg, #ff4444, #cc0000);
-      color: white;
-      padding: 12px 16px;
-      border-radius: 25px;
-      font-size: 0.75em;
-      font-weight: bold;
-      border: 2px solid var(--dark-bg);
-      box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
-      z-index: 10;
-      white-space: nowrap;
-      transform: scale(0);
-      transform-origin: top right;
-      animation: popOut 0.5s ease-out forwards, float 3s ease-in-out infinite;
-      max-width: 200px;
-      text-align: center;
-    }
+.guidelines {
+  padding-left: 15px;
+  margin: 10px 0;
+}
 
-    .popout-message::after {
-      content: '';
-      position: absolute;
-      bottom: -8px;
-      right: 20px;
-      width: 0;
-      height: 0;
-      border-left: 8px solid transparent;
-      border-right: 8px solid transparent;
-      border-top: 8px solid #cc0000;
-    }
+.guidelines li {
+  margin: 8px 0;
+  line-height: 1.6;
+  color: var(--text-dark);
+}
 
-    .popout-message.warning {
-      background: linear-gradient(135deg, #ff8800, #cc6600);
-    }
+.agree-btn {
+  background: var(--primary-color);
+  color: var(--text-light);
+  padding: 14px 40px;
+  border: none;
+  border-radius: 8px;
+  font-weight: 600;
+  cursor: pointer;
+  display: block;
+  margin: 25px auto 15px;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
 
-    .popout-message.warning::after {
-      border-top-color: #cc6600;
-    }
+.agree-btn:hover {
+  background: var(--gradient-end);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 105, 180, 0.25);
+}
 
-    .popout-message.urgent {
-      background: linear-gradient(135deg, #ff4444, #990000);
-      animation: popOut 0.5s ease-out forwards, float 2s ease-in-out infinite, pulse 1s infinite;
-    }
+/* Update shipping details */
+.shipping-details span {
+  color: var(--primary-color);
+  font-weight: 600;
+}
 
-    .popout-message.urgent::after {
-      border-top-color: #990000;
-    }
+/* Loading spinner update */
+.loading-spinner {
+  border-top: 4px solid var(--primary-color);
+}
 
-    /* Global Loading Spinner */
-    .global-loading {
-      position: fixed;
-      top: 0;
-      left: 0;
-      width: 100%;
-      height: 100%;
-      background: rgba(0, 0, 0, 0.8);
-      display: none;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      flex-direction: column;
-    }
+/* Mobile Optimization Updates */
+@media (max-width: 768px) {
+  .welcome-content {
+    padding: 20px;
+    border-radius: 12px;
+  }
+  
+  .modal-section {
+    padding: 12px;
+  }
+  
+  .agree-btn {
+    width: 100%;
+    padding: 12px;
+  }
+}
 
-    .global-loading .loading-spinner {
-      width: 50px;
-      height: 50px;
-      border: 5px solid rgba(197, 160, 71, 0.3);
-      border-top: 5px solid var(--gold);
-      border-radius: 50%;
-      animation: spin 1s linear infinite;
-      margin-bottom: 15px;
-    }
+/* REMOVED THE HIDING STYLE FOR TRACK PARCEL BUTTON */
 
-    .global-loading .loading-text {
-      color: var(--gold);
-      font-size: 1.1em;
-      font-weight: bold;
-    }
-
-    /* Animations */
-    @keyframes popOut {
-      0% {
-        transform: scale(0);
-        opacity: 0;
-      }
-      70% {
-        transform: scale(1.1);
-        opacity: 1;
-      }
-      100% {
-        transform: scale(1);
-        opacity: 1;
-      }
-    }
-
-    @keyframes float {
-      0%, 100% {
-        transform: translateY(0) scale(1);
-      }
-      50% {
-        transform: translateY(-5px) scale(1.02);
-      }
-    }
-
-    @keyframes pulse {
-      0% {
-        box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
-      }
-      50% {
-        box-shadow: 0 4px 25px rgba(255, 68, 68, 0.9);
-      }
-      100% {
-        box-shadow: 0 4px 15px rgba(255, 68, 68, 0.6);
-      }
-    }
-
-    @keyframes borderPulse {
-      0% { opacity: 0.7; }
-      50% { opacity: 1; }
-      100% { opacity: 0.7; }
-    }
-
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-
-    @keyframes shake {
-      0%, 100% {transform: translateX(0);}
-      10%, 30%, 50%, 70%, 90% {transform: translateX(-5px);}
-      20%, 40%, 60%, 80% {transform: translateX(5px);}
-    }
-
-    .shake {
-      animation: shake 0.5s ease;
-    }
-
-    /* Welcome Modal Styles */
-    .welcome-modal {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.9);
-      z-index: 1000;
-      overflow-y: auto;
-      -webkit-overflow-scrolling: touch;
-      padding: 20px 10px;
-    }
-
-    .welcome-content {
-      background: var(--dark-bg);
-      border: 2px solid var(--gold);
-      border-radius: 10px;
-      max-width: 800px;
-      margin: 20px auto;
-      padding: 25px;
-      color: var(--text-light);
-      max-height: 90vh;
-      overflow-y: auto;
-      box-shadow: 0 0 15px rgba(197, 160, 71, 0.2);
-    }
-
-    .gold-text {
-      color: var(--gold) !important;
-      font-weight: bold;
-    }
-
-    .modal-section {
-      margin: 15px 0;
-      padding: 15px 20px;
-      background: rgba(255,255,255,0.05);
-      border-radius: 5px;
-      border: 1px solid rgba(197, 160, 71, 0.1);
-    }
-
-    .guidelines {
-      padding-left: 15px;
-      margin: 10px 0;
-    }
-
-    .guidelines li {
-      margin: 8px 0;
-      line-height: 1.5;
-    }
-
-    .agree-btn {
-      background: var(--gold);
-      color: var(--dark-bg);
-      padding: 12px 30px;
-      border: none;
-      border-radius: 5px;
-      font-weight: bold;
-      cursor: pointer;
-      display: block;
-      margin: 25px auto 15px;
-      transition: opacity 0.3s;
-    }
-
-    .agree-btn:hover {
-      opacity: 0.9;
-    }
-
-    strong.gold-text {
-      display: block;
-      margin: 0 0 10px 0;
-      padding: 5px 0;
-    }
-
-    /* Mobile Optimization */
-    @media (max-width: 768px) {
-      .dashboard-page {
-        padding: 10px;
-      }
-      
-      .thumbnail-container {
-        grid-template-columns: 1fr;
-        gap: 15px;
-      }
-      
-      .thumbnail {
-        margin: 0;
-        padding: 15px;
-        min-height: 100px;
-      }
-      
-      .thumbnail h2 {
-        font-size: 1.2em;
-      }
-
-      .popout-message {
-        top: -12px;
-        right: -12px;
-        padding: 10px 14px;
-        font-size: 0.7em;
-        max-width: 160px;
-        white-space: normal;
-        text-align: center;
-      }
-
-      .popout-message::after {
-        right: 15px;
-        bottom: -6px;
-        border-left: 6px solid transparent;
-        border-right: 6px solid transparent;
-        border-top: 6px solid #cc0000;
-      }
-
-      .welcome-modal {
-        padding: 10px 5px;
-      }
-
-      .welcome-content {
-        max-height: 85vh;
-        padding: 15px;
-        margin: 10px auto;
-        border-width: 1.5px;
-      }
-
-      .modal-section {
-        margin: 10px 0;
-        padding: 10px 15px;
-      }
-
-      .guidelines {
-        font-size: 0.9em;
-        padding-left: 10px;
-      }
-
-      .agree-btn {
-        width: calc(100% - 30px);
-        padding: 15px;
-        font-size: 1em;
-        margin: 20px auto;
-      }
-    }
-
-    @media (max-width: 480px) {
-      .welcome-content {
-        padding: 12px;
-      }
-
-      .modal-section {
-        padding: 10px 12px;
-      }
-
-      .guidelines li {
-        font-size: 0.85em;
-      }
-
-      .popout-message {
-        top: -10px;
-        right: -10px;
-        padding: 8px 12px;
-        font-size: 0.65em;
-        max-width: 140px;
-      }
-
-      .popout-message::after {
-        right: 12px;
-        bottom: -5px;
-        border-left: 5px solid transparent;
-        border-right: 5px solid transparent;
-        border-top: 5px solid #cc0000;
-      }
-    }
-
-    body {
-      min-height: 100vh;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .container {
-      flex: 1;
-    }
-  </style>
+/* Add this to keep modal hidden initially */
+#welcomeModal { display: none; }
+</style>
 </head>
 <body>
-  <!-- Global Loading Spinner -->
-  <div id="globalLoading" class="global-loading">
-    <div class="loading-spinner"></div>
-    <div class="loading-text">Loading...</div>
-  </div>
-
+  <div id="globalLoader" class="loading-overlay">
+  <div class="loading-spinner"></div>
+</div>
+  
   <div class="container dashboard-page">
     <h1>User Dashboard</h1>
     
@@ -425,426 +171,160 @@
       </div>
       
       <div class="thumbnail" onclick="showTrackParcel()">
-        <h2>🚚 Track Parcel</h2>
+        <h2>🔍 Tracking History</h2>
         <p>Check your parcel status</p>
-      </div>
-      
-      <!-- Billing Thumbnail with pop-out message -->
-      <div class="thumbnail" onclick="showBillingInfo()" id="billingThumbnail">
-        <h2>💰 Billing Info</h2>
-        <p>View parcel billing details and make payments</p>
-        <div id="popoutMessage" class="popout-message" style="display: none;"></div>
       </div>
     </div>
     
     <button class="logout-btn" onclick="handleLogout()">Log Out</button>
   </div>
 
-  <!-- Welcome Modal -->
-  <div id="welcomeModal" class="welcome-modal" style="display: none;">
-    <div class="welcome-content">
-      <strong class="gold-text">MAKLUMAN PENTING. SILA BACA</strong>
-      
-      <div class="modal-section">
-        <p><strong class="gold-text">Tolong isikan keterangan parcel order biskita seawalnya jika sudah menerima nombor tracking bagi yang mengunakan shipping address kami di limbang. Tidak perlu menunggu peringatan dari pihak kami.</strong></p>
-        
-        <p>Sila pastikan tracking kita dengan betul, jika bukan kita punya, pastikan kita tidak mengisikannya. Sebarang pertanyaan sila rujuk kembali kepada admin.</p>
-        
-        <p><strong class="gold-text">Peringatan bagi tracking parcel yang tidak ada keterangan akan ditinggalkan di Limbang warehouse. </strong></p>
+ <!-- Updated Welcome Modal -->
+<div id="welcomeModal" class="welcome-modal" style="display: none;">
+  <div class="welcome-content">
+    <strong class="gold-text">MAKLUMAN PENTING, SILA BACA.</strong>
     
-      </div>
+    <div class="modal-section">
+      <p><strong class="gold-text">SAFHANARIZQI ENTERPRISE RUNNER PARCEL COLLECTOR</strong><br>
+      We're Trusted registered runner under JKED<br>
+      Runner code R1</p>
+      
+      <p>To all registered users, please use provided shipping details format below:</p>
+      <pre class="shipping-details"><span id="user-info"></span><span id="user-name"></span>
+LOT 673
+KPG BAKOL
+LIMBANG
+98700
+SARAWAK
+<span id="user-phone"></span>
+      </pre>
+    </div>
 
-      <div class="modal-section">
-        <ul class="guidelines">
-          <li>Pastikan keterangan adalah betul.</li>
-          <li>Isikan keterangan nama yang mudah difahami dan tidak perlu panjang.</li>
-          <li>Nombor telefon hendaklah penerima di Brunei yang pihak kami akan hubungi.</li>
-          <li>Jika parcel dalam satu tracking mempunyai banyak keterangan item, sila senaraikan "breakdown" satu persatu termasuk harga & kuantiti.</li>
-          <li>Harga termasuk postage.</li>
-          <li>Item yang memerlukan permit (under control), sila sediakan document yang diperlukan.</li>
-        </ul>
-      </div>
+    <!-- Terms & Conditions Section -->
+    <div class="modal-section">
+      <strong class="gold-text">Terms & Conditions:</strong>
+      <ul class="guidelines">
+        <li>Semua ahli yang berdaftar dimestikan menyatakan maklumat yang ternyata di I.C (untuk kegunaan deklarasi kastam)</li>
+        <li>Sila pastikan bungkusan parcel yang biskita adalah bukan barang KAWALAN dan bukan barang TEGAHAN agensi Kerajaan.</li>
+        <li>Adalah penting supaya biskita tidak membuat pesanan barangan Terkawal/Tegahan tanpa kebenaran Agensi Kerajaan *(Vape & accessories, Drugs , Senjata dan apa jua yg menyerupai , Drone , Walkie Talkie , Rokok , Baja , Racun , Archery , Tanaman dan sebagainya)* dalam urusan ini.</li>
+        <li>Untuk barangan permit seperti pemakanan ; pharmaceutical ; AITI ; KDN ; PDi , adalah di hadkan mengikut kuantity pemakaian sendiri sahaja iaitu 5 unit @ BND100 @ 5kg kebawah.</li>
+        <li>Sila submit ketarangan bungkusan parcel biskita dengan lengkap pada link yang sudah di sediakan untuk memudahkan pihak kami membuat deklarasi kastam bagi mengelakkan sebarang kelawatan.</li>
+        <li>Biskita akan menerima WhatsApp dari sistem kami, pastikan makluman nombor telefon biskita adalah betul.</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">Cosmetics, Supplements, Foods or Drinks permit (pengunaan sendiri)</strong>
-        <ul class="guidelines">
-          <li>Invoice penuh adalah diperlukan.</li>
-          <li>Pastikan butiran nama penerima dan summary shipping dapat dilihat dengan jelas.</li>
-          <strong class="gold-text">*Jika barang biskita untuk jualan, pastikan biskita menyediakan DPS/FSQ permit dibawah syarikat sendiri.</strong></li>
-        </ul>
-      </div>
+    <!-- Charges Section -->
+    <div class="modal-section">
+      <strong class="gold-text">1 ) CHARGES</strong>
+      <ul class="guidelines">
+        <li>$1.50 size S</li>
+        <li>$2-$3.50 size M</li>
+        <li>$3-$4.50 size L</li>
+        <li>$4-$5.50 size XL</li>
+        <li>$5-$15 size box type</li>
+        <li>$15-$45 size XXXXL</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">AITI permit </strong>
-        <ul class="guidelines">
-          <li>Bluetooth devices </li>
-          <li>Wireless devices</li>
-          <strong class="gold-text">*Sila dapat kan permit AITI terlebih dahulu jika pesanan tidak melebihi 5 unit.</strong></li>
-        </ul>
-      </div>
+    <!-- TATACARA Section -->
+    <div class="modal-section">
+      <strong class="gold-text">2 ) TATACARA PENGAMBILAN PARCEL</strong>
+      <ul class="guidelines">
+        <li><strong>Langkah 1 Listing</strong><br>
+        *Sila beri maklumat parcel yang ringkas seperti tracking number, maklumat barang dalam parcel, kuantiti barang, harga barang (sila sertakan screenshot resit belian bagi brg yg memerlukan Permit Agensi Kerajaan)*</li>
+        <li><strong>Langkah 2 Deklarasi kastam</strong></li>
+        <li><strong>Langkah 3 Sorting out parcel</strong><br>
+        (Sila tunggu 'update' dari kami sekiranya parcel boleh dikutip pada hari yang sama)</li>
+        <li><strong>Langkah 4 Pengagihan parcel</strong><br>
+        (apabila biskita menerima 'billing' dari pihak kami)<br>
+        *Pastikan parcel yang diterima adalah betul sebelum meninggalkan warehouse kami*</li>
+      </ul>
+    </div>
 
-      <div class="modal-section">
-        <strong class="gold-text">Pihak kami tidak akan membawa masuk senarai dibawah:</strong>
-        <ul class="guidelines">
-          <li>Vape dan accessories</li>
-          <li>Juice Vape</li>
-          <li>Rokok</li>
-          <li>Dadah</li>
-          <li>Tumbuh-tumbahan dan binatang hidup</li>
-          <li>Senjata merbahaya</li>
-          <li>Gel blaster gun</li>
-          <strong class="gold-text">*Untuk keterangan lanjut sila layari laman web JKED.</strong></li>
-        </ul>
-      </div>
-
-      <div class="modal-section warning">
-        <p><strong class="gold-text">● SILA SEMAK SEBELUM SUBMIT.</strong></p>
-        <p><strong class="gold-text">● PASTIKAN SEMUA KETERANGAN ADALAH BETUL.</strong></p>
-        <p>Nota: Jika keterangan pengisytiharan tidak lengkap atau tidak betul, maka kesalahan adalah tanggungjawab pemilik sendiri.</p>
-        
-      </div>
-
-      <div class="modal-footer">
-        <button class="agree-btn" onclick="closeWelcomeModal()">Saya faham & setuju</button>
-      </div>
+    <div class="modal-footer">
+      <button class="agree-btn" onclick="closeWelcomeModal()">Saya faham & setuju</button>
     </div>
   </div>
+</div>
 
   <script src="scripts/app.js"></script>
   <script>
-    // ================= GLOBAL VARIABLES =================
-    let modalWasShown = false;
+
+function showGlobalLoader(show = true) {
+  document.getElementById('globalLoader').style.display = show ? 'flex' : 'none';
+}
     
-    // ================= GLOBAL FUNCTIONS =================
-    // Move these functions outside initDashboard so they're available globally
-    
-    function showGlobalLoading(message = 'Loading...') {
-      const loader = document.getElementById('globalLoading');
-      const text = loader.querySelector('.loading-text');
-      text.textContent = message;
-      loader.style.display = 'flex';
-    }
-  
-    function hideGlobalLoading() {
-      const loader = document.getElementById('globalLoading');
-      loader.style.display = 'none';
-    }
-  
-    function closeWelcomeModal() {
+function closeWelcomeModal() {
       const modal = document.getElementById('welcomeModal');
       modal.style.display = 'none';
       document.body.style.overflow = 'auto';
-      
-      // Show loading spinner only after modal is closed
-      if (modalWasShown) {
-        checkUncollectedParcels();
-      }
-    }
-  
-    function showMyInfo() {
-      safeRedirect('my-info.html');
-    }
-  
-    function showParcelDeclaration() {
-      safeRedirect('parcel-declaration.html');
-    }
-  
-    function showTrackParcel() {
-      safeRedirect('track-parcel.html');
     }
 
-    function showBillingInfo() {
-      safeRedirect('billing-info.html');
-    }
-    
-    function showInvoice() {
-      // Note: invoice.html requires an orderNumber parameter
-      // This is typically called from billing-info.html, not directly from dashboard
-      safeRedirect('invoice.html');
-    }
+function loadWelcomeModalData(phone) {
+  const userData = JSON.parse(sessionStorage.getItem('userData'));
   
-    function handleLogout() {
+  // Immediate population from session storage
+  document.getElementById('user-phone').textContent = userData.phone;
+
+  const callbackName = `userInfo_${Date.now()}`;
+  const script = document.createElement('script');
+  script.src = `${CONFIG.GAS_URL}?action=getUserInfo&phone=${encodeURIComponent(phone)}&callback=${callbackName}`;
+
+  window[callbackName] = (response) => {
+    showGlobalLoader(false);
+    if(response.success) {
+      const userInfo = `${response.userId} ${response.fullName}`;
+      document.getElementById('user-info').textContent = userInfo;
+      document.getElementById('welcomeModal').style.display = 'block';
+      document.body.style.overflow = 'hidden';
+    }
+    document.body.removeChild(script);
+    delete window[callbackName];
+  };
+  
+  document.body.appendChild(script);
+}
+    
+(function initDashboard() {
+  const userData = JSON.parse(sessionStorage.getItem('userData'));
+  if (!userData) return safeRedirect('login.html');
+  if (userData.tempPassword) return safeRedirect('password-reset.html');
+
+  // Always show loader initially
+  showGlobalLoader(true);
+  
+  const urlParams = new URLSearchParams(window.location.search);
+  
+  // Modified initialization flow
+  setTimeout(() => {
+    if (urlParams.has('fresh')) {
+      window.history.replaceState({}, '', 'dashboard.html');
+      loadWelcomeModalData(userData.phone);
+    } else {
+      showGlobalLoader(false);
+    }
+
+    // Existing code
+    const modal = document.getElementById('welcomeModal');
+    window.onclick = (event) => {
+      if(event.target === modal) modal.style.display = 'none';
+    }
+
+    window.showMyInfo = () => safeRedirect('my-info.html');
+    window.showParcelDeclaration = () => {
+  showGlobalLoader(true);
+  setTimeout(() => {
+    safeRedirect('parcel-declaration.html');
+  }, 50);
+}
+    window.showTrackParcel = () => safeRedirect('track-parcel.html');
+    
+    window.handleLogout = () => {
       sessionStorage.clear();
-      localStorage.removeItem('lastActivity');
-      localStorage.removeItem('freshLogin');
       safeRedirect('login.html');
     }
-  
-    // ================= EXACT Mark 1 JSONP approach =================
-    async function checkUncollectedParcels() {
-      try {
-        showGlobalLoading('Checking for pending payments...');
-        const userData = checkSession();
-        if (!userData?.phone) {
-          handleLogout();
-          return;
-        }
-  
-        const count = await getUncollectedCountWithRetry(userData.phone);
-        
-        const popout = document.getElementById('popoutMessage');
-        const billingThumbnail = document.getElementById('billingThumbnail');
-        
-        if (count > 0) {
-          // Create appropriate message based on count
-          let message = '';
-          if (count === 1) {
-            message = '⚠️ 1 Unclaim Parcel!';
-          } else {
-            message = `⚠️ ${count} Unclaim Parcels!`;
-          }
-          
-          popout.textContent = message;
-          popout.style.display = 'block';
-          billingThumbnail.classList.add('has-uncollected');
-          
-          // Add urgency levels
-          if (count >= 5) {
-            popout.classList.add('urgent');
-            popout.classList.remove('warning');
-          } else if (count >= 2) {
-            popout.classList.add('warning');
-            popout.classList.remove('urgent');
-          } else {
-            popout.classList.remove('warning', 'urgent');
-          }
-          
-          // Add shake animation for attention
-          setTimeout(() => {
-            billingThumbnail.classList.add('shake');
-            setTimeout(() => billingThumbnail.classList.remove('shake'), 500);
-          }, 1000);
-          
-          console.log(`Found ${count} uncollected parcels - popout shown`);
-        } else {
-          popout.style.display = 'none';
-          billingThumbnail.classList.remove('has-uncollected');
-          console.log('No uncollected parcels found');
-        }
-      } catch (error) {
-        console.error('Uncollected count check failed:', error);
-      } finally {
-        hideGlobalLoading();
-      }
-    }
-  
-    // Mark 1 JSONP approach with retry logic
-    async function getUncollectedCountWithRetry(phone, maxRetries = 2) {
-      let lastError;
-      
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        try {
-          console.log(`Getting uncollected count (attempt ${attempt}/${maxRetries})`);
-          
-          // Exponential backoff for retries
-          if (attempt > 1) {
-            const delay = Math.min(500 * Math.pow(2, attempt - 1), 5000);
-            await new Promise(resolve => setTimeout(resolve, delay));
-          }
-          
-          const result = await getUncollectedCountFromServer(phone);
-          
-          if (result && result.count !== undefined) {
-            return result.count;
-          }
-          
-          lastError = new Error('Invalid response format');
-          
-        } catch (error) {
-          console.error(`Uncollected count attempt ${attempt} failed:`, error);
-          lastError = error;
-          
-          if (attempt < maxRetries) {
-            continue;
-          }
-        }
-      }
-      
-      throw lastError || new Error('Failed to get uncollected count');
-    }
-  
-    function getUncollectedCountFromServer(phone) {
-      return new Promise((resolve, reject) => {
-        const callbackName = `uncollectedCallback_${Date.now()}`;
-        const timeoutId = setTimeout(() => {
-          cleanup();
-          reject(new Error('Uncollected count request timeout'));
-        }, 15000); // 15 second timeout
-        
-        function cleanup() {
-          clearTimeout(timeoutId);
-          delete window[callbackName];
-          const script = document.getElementById(callbackName);
-          if (script && script.parentNode) {
-            document.head.removeChild(script);
-          }
-        }
-        
-        const script = document.createElement('script');
-        script.id = callbackName;
-        
-        // Use the CONFIG from app.js - make sure it's loaded
-        if (typeof CONFIG === 'undefined') {
-          console.error('CONFIG not loaded from app.js');
-          reject(new Error('Configuration not loaded'));
-          return;
-        }
-        
-        // EXACT Mark 1 approach with crossorigin attribute
-        script.crossOrigin = 'anonymous';
-        script.src = `${CONFIG.GAS_URL}?callback=${callbackName}&action=getUncollectedCount&phone=${encodeURIComponent(phone)}`;
-        
-        window[callbackName] = (data) => {
-          cleanup();
-          resolve(data);
-        };
-        
-        script.onerror = () => {
-          cleanup();
-          reject(new Error('Failed to load uncollected count'));
-        };
-        
-        document.head.appendChild(script);
-      });
-    }
-    
-    // ================= DASHBOARD INITIALIZATION =================
-    function initDashboard() {
-      // EXACT Mark 1 session check
-      const userData = checkSession();
-      if (!userData) {
-        handleLogout();
-        return;
-      }
-      
-      if (userData.tempPassword) {
-        safeRedirect('password-reset.html');
-        return;
-      }
-  
-      // Check if we have a pending tracking redirect (should bypass modal)
-      const pendingTracking = sessionStorage.getItem('pendingTracking');
-      const pendingRedirect = sessionStorage.getItem('pendingRedirect');
-      
-      if (pendingTracking && pendingRedirect === 'parcel-declaration.html') {
-        // Bypass dashboard and modal - redirect directly to parcel declaration
-        sessionStorage.removeItem('pendingTracking');
-        sessionStorage.removeItem('pendingRedirect');
-        sessionStorage.setItem('prefillTracking', pendingTracking);
-        safeRedirect('parcel-declaration.html');
-        return;
-      }
-  
-      // Original modal display logic (only if no tracking pending)
-      const urlParams = new URLSearchParams(window.location.search);
-      const shouldShowModal = urlParams.has('fresh') || 
-                             (localStorage.getItem('freshLogin') === 'true' && 
-                              sessionStorage.getItem('modalShown') === 'false');
-  
-      if (shouldShowModal) {
-        modalWasShown = true;
-        // Show modal and clean URL
-        document.getElementById('welcomeModal').style.display = 'block';
-        document.body.style.overflow = 'hidden';
-        window.history.replaceState({}, '', 'dashboard.html');
-        
-        // Set session storage to prevent showing modal again
-        sessionStorage.setItem('modalShown', 'true');
-        localStorage.removeItem('freshLogin');
-      } else {
-        // If no modal is shown, check uncollected parcels immediately
-        checkUncollectedParcels();
-      }
-  
-      const modal = document.getElementById('welcomeModal');
-  
-      window.onclick = (event) => {
-        if(event.target === document.getElementById('welcomeModal')) {
-          closeWelcomeModal();
-        }
-      }
-    }
-  
-    // ================= EVENT LISTENERS =================
-    // Initialize on DOMContentLoaded
-    document.addEventListener('DOMContentLoaded', () => {
-      // Call detectViewMode from app.js
-      if (typeof detectViewMode === 'function') {
-        detectViewMode();
-      }
-      
-      // Also ensure the functions from app.js are available
-      if (typeof checkSession === 'function' && typeof safeRedirect === 'function') {
-        initDashboard();
-      } else {
-        console.error('Required functions from app.js not loaded');
-        showError('System error. Please refresh the page.');
-      }
-    });
-  
-    // Add keyboard navigation
-    document.addEventListener('keydown', (e) => {
-      if (e.key === 'Escape') {
-        const modal = document.getElementById('welcomeModal');
-        if (modal && modal.style.display === 'block') {
-          closeWelcomeModal();
-        }
-      }
-      
-      // Numeric shortcuts for dashboard items
-      if (e.altKey) {
-        switch(e.key) {
-          case '1':
-            showMyInfo();
-            break;
-          case '2':
-            showParcelDeclaration();
-            break;
-          case '3':
-            showTrackParcel();
-            break;
-          case '4':
-            showBillingInfo();  // ADD THIS
-            break;
-          case 'l':
-          case 'L':
-            handleLogout();
-            break;
-        }
-      }
-    });
-  
-    // ================= ERROR HANDLING =================
-    function showError(message) {
-      // Use the showError function from app.js if available
-      if (typeof showError === 'function' && typeof window.showError !== 'function') {
-        // We're shadowing the global showError, so use window.showError if it exists
-        if (window.showError) {
-          window.showError(message);
-          return;
-        }
-      }
-      
-      // Fallback error display
-      const errorDiv = document.createElement('div');
-      errorDiv.style.cssText = `
-        position: fixed;
-        top: 20px;
-        left: 50%;
-        transform: translateX(-50%);
-        padding: 15px;
-        background: #ff4444dd;
-        color: white;
-        border-radius: 5px;
-        z-index: 1000;
-      `;
-      errorDiv.textContent = message;
-      document.body.appendChild(errorDiv);
-      
-      setTimeout(() => {
-        errorDiv.remove();
-      }, 5000);
-    }
+  }, 500); // Small delay for loader visibility
+})();
   </script>
 </body>
 </html>
