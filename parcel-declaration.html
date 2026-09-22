@@ -7,6 +7,11 @@
   <link rel="stylesheet" href="styles/main.css">
 </head>
 <body>
+  <div id="pageLoadingOverlay" class="page-loading-overlay">
+  <div class="loading-spinner"></div>
+  <div class="loading-text">Loading Declaration Form...</div>
+</div>
+  
   <div class="container">
     <h1>Parcel Declaration Form</h1>
     <form id="declarationForm">
@@ -26,7 +31,13 @@
          required>
 </div>
 
-      <!-- Auto-populated Phone Number -->
+<div class="input-group">
+  <label for="userId">User ID:</label>
+  <input type="text" id="userId" name="userId" 
+       readonly
+       style="background-color: #2a2a2a; color: #ffffff;">
+</div>
+      
       <div class="input-group">
         <label for="phone">Phone Number:</label>
         <input type="tel" id="phone" name="phone" readonly>
@@ -50,57 +61,126 @@
           <input type="number" id="price" name="price" 
                  min="0" step="0.01" required>
         </div>
-
-            <div class="input-group">
-      <label for="itemCategory">Item Category:</label>
-      <select id="itemCategory" name="itemCategory" required>
-        <option value="">Select Category</option>
-        <option value="Apparels">Apparels</option>
-        <option value="Bags">Bags</option>
-        <option value="Car Parts/Accessories">Car Parts/Accessories</option>
-        <option value="Cosmetics">Cosmetics*</option>
-        <option value="Electrical Goods">Electrical Goods</option>
-        <option value="Footwear">Footwear</option>
-        <option value="Food">Food*</option>
-        <option value="Furniture">Furniture</option>
-        <option value="Gadgets">Gadgets*</option>
-        <option value="Kitchenware">Kitchenware</option>
-        <option value="Plastics">Plastics</option>
-        <option value="Stationery">Stationery</option>
-        <option value="Suppplement">Supplement*</option>
-        <option value="Others">Others*</option>
-      </select>
-    </div>
+      </div>
 
       <!-- Collection Point -->
       <div class="input-group">
         <label for="collectionPoint">Collection Point:</label>
         <select id="collectionPoint" name="collectionPoint" required>
-          <option value="">Select Collection Point</option>
-          <option value="Sengkurong">Sengkurong</option>
-          <option value="Rimba">Rimba</option>
+          <option value="" disabled>Select Collection Point</option>
+          <option value="Tungku Gadong">Tungku Gadong</option>
         </select>
+      </div>
+
+      <!-- Item Category -->
+      <div class="form-group">
+        <label for="itemCategory">Item Category:</label>
+ <select id="itemCategory" name="itemCategory" required>
+  <option value="">Select Category</option>
+  <option value="AIR OR VACUUM PUMP 8414.10">AIR OR VACUUM PUMP 8414.10</option>
+  <option value="ARTICLES OF IRON OR STEEL 73">ARTICLES OF IRON OR STEEL 73</option>
+  <option value="ARTICLES OF STONE 68">ARTICLES OF STONE 68</option>
+  <option value="ARTIFICAL FLOWER 67.02.10">ARTIFICAL FLOWER 67.02.10</option>
+  <option value="AUTOPARTS ; CAR ACCESSORIES 8708">AUTOPARTS ; CAR ACCESSORIES 8708</option>
+  <option value="BAG ; WALLET 4202">BAG ; WALLET 4202</option>
+  <option value="BAJU BABY ; AND ACCESSORIES 6209">BAJU BABY ; AND ACCESSORIES 6209</option>
+  <option value="BAJU ; PAKAIAN  ; SET SUIT 6206">BAJU ; PAKAIAN  ; SET SUIT 6206</option>
+  <option value="BEDDING SET ; CUSHION ; PILLOW 9404">BEDDING SET ; CUSHION ; PILLOW 9404</option>
+  <option value="BLANKET 63">BLANKET 63</option>
+  <option value="BRA ; BENGKUNG ; CORSET 6212">BRA ; BENGKUNG ; CORSET 6212</option>
+  <option value="BROOM ; BRUSH ;FLOOR MOPS SWEEPERS 9603">BROOM ; BRUSH ;FLOOR MOPS SWEEPERS 9603</option>
+  <option value="BUKU ; PRINTED BOOK ; PICTURE 49">BUKU ; PRINTED BOOK ; PICTURE 49</option>
+  <option value="CANDLE 3406">CANDLE 3406</option>
+  <option value="CARPET ; CARPET KERETA ; SEJADAH 5703">CARPET ; CARPET KERETA ; SEJADAH 5703</option>
+  <option value="CERAMIC PRODUCTS 69">CERAMIC PRODUCTS 69</option>
+  <option value="COMBS ; HAIR PIN ; AND PARTS 96.15">COMBS ; HAIR PIN ; AND PARTS 96.15</option>
+  <option value="CONTACT LENS 900130">CONTACT LENS 900130</option>
+  <option value="*COCOA PREPARATION 18">*COCOA PREPARATION 18</option>
+  <option value="*COFFEE ; TEA INSTANT 2101">*COFFEE ; TEA INSTANT 2101</option>
+  <option value="CURTAIN ; BLINDS 6303">CURTAIN ; BLINDS 6303</option>
+  <option value="*DEODORANTS ; BATH SALTS ; INCENSE ; ROOM PERFUMING ; EYE SOLUTION 3307">*DEODORANTS ; BATH SALTS ; INCENSE ; ROOM PERFUMING ; EYE SOLUTION 3307</option>
+  <option value="DISH WASHING MACHINES ; PACKING ; WRAPING MACHINE ; PARTS 8422">DISH WASHING MACHINES ; PACKING ; WRAPING MACHINE ; PARTS 8422</option>
+  <option value="ELECTRICAL 8516">ELECTRICAL 8516</option>
+  <option value="*ESSENTIAL OIL 3301">*ESSENTIAL OIL 3301</option>
+  <option value="EXERCISE ; SPORT EQUIPMENT ;  950691">EXERCISE ; SPORT EQUIPMENT ;  950691</option>
+  <option value="EYELASHES ; WIG 67.04">EYELASHES ; WIG 67.04</option>
+  <option value="FAN ; PORTABLE FAN 8414.51">FAN ; PORTABLE FAN 8414.51</option>
+  <option value="FISHING ACCESSORIES 95.07">FISHING ACCESSORIES 95.07</option>
+  <option value="FOOTWEAR ARTICLES ; KASUT SLIPPER 64">FOOTWEAR ARTICLES ; KASUT SLIPPER 64</option>
+  <option value="FURNITURE 9403">FURNITURE 9403</option>
+  <option value="GLASS AND GLASSWARE 70">GLASS AND GLASSWARE 70</option>
+  <option value="*GOLD 71">*GOLD 71</option>
+  <option value="HANDSOCK 6116">HANDSOCK 6116</option>
+  <option value="HANDPHONE CASING 42022">HANDPHONE CASING 42022</option>
+  <option value="HANDPHONE SCREEN PROTECTOR ; LCDs 7020">HANDPHONE SCREEN PROTECTOR ; LCDs 7020</option>
+  <option value="HARDWARE TOOLS ; CUTLERY ; OF BASE METAL 82">HARDWARE TOOLS ; CUTLERY ; OF BASE METAL 82</option>
+  <option value="HEADGEAR ; PARTS ; TOPI ; SONGKOK ; CAP ; INNER TUDUNG 65">HEADGEAR ; PARTS ; TOPI ; SONGKOK ; CAP ; INNER TUDUNG 65</option>
+  <option value="*HEADPHONE ; EARPHONE 8518.30">*HEADPHONE ; EARPHONE 8518.30</option>
+  <option value="IMITATION JEWELLERY ; PIN ; BROOCH 71">IMITATION JEWELLERY ; PIN ; BROOCH 71</option>
+  <option value="JAM ; WATCHES AND PARTS THEREOF 91">JAM ; WATCHES AND PARTS THEREOF 91</option>
+  <option value="KAIN ; SAMPIN ; FABRIC SILK 5007">KAIN ; SAMPIN ; FABRIC SILK 5007</option>
+  <option value="KITCHENWARE PERIUK BELANGA 7615">KITCHENWARE PERIUK BELANGA 7615</option>
+  <option value="LUBRICATING OIL ; GREASES 2710.19">LUBRICATING OIL ; GREASES 2710.19</option>
+  <option value="MUSICAL INSTRUMENT ; PARTS ACCESSORIES 92">MUSICAL INSTRUMENT ; PARTS ACCESSORIES 92</option>
+  <option value="*ORAL TOOTHPASTE ;DENTAL HYGIENE 3306">*ORAL TOOTHPASTE ;DENTAL HYGIENE 3306</option>
+  <option value="PAINTS , INK 32">PAINTS , INK 32</option>
+  <option value="PAPER AND PAPERBOARD ARTICLES 48">PAPER AND PAPERBOARD ARTICLES 48</option>
+  <option value="PEN ; MARKER PEN 9608">PEN ; MARKER PEN 9608</option>
+  <option value="PENCIL 9609">PENCIL 9609</option>
+  <option value="*PERFUME 3303">*PERFUME 3303</option>
+  <option value="*PHARMACEUTICAL PRODUCT 3004">*PHARMACEUTICAL PRODUCT 3004</option>
+  <option value="PLAYING CARD ;GAMING ; VIDEO GAMES 9504">PLAYING CARD ;GAMING ; VIDEO GAMES 9504</option>
+  <option value="PLASTIC ARTICLES 39">PLASTIC ARTICLES 39</option>
+  <option value="PLASTICS AND ARTICLES THEREOF 3926">PLASTICS AND ARTICLES THEREOF 3926</option>
+  <option value="POLISHES AND CREAM 3405">POLISHES AND CREAM 3405</option>
+  <option value="REPELLENT ; Insecticides 3808">REPELLENT ; Insecticides 3808</option>
+  <option value="RUBBER ARTICLES 40">RUBBER ARTICLES 40</option>
+  <option value="*SAMBAL SAUCE ; SAMBAL NYET 2103">*SAMBAL SAUCE ; SAMBAL NYET 2103</option>
+  <option value="SANITARY TOWELS ; DIAPERS ; NAPKIN LINER 9619">SANITARY TOWELS ; DIAPERS ; NAPKIN LINER 9619</option>
+  <option value="SELUAR 6204.69">SELUAR 6204.69</option>
+  <option value="*SHAMPOO ; HAIR CARE 3305">*SHAMPOO ; HAIR CARE 3305</option>
+  <option value="*SKINCARE ; COSMETICS BEAUTY 3304">*SKINCARE ; COSMETICS BEAUTY 3304</option>
+  <option value="SKIRT 620452">SKIRT 620452</option>
+  <option value="SOAP , DETERGENT , WASHING PREPARATION 3402">SOAP , DETERGENT , WASHING PREPARATION 3402</option>
+  <option value="SOCKS 6115">SOCKS 6115</option>
+  <option value="SOLAR LIGHT 940550">SOLAR LIGHT 940550</option>
+  <option value="SPECIAL WOVEN FABRIC ; LACE ; TAPESTRIES ; EMBROIDERY 58">SPECIAL WOVEN FABRIC ; LACE ; TAPESTRIES ; EMBROIDERY 58</option>
+  <option value="STICKER 3919">STICKER 3919</option>
+  <option value="*SUGAR CONFECTIONERY 17">*SUGAR CONFECTIONERY 17</option>
+  <option value="*SUPPLEMENT MISC 2106">*SUPPLEMENT MISC 2106</option>
+  <option value="SUNGLASSES 9004">SUNGLASSES 9004</option>
+  <option value="TELEKUNG 6211">TELEKUNG 6211</option>
+  <option value="*TELEPHONE SET ; WIRELESS NETWORK ; OTHERS 8517">*TELEPHONE SET ; WIRELESS NETWORK ; OTHERS 8517</option>
+  <option value="TISSUE ; NAPKIN 4803">TISSUE ; NAPKIN 4803</option>
+  <option value="*TOOTHPASTE ; PREPARATIONS FOR ORAL OR DENTAL HYGIENE 3306">*TOOTHPASTE ; PREPARATIONS FOR ORAL OR DENTAL HYGIENE 3306</option>
+  <option value="TOWELS 6302">TOWELS 6302</option>
+  <option value="TOYS 9503">TOYS 9503</option>
+  <option value="TRIPODS 9620">TRIPODS 9620</option>
+  <option value="TUDUNG ; SHAWL ; SCARVES 6214">TUDUNG ; SHAWL ; SCARVES 6214</option>
+  <option value="TUMBLER VACUUM FLASK ; PARTS ACCESSORIES 9617">TUMBLER VACUUM FLASK ; PARTS ACCESSORIES 9617</option>
+  <option value="*TUMBUHAN LIVE PLANTS ( ITEM KAWALAN ) 6">*TUMBUHAN LIVE PLANTS ( ITEM KAWALAN ) 6</option>
+  <option value="UMBRELLA 66">UMBRELLA 66</option>
+  <option value="UNDERWEAR ; PANTIES 610821">UNDERWEAR ; PANTIES 610821</option>
+  <option value="USED PERSONAL OR HOUSEHOLD EFFECT 980210">USED PERSONAL OR HOUSEHOLD EFFECT 980210</option>
+  <option value="WALL MOUNT ; POWDER PUFFS SPONGE 9616">WALL MOUNT ; POWDER PUFFS SPONGE 9616</option>
+  <option value="*WOOD ARTICLES 44">*WOOD ARTICLES 44</option>
+  <option value="*OTHERS">*OTHERS</option>
+</select>
       </div>
 
       <!-- File Upload -->
       <div class="input-group">
         <label for="fileUpload">Upload Documents:</label>
         <input type="file" 
-               id="fileUpload" 
-               name="files"
-               multiple
-               accept="image/jpeg, image/png, application/pdf"
-               onchange="handleFileSelection(this)">
+       id="fileUpload" 
+       name="files[]"  
+       multiple
+       accept="image/jpeg, image/png, application/pdf"
+       onchange="handleFileSelection(this)">
         <small id="fileHelp" class="form-text">
-          Required for starred categories: JPEG, PNG, PDF (Max 5MB each, Max 3 files)
+          Required for starred (*) categories: JPEG, PNG, PDF (Max 5MB each)
         </small>
       </div>
-
-      <div class="input-group">
-  <label for="remarks">Remarks (Optional):</label>
-  <textarea id="remarks" name="remarks" 
-            placeholder="Additional notes or special instructions"></textarea>
-</div>
 
       <!-- Form Buttons -->
       <div class="button-group">
@@ -116,48 +196,9 @@
   </div>
 
   <script src="scripts/app.js"></script>
-  
-  <script>
-// Enhanced prefill tracking number logic with loop prevention
-document.addEventListener('DOMContentLoaded', function() {
-    console.log('Parcel declaration page loaded');
-    
-    // Check for prefill tracking from session storage
-    const prefillTracking = sessionStorage.getItem('prefillTracking');
-    const urlParams = new URLSearchParams(window.location.search);
-    const urlTracking = urlParams.get('tracking');
-    
-    console.log('Prefill tracking from session:', prefillTracking);
-    console.log('Tracking from URL:', urlTracking);
-    
-    let trackingToUse = prefillTracking || urlTracking;
-    
-    if (trackingToUse) {
-        const trackingInput = document.getElementById('trackingNumber');
-        if (trackingInput) {
-            trackingInput.value = trackingToUse;
-            trackingInput.readOnly = true;
-            trackingInput.style.backgroundColor = '#2a2a2a';
-            trackingInput.style.color = '#888';
-            trackingInput.title = "Tracking number from login link - cannot be modified";
-            
-            console.log('Tracking prefilled:', trackingToUse);
-            
-            // Clean up session storage after use
-            if (prefillTracking) {
-                setTimeout(() => {
-                    sessionStorage.removeItem('prefillTracking');
-                }, 1000);
-            }
-        }
-    }
-    
-    // Clean URL if it has tracking parameter
-    if (urlTracking) {
-        const cleanUrl = window.location.pathname;
-        window.history.replaceState({}, '', cleanUrl);
-    }
-});
-</script>
+  <div class="footer-text">
+    Built by Omis Logistics. For more info 👉
+    <a href="https://wa.me/6737187776" target="_blank" rel="noopener">here</a>
+  </div>
 </body>
 </html>
